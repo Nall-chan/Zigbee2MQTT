@@ -1332,7 +1332,6 @@ abstract class ModulBase extends \IPSModule
      *
      * @return string Der Name des erstellten oder vorhandenen Variablenprofils. Im Falle eines Systemprofils wird dieses direkt genutzt.
      */
-
     private function registerVariableProfile($expose, $stateMapping = null)
     {
         // Profilname basierend auf Expose oder Mapping
