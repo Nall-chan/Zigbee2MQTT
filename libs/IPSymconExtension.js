@@ -1,6 +1,6 @@
 /*
  IPSymconExtension
- Version: 4.5.3
+ Version: 4.5.4
 */
 
 class IPSymconExtension {
@@ -26,6 +26,11 @@ class IPSymconExtension {
 
     async onMQTTMessage(data) {
         const topicPrefix = `${this.symconTopic}/${this.baseTopic}`;
+        // Prüfen, ob das Topic mit '/set' endet
+        if (data.topic.endsWith('/set')) {
+            console.log(`Setting value for ${data.topic}: ${data.message}`);
+            return;
+        }
         if (data.topic.startsWith(`${this.baseTopic}/SymconExtension/request/getDeviceInfo/`)) {
             try {
                 const devicename = data.topic.split('/').slice(4).join('/');
@@ -138,7 +143,8 @@ class IPSymconExtension {
                 }
                 break;
             default:
-                console.log('Unhandled MQTT topic');
+                console.log(`Unhandled MQTT topic: ${data.topic}`);
+                console.log(`Topic prefix: ${topicPrefix}, base topic: ${this.baseTopic}`);
         }
     }
 
