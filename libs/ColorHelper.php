@@ -44,8 +44,6 @@ trait ColorHelper
             $hue /= 6;
         }
 
-        $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__ . ' :: Output HSL', 'Hue: ' . ($hue * 360) . ', Saturation: ' . ($saturation * 100) . ', Lightness: ' . ($lightness * 100), 0);
-
         return [
             'hue'        => round($hue * 360, 2),
             'saturation' => round($saturation * 100, 2),
@@ -294,44 +292,45 @@ trait ColorHelper
      * @param  float $x
      * @param  float $y
      * @param  int $bri brightness
-     * @return string HTML-Farbe (warum nicht wieder ein int oder array?)
+     * @return int Integer-Wert der Farbe
      */
-    protected function xyToHEX($x, $y, $bri)
+    protected function xyToHEX($x, $y, $bri = 255)
     {
+        // Normalisierung der Brightness (0-1)
+        $Y = $bri / 255;
+
         // Berechnung der XYZ-Werte
-        $z = 1 - $x - $y;
-        $Y = $bri / 254; // Brightness Koeffizient.
         if ($y == 0) {
             $X = 0;
             $Z = 0;
         } else {
             $X = ($Y / $y) * $x;
-            $Z = ($Y / $y) * $z;
+            $Z = ($Y / $y) * (1 - $x - $y);
         }
 
-        // Umwandlung in sRGB D65 (offizielle Formel von Philips Hue)
-        $r = $X * 1.656492 - $Y * 0.354851 - $Z * 0.255038;
-        $g = -$X * 0.707196 + $Y * 1.655397 + $Z * 0.036152;
-        $b = $X * 0.051713 - $Y * 0.121364 + $Z * 1.011530;
+        // Präzisere XYZ zu RGB Matrix (sRGB D65)
+        $r = $X * 3.2406 - $Y * 1.5372 - $Z * 0.4986;
+        $g = -$X * 0.9689 + $Y * 1.8758 + $Z * 0.0415;
+        $b = $X * 0.0557 - $Y * 0.2040 + $Z * 1.0570;
 
-        // Gammakorrektur rückgängig machen
-        $r = ($r <= 0.0031308 ? 12.92 * $r : (1.055) * pow($r, (1 / 2.4)) - 0.055);
-        $g = ($g <= 0.0031308 ? 12.92 * $g : (1.055) * pow($g, (1 / 2.4)) - 0.055);
-        $b = ($b <= 0.0031308 ? 12.92 * $b : (1.055) * pow($b, (1 / 2.4)) - 0.055);
+        // Korrekte Gamma-Korrektur für jeden Kanal
+        $r = $r <= 0.0031308 ? 12.92 * $r : (1.0 + 0.055) * pow($r, (1.0 / 2.4)) - 0.055;
+        $g = $g <= 0.0031308 ? 12.92 * $g : (1.0 + 0.055) * pow($g, (1.0 / 2.4)) - 0.055;
+        $b = $b <= 0.0031308 ? 12.92 * $b : (1.0 + 0.055) * pow($b, (1.0 / 2.4)) - 0.055; // Korrigiert von $g zu $b
 
-        // Berechnung des RGB-Wertes
-        $r = ($r < 0 ? 0 : round($r * 255));
-        $g = ($g < 0 ? 0 : round($g * 255));
-        $b = ($b < 0 ? 0 : round($b * 255));
+        // Debug für Zwischenwerte
+        $this->SendDebug(__FUNCTION__ . ' :: Pre-Scale', "R: $r G: $g B: $b", 0);
 
-        $r = ($r > 255 ? 255 : $r);
-        $g = ($g > 255 ? 255 : $g);
-        $b = ($b > 255 ? 255 : $b);
+        // RGB Werte auf 0-255 skalieren und begrenzen
+        $r = max(0, min(255, round($r * 255)));
+        $g = max(0, min(255, round($g * 255)));
+        $b = max(0, min(255, round($b * 255)));
 
-        $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__ . ' :: RGB', 'R: ' . $r . ' G: ' . $g . ' B: ' . $b, 0);
+        $this->SendDebug(__FUNCTION__ . ' :: RGB', "R: $r G: $g B: $b", 0);
 
-        $color = sprintf('#%02x%02x%02x', $r, $g, $b);
-        $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__ . ' :: colorHEX', $color, 0);
+        // Integer-Wert berechnen
+        $color = ($r << 16) | ($g << 8) | $b;
+        $this->SendDebug(__FUNCTION__ . ' :: colorINT', $color, 0);
 
         return $color;
     }
@@ -385,9 +384,9 @@ trait ColorHelper
      * @param  mixed $p ???
      * @param  mixed $q ???
      * @param  mixed $t ???
-     * @return void ???
+     * @return float
      */
-    private function hueToRGB($p, $q, $t)
+    private function hueToRGB($p, $q, $t): float
     {
         if ($t < 0) {
             $t += 1;
@@ -405,5 +404,99 @@ trait ColorHelper
             return $p + ($q - $p) * (2 / 3 - $t) * 6;
         }
         return $p;
+    }
+
+    /**
+     * Konvertiert einen HEX-Farbwert in XY-Farbkoordinaten.
+     *
+     * @param int $hex Der HEX-Farbwert.
+     * @return array Ein Array mit den Schlüsseln 'x' und 'y'.
+     */
+    function HexToXY(int $hex): array
+    {
+        // HEX in RGB umwandeln
+        $r = (($hex >> 16) & 0xFF) / 255.0;
+        $g = (($hex >> 8) & 0xFF) / 255.0;
+        $b = ($hex & 0xFF) / 255.0;
+
+        // Gamma-Korrektur
+        $r = ($r > 0.04045) ? pow(($r + 0.055) / (1.0 + 0.055), 2.4) : ($r / 12.92);
+        $g = ($g > 0.04045) ? pow(($g + 0.055) / (1.0 + 0.055), 2.4) : ($g / 12.92);
+        $b = ($b > 0.04045) ? pow(($b + 0.055) / (1.0 + 0.055), 2.4) : ($b / 12.92);
+
+        // RGB in XYZ umwandeln
+        $X = $r * 0.4124 + $g * 0.3576 + $b * 0.1805;
+        $Y = $r * 0.2126 + $g * 0.7152 + $b * 0.0722;
+        $Z = $r * 0.0193 + $g * 0.1192 + $b * 0.9505;
+
+        // XYZ in xy umwandeln
+        $x = $X / ($X + $Y + $Z);
+        $y = $Y / ($X + $Y + $Z);
+
+        // Rückgabe der xy-Koordinaten
+        return ['x' => $x, 'y' => $y];
+    }
+
+    /**
+     * Konvertiert Kelvin in Mired
+     *
+     * @param  int $value Kelvin-Wert
+     * @return int Mired-Wert
+     */
+    protected function convertKelvinToMired($value): int
+    {
+        if ($value >= 1000) {
+            $miredValue = intval(round(1000000 / $value, 0));
+            $this->SendDebug(__FUNCTION__, 'Kelvin zu Mired konvertiert: ' . $miredValue, 0);
+        } else {
+            $miredValue = intval($value);
+            $this->SendDebug(__FUNCTION__, 'Wert unter 1000, Keine Konvertierung: ' . $miredValue, 0);
+        }
+        return $miredValue;
+    }
+
+    /**
+     * Konvertiert Mired in Kelvin
+     *
+     * @param  int $value Mired-Wert
+     * @return int Kelvin-Wert
+     */
+    protected function convertMiredToKelvin($value)
+    {
+        if ($value > 0) {
+            $kelvinValue = intval(round(1000000 / $value, 0));
+            $this->SendDebug(__FUNCTION__, 'Mired zu Kelvin konvertiert: ' . $kelvinValue, 0);
+        } else {
+            $kelvinValue = 0;
+            $this->SendDebug(__FUNCTION__, 'Ungültiger Mired-Wert: ' . $value, 0);
+        }
+        return $kelvinValue;
+    }
+
+    protected function normalizeValueToRange($value, $oldMin, $oldMax, $newMin = 0, $newMax = 100)
+    {
+        // Vermeidung Division durch 0
+        if ($oldMin == $oldMax) return $newMin;
+
+        // Lineare Transformation
+        $normalizedValue = (($value - $oldMin) * ($newMax - $newMin)) / ($oldMax - $oldMin) + $newMin;
+
+        // Auf ganze Zahl runden
+        return max($newMin, min($newMax, round($normalizedValue)));
+    }
+
+    /**
+ * Gibt den maximalen Helligkeitswert aus der Konfiguration zurück.
+ *
+ * Diese Methode liest die gespeicherte Helligkeitskonfiguration aus dem Buffer und
+ * extrahiert den maximalen Helligkeitswert. Falls keine Konfiguration vorhanden ist
+ * oder der Wert nicht gesetzt wurde, wird der Standardwert 255 zurückgegeben.
+ *
+ * @return int Der maximale Helligkeitswert (Standard: 255)
+ */
+    private function getBrightnessMaxValue(): int
+    {
+        $config = json_decode($this->GetBuffer('brightnessConfig'), true);
+        return isset($config['max']) ? (int)$config['max'] : 255;
     }
 }
