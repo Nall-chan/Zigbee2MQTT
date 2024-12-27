@@ -2841,10 +2841,35 @@ abstract class ModulBase extends \IPSModule
     }
 
     /**
-     * Prüft ob ein Feature ein State-Feature ist und gibt dessen Konfiguration zurück
-     * @param string $featureId Feature-ID zu prüfen
-     * @param array|null $feature Komplettes Feature-Array aus dem Payload
-     * @return array|null State-Konfiguration oder null wenn kein State-Feature
+     * Prüft und liefert die Konfiguration für State-basierte Features.
+     *
+     * Diese Methode analysiert ein Feature und bestimmt, ob es sich um ein State-Feature handelt.  
+     * Sie prüft zwei Szenarien:
+     * 1. Standard State-Pattern (z.B. "state", "state_left") 
+     * 2. Vordefinierte States aus stateDefinitions
+     *
+     * Die zurückgegebene Konfiguration enthält:
+     * - type: Typ des States (z.B. 'switch')
+     * - dataType: IPS Variablentyp (z.B. VARIABLETYPE_BOOLEAN)
+     * - values: Mögliche Zustände (z.B. ['ON', 'OFF'])
+     * - profile: Zu verwendenes IPS-Profil
+     * - enableAction: Ob Aktionen erlaubt sind (basierend auf access)
+     * - ident: Normalisierter Identifikator
+     *
+     * @param string $featureId Feature-Identifikator (z.B. 'state', 'state_left')
+     * @param array|null $feature Optionales Feature-Array mit weiteren Eigenschaften wie:
+     *                           - access: Zugriffsrechte für Schreiboperationen
+     * 
+     * @return array|null Array mit State-Konfiguration oder null wenn kein State-Feature
+     *
+     * @example
+     * // Standard state
+     * $config = $this->getStateConfiguration('state');
+     * // Ergebnis: ['type' => 'switch', 'values' => ['ON', 'OFF'], ...]
+     *
+     * // Vordefinierter state
+     * $config = $this->getStateConfiguration('Z2M_ValveState');
+     * // Ergebnis: Konfiguration aus stateDefinitions
      */
     private function getStateConfiguration(string $featureId, ?array $feature = null): ?array
     {
