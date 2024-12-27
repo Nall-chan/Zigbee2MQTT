@@ -123,7 +123,6 @@ abstract class ModulBase extends \IPSModule
         ['group_type' => '', 'feature' => 'window_open', 'profile' => '~Window', 'variableType' => VARIABLETYPE_BOOLEAN],
         ['group_type' => '', 'feature' => 'valve', 'profile' => '~Valve', 'variableType' => VARIABLETYPE_INTEGER],
         ['group_type' => '', 'feature' => 'window_detection', 'profile' =>'~Window', 'variableType' => VARIABLETYPE_BOOLEAN],
-        ['group_type' => 'light', 'feature' => 'brightness', 'profile' => '~Intensity.100', 'variableType' => VARIABLETYPE_INTEGER],
     ];
 
     /**
@@ -144,7 +143,7 @@ abstract class ModulBase extends \IPSModule
         'color_mode' => ['type' => VARIABLETYPE_STRING, 'name' => 'Color Mode', 'profile' => '', 'enableAction' => false],
         'update' => ['type' => VARIABLETYPE_BOOLEAN, 'name' => 'Update Available', 'profile' => '~Alert', 'enableAction' => false],
         'device_temperature' => ['type' => VARIABLETYPE_FLOAT, 'name' => 'Device Temperature', 'profile' => '~Temperature', 'enableAction' => false],
-        'brightness' => ['type' => VARIABLETYPE_INTEGER, 'ident' => 'Z2M_Brightness', 'profile' => '~Intensity.100', 'scale' => 1, 'enableAction' => false],
+        'brightness' => ['type' => VARIABLETYPE_INTEGER, 'ident' => 'Z2M_Brightness', 'profile' => '~Intensity.100', 'scale' => 1, 'enableAction' => true],
         'voltage' => ['type' => VARIABLETYPE_FLOAT, 'ident' => 'Z2M_Voltage', 'profile' => '~Volt', 'enableAction' => false],
     ];
 
