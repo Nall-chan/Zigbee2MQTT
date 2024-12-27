@@ -148,8 +148,7 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
                         $ieeeAddr = $Result['ieeeAddr'];
                         // Optional: Entfernen von '0x' aus der IEEE-Adresse, falls gewünscht
                         // $ieeeAddr = ltrim($ieeeAddr, '0x');
-                        $dateiPfad = $vollerPfad . $instanceID . '_' . $ieeeAddr . '.json';
-
+                        $dateiPfad = $vollerPfad . $instanceID . '.json';
                         // Schreiben der JSON-Daten in die Datei
                         if (file_put_contents($dateiPfad, $jsonData) !== false) {
                             IPS_LogMessage(__CLASS__, "IEEE.json erfolgreich als '$ieeeAddr.json' im Verzeichnis '$verzeichnisName' gespeichert.");
@@ -194,8 +193,8 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
         $vollerPfad = $kernelDir . $verzeichnisName . DIRECTORY_SEPARATOR;
 
         // Konstruktion des erwarteten Dateinamens mit InstanceID und Wildcard für ieeeAddr
-        $dateiNamePattern = $instanceID . '_*.json';
-
+        $dateiNamePattern = $instanceID . '.json';
+        
         // Vollständiger Pfad mit Muster
         $dateiPfad = $vollerPfad . $dateiNamePattern;
 
