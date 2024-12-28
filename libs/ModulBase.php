@@ -2245,7 +2245,7 @@ abstract class ModulBase extends \IPSModule
                 }
             } else {
                 if (!$this->RegisterProfileIntegerEx($profileName, '', '', '', [])) {
-                    $this->SendDebug(__CLASS__ . " : Fehler beim Erstellen des Integer-Profils:', $profileName", 0);
+                    $this->SendDebug(__CLASS__ . " : Fehler beim Erstellen des Integer-Profils:'",  $profileName, 0);
                 }
             }
         }
