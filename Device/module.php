@@ -67,6 +67,12 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
         $Result = $this->SendData('/SymconExtension/request/getDeviceInfo/' . $mqttTopic);
         $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__ . ' result', json_encode($Result), 0);
 
+        // Neue Prüfung für leeres Array
+        if (empty($Result) || !is_array($Result)) {
+            IPS_LogMessage(__CLASS__, "Keine Daten empfangen für MQTTTopic '$mqttTopic'.");
+            return false;
+        }
+
         if ($Result === false) {
             IPS_LogMessage(__CLASS__, "SendData für MQTTTopic '$mqttTopic' fehlgeschlagen.");
             return false;
@@ -194,7 +200,7 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
 
         // Konstruktion des erwarteten Dateinamens mit InstanceID und Wildcard für ieeeAddr
         $dateiNamePattern = $instanceID . '.json';
-        
+
         // Vollständiger Pfad mit Muster
         $dateiPfad = $vollerPfad . $dateiNamePattern;
 
