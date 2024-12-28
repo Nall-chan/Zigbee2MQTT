@@ -293,7 +293,7 @@ abstract class ModulBase extends \IPSModule
      *
      * Aktionstypen:
      * - UpdateInfo: Aktualisiert Geräteinformationen
-     * - Presets: Verarbeitet vordefinierte Einstellungen
+     * - presets: Verarbeitet vordefinierte Einstellungen
      * - String-Variablen ohne Rückmeldung: Direkte Aktualisierung
      * - Farbvariablen: Spezielle Behandlung von RGB/HSV/etc.
      * - Status-Variablen: ON/OFF und andere Zustände
@@ -318,7 +318,7 @@ abstract class ModulBase extends \IPSModule
             //Behandelt UpdateInfo
             $ident == 'UpdateInfo' => $this->UpdateDeviceInfo(),
             // Behandelt Presets
-            strpos($ident, 'Presets') !== false => $this->handlePresetVariable($ident, $value),
+            strpos($ident, 'presets') !== false => $this->handlePresetVariable($ident, $value),
             // Behandelt String-Variablen ohne Rückmeldung
             in_array($ident, self::$stringVariablesNoResponse) => $this->handleStringVariableNoResponse($ident, $value),
             // Behandelt Farbvariablen
@@ -1288,9 +1288,9 @@ abstract class ModulBase extends \IPSModule
     private function handlePresetVariable($ident, $value)
     {
         // Extrahiere den Identifikator der Hauptvariable
-        $mainIdent = str_replace('Presets', '', $ident);
-        $this->SendDebug(__FUNCTION__, "Aktion über Presets erfolgt, Weiterleitung zur eigentlichen Variable: $mainIdent", 0);
-        $this->SendDebug(__FUNCTION__, "Aktion über Presets erfolgt, Schreibe zur PresetVariable Variable: $ident", 0);
+        $mainIdent = str_replace('presets', '', $ident);
+        $this->SendDebug(__FUNCTION__, "Aktion über presets erfolgt, Weiterleitung zur eigentlichen Variable: $mainIdent", 0);
+        $this->SendDebug(__FUNCTION__, "Aktion über presets erfolgt, Schreibe zur PresetVariable Variable: $ident", 0);
 
         // Setze den Wert der Hauptvariable
         $this->SetValue($mainIdent, $value);
@@ -2279,41 +2279,38 @@ abstract class ModulBase extends \IPSModule
 
         $profileName .= '_Presets';
 
-        // Wenn das Profil bereits existiert, zuerst entfernen
-        if (IPS_VariableProfileExists($profileName)) {
-            IPS_DeleteVariableProfile($profileName);
-        }
-
-        if (!IPS_VariableProfileExists($profileName)) {
-
-            // Neues Profil anlegen
-            if ($variableType === 'float') {
-                if (!$this->RegisterProfileFloatEx($profileName, '', '', '', [])) {
-                    $this->LogMessage(__FUNCTION__ . ' :: ' . __LINE__ .  " : Fehler beim Erstellen des Float-Profils: $profileName", KL_ERROR);
-                }
-            } else {
-                if (!$this->RegisterProfileIntegerEx($profileName, '', '', '', [])) {
-                    $this->LogMessage(__FUNCTION__ . ' :: ' . __LINE__ .  " : Fehler beim Erstellen des Integer-Profils: $profileName", KL_ERROR);
-                }
-            }
-        }
-
-        // Füge die Presets zum Profil hinzu
-        foreach ($presets as $preset) {
-            // **Preset-Wert an den Variablentyp anpassen**
-            if ($variableType === 'float') {
-                $presetValue = floatval($preset['value']);
-            } else {
-                $presetValue = intval($preset['value']);
+        try {
+            // Wenn das Profil bereits existiert, zuerst entfernen
+            if (IPS_VariableProfileExists($profileName)) {
+                IPS_DeleteVariableProfile($profileName);
             }
 
-            $presetName = $this->Translate(ucwords(str_replace('_', ' ', $preset['name'])));
-            $this->SendDebug(__FUNCTION__, 'Adding preset: ' . $presetName . ' with value ' . $presetValue, 0);
+            if (!IPS_VariableProfileExists($profileName)) {
+                // Neues Profil anlegen
+                if ($variableType === 'float') {
+                    if (!$this->RegisterProfileFloatEx($profileName, '', '', '', [])) {
+                        $this->LogMessage(sprintf('%s: Could not create float profile %s', __FUNCTION__, $profileName), KL_DEBUG);
+                    }
+                } else {
+                    if (!$this->RegisterProfileIntegerEx($profileName, '', '', '', [])) {
+                        $this->LogMessage(sprintf('%s: Could not create integer profile %s', __FUNCTION__, $profileName), KL_DEBUG);
+                    }
+                }
+            }
 
-            // Assoziation zum Profil hinzufügen
-            IPS_SetVariableProfileAssociation($profileName, $presetValue, $presetName, '', -1);
+            // Füge die Presets zum Profil hinzu
+            foreach ($presets as $preset) {
+                // Preset-Wert an den Variablentyp anpassen
+                $presetValue = ($variableType === 'float') ? floatval($preset['value']) : intval($preset['value']);
+                $presetName = $this->Translate(ucwords(str_replace('_', ' ', $preset['name'])));
 
+                $this->SendDebug(__FUNCTION__, sprintf('Adding preset: %s with value %s', $presetName, $presetValue), 0);
+                IPS_SetVariableProfileAssociation($profileName, $presetValue, $presetName, '', -1);
+            }
+        } catch (Exception $e) {
+            $this->LogMessage(sprintf('%s: Error handling profile %s: %s', __FUNCTION__, $profileName, $e->getMessage()), KL_DEBUG);
         }
+
         return $profileName;
     }
 
