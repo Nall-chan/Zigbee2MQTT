@@ -2241,11 +2241,11 @@ abstract class ModulBase extends \IPSModule
             // Neues Profil anlegen
             if ($variableType === 'float') {
                 if (!$this->RegisterProfileFloatEx($profileName, '', '', '', [])) {
-                    IPS_LogMessage(__CLASS__, "Fehler beim Erstellen des Float-Profils: $profileName");
+                    $this->SendDebug(__CLASS__ . "Fehler beim Erstellen des Float-Profils:', $profileName", 0);
                 }
             } else {
                 if (!$this->RegisterProfileIntegerEx($profileName, '', '', '', [])) {
-                    IPS_LogMessage(__CLASS__, "Fehler beim Erstellen des Integer-Profils: $profileName");
+                    $this->SendDebug(__CLASS__ . " : Fehler beim Erstellen des Integer-Profils:', $profileName", 0);
                 }
             }
         }
@@ -2842,9 +2842,9 @@ abstract class ModulBase extends \IPSModule
     /**
      * Prüft und liefert die Konfiguration für State-basierte Features.
      *
-     * Diese Methode analysiert ein Feature und bestimmt, ob es sich um ein State-Feature handelt.  
+     * Diese Methode analysiert ein Feature und bestimmt, ob es sich um ein State-Feature handelt.
      * Sie prüft zwei Szenarien:
-     * 1. Standard State-Pattern (z.B. "state", "state_left") 
+     * 1. Standard State-Pattern (z.B. "state", "state_left")
      * 2. Vordefinierte States aus stateDefinitions
      *
      * Die zurückgegebene Konfiguration enthält:
@@ -2858,7 +2858,7 @@ abstract class ModulBase extends \IPSModule
      * @param string $featureId Feature-Identifikator (z.B. 'state', 'state_left')
      * @param array|null $feature Optionales Feature-Array mit weiteren Eigenschaften wie:
      *                           - access: Zugriffsrechte für Schreiboperationen
-     * 
+     *
      * @return array|null Array mit State-Konfiguration oder null wenn kein State-Feature
      *
      * @example
