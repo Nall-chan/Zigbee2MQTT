@@ -70,7 +70,16 @@ trait SendData
         if ($Timeout) {
             $Result = $this->WaitForTransactionEnd($TransactionId, $Timeout);
             if ($Result === false) {
-                trigger_error($this->Translate('Zigbee2MQTT did not response.'), E_USER_NOTICE);
+                $this->SendDebug(__FUNCTION__ . ':Error', sprintf(
+                    'Timeout (%dms) reached while waiting for response on topic: %s',
+                    $Timeout,
+                    $Topic
+                ), 0);
+                trigger_error(sprintf(
+                    $this->Translate('Zigbee2MQTT did not respond within %d ms for topic %s'),
+                    $Timeout,
+                    $Topic
+                ), E_USER_NOTICE);
                 return false;
             }
             return $Result;
