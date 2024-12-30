@@ -2369,19 +2369,12 @@ abstract class ModulBase extends \IPSModule
             // Prüfe erneut Parent Status nach Wartezeit
             if ($this->HasActiveParent() && (IPS_GetKernelRunlevel() == KR_READY)) {
                 $this->SendDebug(__FUNCTION__, "Starte UpdateDeviceInfo für Topic: " . $mqttTopic, 0);
+                // Versuche UpdateDeviceInfo, aber breche nicht ab bei Fehlschlag
                 if (!$this->UpdateDeviceInfo()) {
                     $this->SendDebug(__FUNCTION__, "UpdateDeviceInfo fehlgeschlagen - erster Versuch", 0);
-                    // Zweiter Versuch nach 3 Sekunden
+                    // Zweiter Versuch nach 20 Sekunden
                     IPS_Sleep(20);
-                    if (!$this->UpdateDeviceInfo()) {
-                        $this->SendDebug(__FUNCTION__, "UpdateDeviceInfo fehlgeschlagen - zweiter Versuch", 0);
-                        return;
-                    }
-                }
-
-                // Prüfe ob JSON erstellt wurde
-                if (!file_exists($jsonFile)) {
-                    $this->SendDebug(__FUNCTION__, "JSON-Datei konnte nicht erstellt werden", 0);
+                    $this->UpdateDeviceInfo();
                 }
             }
         }
