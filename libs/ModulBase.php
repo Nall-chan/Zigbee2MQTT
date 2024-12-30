@@ -430,6 +430,13 @@ abstract class ModulBase extends \IPSModule
                 continue;
             }
 
+            // Prüfe auf nicht-Z2M_ Variablen mit Großbuchstaben
+            if (substr($oldIdent, 0, 4) !== 'Z2M_' && preg_match('/[A-Z]/', $oldIdent)) {
+                $this->SendDebug('MIGRATION', sprintf('Lösche Variable mit ungültigem Ident: %s (#%d)', $oldIdent, $childID), 0);
+                IPS_DeleteVariable($childID);
+                continue;
+            }
+
             $oldIdent = $obj['ObjectIdent'];
             if ($oldIdent == '') {
                 // Hat keinen Ident, also ignorieren
@@ -2417,62 +2424,74 @@ abstract class ModulBase extends \IPSModule
      */
     private function getKnownVariables(): array
     {
+        $knownVariables = [];
         $instanceID = $this->InstanceID;
 
+        // 1. Zuerst nach JSON-Datei suchen
         $kernelDir = rtrim(IPS_GetKernelDir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
         $verzeichnisName = 'Zigbee2MQTTExposes';
         $vollerPfad = $kernelDir . $verzeichnisName . DIRECTORY_SEPARATOR;
         $dateiPfadPattern = $vollerPfad . $instanceID . '.json';
 
-        $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, "Suche nach Dateien mit Muster: " . $dateiPfadPattern, 0);
-        $files = glob($dateiPfadPattern);
-
-        if (empty($files)) {
-            $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, "Keine JSON-Dateien gefunden, die dem Muster entsprechen: " . $dateiPfadPattern, 0);
-            return [];
-        }
-
-        $knownVariables = [];
-
-        foreach ($files as $dateiPfad) {
-            $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, "Verarbeite Datei: " . $dateiPfad, 0);
-            if (!file_exists($dateiPfad)) {
-                $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, "JSON-Datei nicht gefunden: " . $dateiPfad, 0);
-                continue;
-            }
-
-            $jsonData = file_get_contents($dateiPfad);
+        // Verarbeite JSON wenn vorhanden
+        if (file_exists($dateiPfadPattern)) {
+            $this->SendDebug(__FUNCTION__, "Verarbeite JSON-Datei: " . $dateiPfadPattern, 0);
+            $jsonData = file_get_contents($dateiPfadPattern);
             $data = json_decode($jsonData, true);
 
-            if (json_last_error() !== JSON_ERROR_NONE || !isset($data['exposes'])) {
-                $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, "Fehler beim Dekodieren der JSON-Datei oder fehlende 'exposes' in Datei: $dateiPfad. Fehler: " . json_last_error_msg(), 0);
-                continue;
-            }
-
-            $exposes = $data['exposes'];
-
-            $features = array_map(function ($expose) {
-                return isset($expose['features']) ? $expose['features'] : [$expose];
-            }, $exposes);
-
-            $features = array_merge(...$features);
-
-            $filteredFeatures = array_filter($features, function ($feature) {
-                return isset($feature['property']);
-            });
-
-            foreach ($filteredFeatures as $feature) {
-                $variableName = trim(strtolower($feature['property']));
-                $knownVariables[$variableName] = $feature;
+            if (json_last_error() === JSON_ERROR_NONE && isset($data['exposes'])) {
+                // Durchlaufe alle Exposes und füge sie zu knownVariables hinzu
+                foreach ($data['exposes'] as $expose) {
+                    if (isset($expose['features'])) {
+                        foreach ($expose['features'] as $feature) {
+                            $property = strtolower($feature['property']);
+                            $knownVariables[$property] = $feature;
+                        }
+                    } elseif (isset($expose['property'])) {
+                        $property = strtolower($expose['property']);
+                        $knownVariables[$property] = $expose;
+                    }
+                }
+                $this->SendDebug(__FUNCTION__, "JSON-Variablen verarbeitet: " . json_encode($knownVariables), 0);
             }
         }
 
-        $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, 'Known Variables Array:', 0);
-        foreach ($knownVariables as $varName => $varProps) {
-            // $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, "'" . $varName . "'", 0);
+        // 2. Hole existierende Variablen der Instanz
+        $childrenIDs = IPS_GetChildrenIDs($this->InstanceID);
+        foreach ($childrenIDs as $childID) {
+            if (IPS_GetObject($childID)['ObjectType'] !== OBJECTTYPE_VARIABLE) {
+                continue;
+            }
+
+            $object = IPS_GetObject($childID);
+            $variable = IPS_GetVariable($childID);
+
+            $ident = $object['ObjectIdent'];
+            if (empty($ident)) continue;
+
+            // Erstelle Feature-Array für existierende Variable
+            $feature = [
+                'property' => $ident,
+                'type' => $this->getVariableTypeString($variable['VariableType']),
+                'access' => 7 // Standard: Lesen/Schreiben/Notify
+            ];
+
+            // Füge zur Liste bekannter Variablen hinzu
+            $knownVariables[strtolower($ident)] = $feature;
         }
 
         return $knownVariables;
+    }
+
+    private function getVariableTypeString($variableType): string
+    {
+        return match($variableType) {
+            VARIABLETYPE_BOOLEAN => 'binary',
+            VARIABLETYPE_INTEGER => 'numeric',
+            VARIABLETYPE_FLOAT => 'numeric',
+            VARIABLETYPE_STRING => 'string',
+            default => 'unknown'
+        };
     }
 
     /**
