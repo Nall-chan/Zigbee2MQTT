@@ -300,14 +300,14 @@ class Zigbee2MQTTBridge extends IPSModule
                 // JavaScript ausführen um Version zu erhalten
                 $version = $Response['data']['version'] ?? null;
                 
-                if ($version && version_compare($version, '4.5', '>')) {
-                    $this->LogMessage('Installation nicht erforderlich - Version ' . $version . ' > 4.5', KL_NOTIFY);
+                if ($version && version_compare($version, '4.6', '<')) {
+                    $this->LogMessage('Installation nicht erforderlich - Version ' . $version . ' > 4.5.3', KL_NOTIFY);
                     return true;
                 }
             }
         }
 
-        // Installation nur durchführen wenn Version <= 4.5 oder Version nicht ermittelbar
+        // Installation nur durchführen wenn Version <= 4.6 oder Version nicht ermittelbar
         if (empty($this->ExtensionName)) {
             $ExtensionName = 'IPSymconExtension.js';
         }
