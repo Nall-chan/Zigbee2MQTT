@@ -1,8 +1,9 @@
 /*
  IPSymconExtension
- For Z2M v. 2.0/1.42-DEV
  Version: 4.6
 */
+
+const utils = require("../util/utils");
 
 class MyLogger {
     constructor(logger) {
@@ -38,29 +39,27 @@ class MyLogger {
 }
 
 class IPSymconExtension {
-    constructor(zigbee, mqtt, state, publishEntityState, eventBus, settings, logger, baseLogger) {
+    constructor(zigbee, mqtt, state, publishEntityState, eventBus, enableDisableExtension, restartCallback, addExtension, settings, baseLogger) {
         this.zigbee = zigbee;
         this.mqtt = mqtt;
         this.state = state;
         this.publishEntityState = publishEntityState;
         this.eventBus = eventBus;
-        settings;
+        this.settings = settings;
         this.logger = new MyLogger(baseLogger);
-
-        this.baseTopic = settings.mqtt?.base_topic || 'zigbee2mqtt';
-        this.symconTopic = 'symcon';
-
-        this.eventBus.on('mqttMessage', this.onMQTTMessage.bind(this), this);
+        this.baseTopic = this.settings.get().mqtt.base_topic;
+        this.symconExtensionTopic = 'SymconExtension';
+        this.eventBus.onMQTTMessage(this, this.onMQTTMessage.bind(this));
         this.logger.info('Loaded IP-Symcon Extension');
     }
 
     async start() {
-        this.mqtt.subscribe(`${this.symconTopic}/${this.baseTopic}/#`);
+        this.mqtt.subscribe(`${this.baseTopic}/${this.symconExtensionTopic}/#`);
+
     }
 
     async onMQTTMessage(data) {
-        const topicPrefix = `${this.symconTopic}/${this.baseTopic}`;
-        if (data.topic.startsWith(`${this.baseTopic}/SymconExtension/request/getDeviceInfo/`)) {
+        if (data.topic.startsWith(`${this.baseTopic}/${this.symconExtensionTopic}/request/getDeviceInfo/`)) {
             try {
                 const devicename = data.topic.split('/').slice(4).join('/');
                 const message = JSON.parse(data.message);
@@ -71,7 +70,7 @@ class IPSymconExtension {
                 }
                 devicepayload.transaction = message.transaction;
                 this.logger.info('Symcon: request/getDevice');
-                await this.mqtt.publish(`SymconExtension/response/getDeviceInfo/${devicename}`, JSON.stringify(devicepayload), { retain: false, qos: 0 }, `${this.baseTopic}`, false, false);
+                await this.mqtt.publish(`${this.symconExtensionTopic}/response/getDeviceInfo/${devicename}`, JSON.stringify(devicepayload));
             } catch (error) {
                 let errormessage = 'Unknown Error'
                 if (error instanceof Error) errormessage = error.message
@@ -79,14 +78,14 @@ class IPSymconExtension {
             }
             return;
         }
-        if (data.topic.startsWith(`${this.baseTopic}/SymconExtension/request/getGroupInfo`)) {
+        if (data.topic.startsWith(`${this.baseTopic}/${this.symconExtensionTopic}/request/getGroupInfo`)) {
             try {
                 const groupname = data.topic.split('/').slice(4).join('/');
                 const message = JSON.parse(data.message);
                 const groupExposes = this.#createGroupExposes(groupname);
                 groupExposes.transaction = message.transaction;
                 this.logger.info('Symcon: request/getGroupe');
-                await this.mqtt.publish(`SymconExtension/response/getGroupInfo/${groupname}`, JSON.stringify(groupExposes), { retain: false, qos: 0 }, `${this.baseTopic}`, false, false);
+                await this.mqtt.publish(`${this.symconExtensionTopic}/response/getGroupInfo/${groupname}`, JSON.stringify(groupExposes));
             } catch (error) {
                 let errormessage = 'Unknown Error'
                 if (error instanceof Error) errormessage = error.message
@@ -94,17 +93,27 @@ class IPSymconExtension {
             }
             return;
         }
-        if (data.topic == `${this.baseTopic}/SymconExtension/lists/request/getGroups`) {
+        if (data.topic == `${this.baseTopic}/${this.symconExtensionTopic}/lists/request/getGroups`) {
             try {
                 const message = JSON.parse(data.message);
                 const groups = {
                     list: [],
                     transaction: 0,
                 };
-                groups.list = this.settings.getGroups();
+                for (const group of this.zigbee.groupsIterator()) {
+                    const listEntry = {
+                        devices: [],
+                        friendly_name: group.options.friendly_name,
+                        ID: group.zh.groupID
+                    }
+                    for (const device of group.zh.members) {
+                        listEntry.devices.push(device.deviceIeeeAddress);
+                    }
+                    groups.list.push(listEntry);
+                }
                 groups.transaction = message.transaction;
                 this.logger.info('Symcon: lists/request/getGroups');
-                await this.mqtt.publish('SymconExtension/lists/response/getGroups', JSON.stringify(groups), { retain: false, qos: 0 }, `${this.baseTopic}`, false, false);
+                await this.mqtt.publish(`${this.symconExtensionTopic}/lists/response/getGroups`, JSON.stringify(groups));
             } catch (error) {
                 let errormessage = 'Unknown Error'
                 if (error instanceof Error) errormessage = error.message
@@ -112,7 +121,7 @@ class IPSymconExtension {
             }
             return;
         }
-        if (data.topic == `${this.baseTopic}/SymconExtension/lists/request/getDevices`) {
+        if (data.topic == `${this.baseTopic}/${this.symconExtensionTopic}/lists/request/getDevices`) {
             try {
                 const message = JSON.parse(data.message);
                 const devices = {
@@ -120,7 +129,7 @@ class IPSymconExtension {
                     transaction: 0,
                 };
                 try {
-                    for (const device of this.zigbee.devicesIterator(this.#deviceNotCoordinator)) {
+                    for (const device of this.zigbee.devicesIterator(utils.deviceNotCoordinator)) {
                         devices.list = devices.list.concat(this.#createDevicePayload(device, false));
                     }
                 } catch (error) {
@@ -128,51 +137,13 @@ class IPSymconExtension {
                 }
                 devices.transaction = message.transaction;
                 this.logger.info('Symcon: lists/request/getDevices');
-                await this.mqtt.publish('SymconExtension/lists/response/getDevices', JSON.stringify(devices), { retain: false, qos: 0 }, `${this.baseTopic}`, false, false);
+                await this.mqtt.publish(`${this.symconExtensionTopic}/lists/response/getDevices`, JSON.stringify(devices));
             } catch (error) {
                 let errormessage = 'Unknown Error'
                 if (error instanceof Error) errormessage = error.message
                 this.logger.error(`Symcon error (${errormessage}) at Topic ${data.topic}`);
             }
             return;
-        }
-        switch (data.topic) {
-            case `${topicPrefix}/getDevices`: // deprecated
-            case `${this.baseTopic}/bridge/symcon/getDevices`: // deprecated
-                let devices = [];
-                try {
-                    for (const device of this.zigbee.devicesIterator(this.#deviceNotCoordinator)) {
-                        devices = devices.concat(this.#createDevicePayload(device, false));
-                    }
-                } catch (error) {
-                    devices = this.zigbee.devices(false).map(device => this.#createDevicePayload(device, false));
-                }
-                this.logger.info('Symcon: publish devices list');
-                await this.#publishToMqtt('devices', devices);
-                break;
-            case `${topicPrefix}/getDevice`: // deprecated
-            case `${this.baseTopic}/bridge/symcon/getDevice`: // deprecated
-                if (data.message) {
-                    const device = this.zigbee.resolveEntity(data.message);
-                    const devices = this.#createDevicePayload(device, true);
-                    this.logger.info('Symcon: getDevice');
-                    await this.#publishToMqtt(`${device.name}/deviceInfo`, devices);
-                }
-                break;
-            case `${topicPrefix}/getGroups`: // deprecated
-            case `${this.baseTopic}/bridge/symcon/getGroups`: // deprecated
-                const groups = this.settings.getGroups();
-                await this.#publishToMqtt('groups', groups);
-                break;
-            case `${topicPrefix}/getGroup`: // deprecated
-            case `${this.baseTopic}/bridge/symcon/getGroup`: // deprecated
-                if (data.message) {
-                    const groupExposes = this.#createGroupExposes(data.message);
-                    await this.#publishToMqtt(`${data.message}/groupInfo`, groupExposes);
-                }
-                break;
-            default:
-                console.log('Unhandled MQTT topic');
         }
     }
 
@@ -200,37 +171,28 @@ class IPSymconExtension {
         };
     }
 
-    async #publishToMqtt(topicSuffix, payload) {
-        await this.mqtt.publish(`${topicSuffix}`, JSON.stringify(payload), { retain: false, qos: 0 }, `${this.symconTopic}/${this.baseTopic}`, false, false);
-    }
-
-    #createGroupExposes(groupName) {
+    #createGroupExposes(groupname) {
         const groupSupportedTypes = ['light', 'switch', 'lock', 'cover'];
-        const groups = this.settings.getGroups();
         const groupExposes = { foundGroup: false };
-
         groupSupportedTypes.forEach(type => groupExposes[type] = { type, features: [] });
 
-        groups.forEach(group => {
-            if (group.friendly_name === groupName) {
-                groupExposes.foundGroup = true;
-                this.#processGroupDevices(group, groupExposes);
-            }
-        });
-
+        const group = this.zigbee.resolveEntity(groupname);
+        if (group) {
+            groupExposes.foundGroup = true;
+            this.#processGroupDevices(group, groupExposes);
+        }
         return groupExposes;
     }
 
     #processGroupDevices(group, groupExposes) {
-        group.devices.forEach(deviceAddress => {
-            const device = this.zigbee.resolveEntity(deviceAddress.substring(0, deviceAddress.indexOf('/')));
+        group.zh.members.forEach(member => {
+            const device = this.zigbee.resolveEntity(member.deviceIeeeAddress);
             this.#addDeviceExposesToGroup(device, groupExposes);
         });
     }
 
     #addDeviceExposesToGroup(device, groupExposes) {
         let exposes = [];
-
         // Überprüfen, ob 'definition' vorhanden ist und Exposes hinzufügen
         if (device.definition && device.definition.exposes) {
             exposes = exposes.concat(device.definition.exposes);
@@ -255,9 +217,6 @@ class IPSymconExtension {
                 groupExposeType.features.push(feature);
             }
         });
-    }
-    #deviceNotCoordinator(device) {
-        return device.type !== 'Coordinator';
     }
 }
 

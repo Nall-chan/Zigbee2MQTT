@@ -102,8 +102,10 @@ class Zigbee2MQTTBridge extends IPSModule
             if ($this->actualExtensionVersion == $ExtVersion) {
                 $this->UpdateFormField('InstallExtension', 'enabled', false);
             } else {
-                //$this->LogMessage($this->Translate('Symcon Extension in Zigbee2MQTT is outdated. Please update the extension.'), KL_ERROR);
-                @$this->InstallSymconExtension();
+                if (!empty($BaseTopic)){
+                    //$this->LogMessage($this->Translate('Symcon Extension in Zigbee2MQTT is outdated. Please update the extension.'), KL_ERROR);
+                    @$this->InstallSymconExtension();
+                }
             }
         }
 
