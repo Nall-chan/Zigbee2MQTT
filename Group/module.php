@@ -94,7 +94,7 @@ class Zigbee2MQTTGroup extends \Zigbee2MQTT\ModulBase
 
         // Dateipfad für die JSON-Datei basierend auf InstanceID und groupID
         $instanceID = $this->InstanceID;
-        $dateiPfad = $neuesVerzeichnis . DIRECTORY_SEPARATOR . $instanceID . '_' . $groupID . '.json';
+        $dateiPfad = $neuesVerzeichnis . DIRECTORY_SEPARATOR . $instanceID . '.json';
 
         // JSON-Daten mit Pretty-Print erstellen
         $jsonData = json_encode($Result, JSON_PRETTY_PRINT);
@@ -139,7 +139,7 @@ class Zigbee2MQTTGroup extends \Zigbee2MQTT\ModulBase
         $vollerPfad = $kernelDir . $verzeichnisName . DIRECTORY_SEPARATOR;
 
         // Gruppenspezifische Informationen
-        $dateiNamePattern = $instanceID . '_*.json';
+        $dateiNamePattern = $instanceID . '.json';
 
         // Vollständiger Pfad mit Muster
         $dateiPfad = $vollerPfad . $dateiNamePattern;
