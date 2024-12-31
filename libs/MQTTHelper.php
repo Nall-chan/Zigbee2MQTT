@@ -72,37 +72,8 @@ trait SendData
         if ($Timeout) {
             $Result = $this->WaitForTransactionEnd($TransactionId, $Timeout);
             if ($Result === false) {
-                // Debug Logging
-                $this->SendDebug(__FUNCTION__ . ':Timeout', sprintf(
-                    'Timeout (%dms) reached for topic: %s',
-                    $Timeout,
-                    $Topic
-                ), 0);
-
-                // Standardantwort bei Device-Info Anfragen
-                if (strpos($Topic, 'getDeviceInfo') !== false) {
-                    return [
-                        'success' => true,
-                        'data' => [
-                            'friendly_name' => 'Unknown',
-                            'model' => 'Unknown',
-                            'description' => 'Device not responding',
-                            'type' => 'Unknown'
-                        ]
-                    ];
-                }
-
-                // Warnung ins Log schreiben
-                $this->LogMessage(
-                    sprintf('Zigbee2MQTT antwortet nicht auf Topic: %s', $Topic),
-                    KL_WARNING
-                );
-
-                return [
-                    'success' => false,
-                    'error' => 'Timeout',
-                    'topic' => $Topic
-                ];
+                trigger_error(sprintf($this->Translate('Zigbee2MQTT did not response on Topic %s'), $Topic), E_USER_NOTICE);
+                return false;
             }
             return $Result;
         }

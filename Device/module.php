@@ -72,7 +72,7 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
      *
      * @return bool
      */
-    protected function UpdateDeviceInfo(): ?bool
+    protected function UpdateDeviceInfo(): bool
     {
         try {
             $mqttTopic = $this->ReadPropertyString('MQTTTopic');
