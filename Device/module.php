@@ -85,12 +85,12 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
             $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__ . ' result', json_encode($Result), 0);
 
             if (empty($Result) || !is_array($Result)) {
-                IPS_LogMessage(__CLASS__, "Keine Daten empfangen für MQTTTopic '$mqttTopic'.");
+                $this->LogMessage(__FUNCTION__ . "Keine Daten empfangen für MQTTTopic '$mqttTopic'.", KL_WARNING);
                 return false;
             }
 
             if (!array_key_exists('ieeeAddr', $Result)) {
-                IPS_LogMessage(__CLASS__, "Keine IEEE-Adresse in der Antwort gefunden.");
+                $this->LogMessage(__FUNCTION__ . "Keine IEEE-Adresse in der Antwort gefunden.", KL_WARNING);
                 return false;
             }
 
@@ -123,7 +123,7 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
             return false;
 
         } catch (Exception $e) {
-            IPS_LogMessage(__CLASS__, "Fehler in UpdateDeviceInfo: " . $e->getMessage());
+            $this->LogMessage(__FUNCTION__ . "Fehler in UpdateDeviceInfo: " . $e->getMessage(), KL_ERROR);
             return false;
         }
     }
@@ -138,7 +138,7 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
             $this->WriteAttributeString('Icon', $Icon);
             $this->WriteAttributeString('Model', $Model);
         } else {
-            IPS_LogMessage(__CLASS__, "Fehler beim Herunterladen des Icons von URL: $Url");
+            $this->LogMessage(__FUNCTION__ . "Fehler beim Herunterladen des Icons von URL: $Url", KL_WARNING);
         }
     }
 
@@ -153,7 +153,7 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
 
         $jsonData = json_encode($dataToSave, JSON_PRETTY_PRINT);
         if ($jsonData === false) {
-            IPS_LogMessage(__CLASS__, "Fehler beim JSON-Encoding: " . json_last_error_msg());
+            $this->LogMessage(__FUNCTION__ . "Fehler beim JSON-Encoding: " . json_last_error_msg(), KL_ERROR);
             return;
         }
 
@@ -162,13 +162,13 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
         $vollerPfad = $kernelDir . $verzeichnisName . DIRECTORY_SEPARATOR;
 
         if (!file_exists($vollerPfad) && !mkdir($vollerPfad, 0755, true)) {
-            IPS_LogMessage(__CLASS__, "Fehler beim Erstellen des Verzeichnisses '$verzeichnisName'.");
+            $this->LogMessage(__FUNCTION__ . "Fehler beim Erstellen des Verzeichnisses '$verzeichnisName'.", KL_ERROR);
             return;
         }
 
         $dateiPfad = $vollerPfad . $this->InstanceID . '.json';
         if (file_put_contents($dateiPfad, $jsonData) === false) {
-            IPS_LogMessage(__CLASS__, "Fehler beim Schreiben der JSON-Datei.");
+            $this->LogMessage(__FUNCTION__ . "Fehler beim Schreiben der JSON-Datei.", KL_ERROR);
         }
     }
 
@@ -210,9 +210,9 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
         foreach ($files as $file) {
             if (is_file($file)) {
                 if (unlink($file)) {
-                    IPS_LogMessage(__CLASS__, "Datei erfolgreich gelöscht: $file");
+                    $this->LogMessage(__FUNCTION__ . "Datei erfolgreich gelöscht: $file", KL_NOTIFY);
                 } else {
-                    IPS_LogMessage(__CLASS__, "Fehler beim Löschen der Datei: $file");
+                    $this->LogMessage(__FUNCTION__ . "Fehler beim Löschen der Datei: $file", KL_ERROR);
                 }
             }
         }
