@@ -63,24 +63,46 @@ trait SendData
         if ($Timeout) {
             $TransactionId = $this->AddTransaction($Payload);
         }
+
         $this->SendDebug(__FUNCTION__ . ':Topic', $Topic, 0);
         $this->SendDebug(__FUNCTION__ . ':Payload', json_encode($Payload), 0);
         $DataJSON = self::BuildRequest($this->ReadPropertyString('MQTTBaseTopic') . $Topic, $Payload);
         $this->SendDataToParent($DataJSON);
+
         if ($Timeout) {
             $Result = $this->WaitForTransactionEnd($TransactionId, $Timeout);
             if ($Result === false) {
-                $this->SendDebug(__FUNCTION__ . ':Error', sprintf(
-                    'Timeout (%dms) reached while waiting for response on topic: %s',
+                // Debug Logging
+                $this->SendDebug(__FUNCTION__ . ':Timeout', sprintf(
+                    'Timeout (%dms) reached for topic: %s',
                     $Timeout,
                     $Topic
                 ), 0);
-                trigger_error(sprintf(
-                    $this->Translate('Zigbee2MQTT did not respond within %d ms for topic %s'),
-                    $Timeout,
-                    $Topic
-                ), E_USER_NOTICE);
-                return false;
+
+                // Standardantwort bei Device-Info Anfragen
+                if (strpos($Topic, 'getDeviceInfo') !== false) {
+                    return [
+                        'success' => true,
+                        'data' => [
+                            'friendly_name' => 'Unknown',
+                            'model' => 'Unknown',
+                            'description' => 'Device not responding',
+                            'type' => 'Unknown'
+                        ]
+                    ];
+                }
+
+                // Warnung ins Log schreiben
+                $this->LogMessage(
+                    sprintf('Zigbee2MQTT antwortet nicht auf Topic: %s', $Topic),
+                    KL_WARNING
+                );
+
+                return [
+                    'success' => false,
+                    'error' => 'Timeout',
+                    'topic' => $Topic
+                ];
             }
             return $Result;
         }

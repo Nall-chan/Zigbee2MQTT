@@ -430,13 +430,6 @@ abstract class ModulBase extends \IPSModule
                 continue;
             }
 
-            // Prüfe auf nicht-Z2M_ Variablen mit Großbuchstaben
-            if (substr($oldIdent, 0, 4) !== 'Z2M_' && preg_match('/[A-Z]/', $oldIdent)) {
-                $this->SendDebug('MIGRATION', sprintf('Lösche Variable mit ungültigem Ident: %s (#%d)', $oldIdent, $childID), 0);
-                IPS_DeleteVariable($childID);
-                continue;
-            }
-
             $oldIdent = $obj['ObjectIdent'];
             if ($oldIdent == '') {
                 // Hat keinen Ident, also ignorieren
@@ -757,7 +750,7 @@ abstract class ModulBase extends \IPSModule
             }
 
             // Allgemeine Variablen verarbeiten
-            $this->processVariable($key, $value, $payloadWithTypes, $knownVariables);
+            $this->processVariable($key, $value, $knownVariables);
         }
         return '';
     }
@@ -815,8 +808,12 @@ abstract class ModulBase extends \IPSModule
      */
     protected function SetValue($ident, $value)
     {
-        $variableID = @$this->GetIDForIdent($ident);
-        if (!$variableID) {
+        if (!$this->HasActiveParent()) {
+            return;
+        }
+
+        $id = @$this->GetIDForIdent($ident);
+        if (!$id) {
             $this->SendDebug(__FUNCTION__, 'Variable nicht gefunden: ' . $ident, 0);
             return;
         }
@@ -828,20 +825,19 @@ abstract class ModulBase extends \IPSModule
             return;
         }
 
-        $adjustedValue = $this->adjustValueByType($variableID, $value);
-        $varType = IPS_GetVariable($variableID)['VariableType'];
+        $adjustedValue = $this->adjustValueByType($id, $value);
+        $varType = IPS_GetVariable($id)['VariableType'];
 
         // Profilverarbeitung nur für nicht-boolesche Werte
         if ($varType !== 0) {
-            $profileName = IPS_GetVariable($variableID)['VariableCustomProfile'];
+            $profileName = IPS_GetVariable($id)['VariableCustomProfile'];
             if ($profileName && IPS_VariableProfileExists($profileName)) {
                 $profileAssociations = IPS_GetVariableProfile($profileName)['Associations'];
                 foreach ($profileAssociations as $association) {
                     if ($association['Name'] == $value) {
                         $adjustedValue = $association['Value'];
                         $this->SendDebug(__FUNCTION__, 'Profilwert gefunden: ' . $value . ' -> ' . $adjustedValue, 0);
-                        $ValueIdent = IPS_GetObject($variableID)['ObjectIdent'];
-                        parent::SetValue($ValueIdent, $adjustedValue);
+                        parent::SetValue($ident, $adjustedValue);
                         return;
                     }
                 }
@@ -1029,18 +1025,27 @@ abstract class ModulBase extends \IPSModule
      * @param array $knownVariables Eine Liste der bekannten Variablen, die zur Verarbeitung verwendet werden.
      * @return void
      */
-    private function processVariable($key, $value, $payload, $knownVariables)
+    private function processVariable($key, $value, $knownVariables)
     {
         $lowerKey = strtolower($key);
+        $ident = $key;
 
-        // Prüfen, ob die Variable bekannt ist
-        if (!array_key_exists($lowerKey, $knownVariables)) {
-            $this->SendDebug(__FUNCTION__, 'Variable unbekannt, übersprungen: ' . $key, 0);
+        // Prüfe zuerst, ob eine Variable mit diesem Ident in Symcon existiert
+        $variableID = @$this->GetIDForIdent($ident);
+        if ($variableID) {
+            $this->SendDebug(__FUNCTION__, 'Existierende Variable gefunden: ' . $ident, 0);
+            $this->SetValue($ident, $value);
             return;
         }
 
+        // Wenn keine existierende Variable gefunden wurde, prüfe auf bekannte Variablen aus JSON
+        if (!array_key_exists($lowerKey, $knownVariables)) {
+            $this->SendDebug(__FUNCTION__, 'Variable weder in Symcon noch in JSON bekannt, übersprungen: ' . $key, 0);
+            return;
+        }
+
+        // Restliche Logik für neue Variablen aus JSON...
         $variableProps = $knownVariables[$lowerKey];
-        $ident = $key;
 
         // Spezielle Behandlung für Brightness in Lichtgruppen
         foreach (self::$VariableUseStandardProfile as $profile) {
@@ -1295,7 +1300,7 @@ abstract class ModulBase extends \IPSModule
     private function handlePresetVariable($ident, $value)
     {
         // Extrahiere den Identifikator der Hauptvariable
-        $mainIdent = str_replace('presets', '', $ident);
+        $mainIdent = str_replace('_presets', '', $ident);
         $this->SendDebug(__FUNCTION__, "Aktion über presets erfolgt, Weiterleitung zur eigentlichen Variable: $mainIdent", 0);
         $this->SendDebug(__FUNCTION__, "Aktion über presets erfolgt, Schreibe zur PresetVariable Variable: $ident", 0);
 
@@ -2369,12 +2374,19 @@ abstract class ModulBase extends \IPSModule
             // Prüfe erneut Parent Status nach Wartezeit
             if ($this->HasActiveParent() && (IPS_GetKernelRunlevel() == KR_READY)) {
                 $this->SendDebug(__FUNCTION__, "Starte UpdateDeviceInfo für Topic: " . $mqttTopic, 0);
-                // Versuche UpdateDeviceInfo, aber breche nicht ab bei Fehlschlag
                 if (!$this->UpdateDeviceInfo()) {
                     $this->SendDebug(__FUNCTION__, "UpdateDeviceInfo fehlgeschlagen - erster Versuch", 0);
-                    // Zweiter Versuch nach 20 Sekunden
+                    // Zweiter Versuch nach 3 Sekunden
                     IPS_Sleep(20);
-                    $this->UpdateDeviceInfo();
+                    if (!$this->UpdateDeviceInfo()) {
+                        $this->SendDebug(__FUNCTION__, "UpdateDeviceInfo fehlgeschlagen - zweiter Versuch", 0);
+                        return;
+                    }
+                }
+
+                // Prüfe ob JSON erstellt wurde
+                if (!file_exists($jsonFile)) {
+                    $this->SendDebug(__FUNCTION__, "JSON-Datei konnte nicht erstellt werden", 0);
                 }
             }
         }
@@ -2417,74 +2429,62 @@ abstract class ModulBase extends \IPSModule
      */
     private function getKnownVariables(): array
     {
-        $knownVariables = [];
         $instanceID = $this->InstanceID;
 
-        // 1. Zuerst nach JSON-Datei suchen
         $kernelDir = rtrim(IPS_GetKernelDir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
         $verzeichnisName = 'Zigbee2MQTTExposes';
         $vollerPfad = $kernelDir . $verzeichnisName . DIRECTORY_SEPARATOR;
         $dateiPfadPattern = $vollerPfad . $instanceID . '.json';
 
-        // Verarbeite JSON wenn vorhanden
-        if (file_exists($dateiPfadPattern)) {
-            $this->SendDebug(__FUNCTION__, "Verarbeite JSON-Datei: " . $dateiPfadPattern, 0);
-            $jsonData = file_get_contents($dateiPfadPattern);
-            $data = json_decode($jsonData, true);
+        $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, "Suche nach Dateien mit Muster: " . $dateiPfadPattern, 0);
+        $files = glob($dateiPfadPattern);
 
-            if (json_last_error() === JSON_ERROR_NONE && isset($data['exposes'])) {
-                // Durchlaufe alle Exposes und füge sie zu knownVariables hinzu
-                foreach ($data['exposes'] as $expose) {
-                    if (isset($expose['features'])) {
-                        foreach ($expose['features'] as $feature) {
-                            $property = strtolower($feature['property']);
-                            $knownVariables[$property] = $feature;
-                        }
-                    } elseif (isset($expose['property'])) {
-                        $property = strtolower($expose['property']);
-                        $knownVariables[$property] = $expose;
-                    }
-                }
-                $this->SendDebug(__FUNCTION__, "JSON-Variablen verarbeitet: " . json_encode($knownVariables), 0);
-            }
+        if (empty($files)) {
+            $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, "Keine JSON-Dateien gefunden, die dem Muster entsprechen: " . $dateiPfadPattern, 0);
+            return [];
         }
 
-        // 2. Hole existierende Variablen der Instanz
-        $childrenIDs = IPS_GetChildrenIDs($this->InstanceID);
-        foreach ($childrenIDs as $childID) {
-            if (IPS_GetObject($childID)['ObjectType'] !== OBJECTTYPE_VARIABLE) {
+        $knownVariables = [];
+
+        foreach ($files as $dateiPfad) {
+            $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, "Verarbeite Datei: " . $dateiPfad, 0);
+            if (!file_exists($dateiPfad)) {
+                $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, "JSON-Datei nicht gefunden: " . $dateiPfad, 0);
                 continue;
             }
 
-            $object = IPS_GetObject($childID);
-            $variable = IPS_GetVariable($childID);
+            $jsonData = file_get_contents($dateiPfad);
+            $data = json_decode($jsonData, true);
 
-            $ident = $object['ObjectIdent'];
-            if (empty($ident)) continue;
+            if (json_last_error() !== JSON_ERROR_NONE || !isset($data['exposes'])) {
+                $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, "Fehler beim Dekodieren der JSON-Datei oder fehlende 'exposes' in Datei: $dateiPfad. Fehler: " . json_last_error_msg(), 0);
+                continue;
+            }
 
-            // Erstelle Feature-Array für existierende Variable
-            $feature = [
-                'property' => $ident,
-                'type' => $this->getVariableTypeString($variable['VariableType']),
-                'access' => 7 // Standard: Lesen/Schreiben/Notify
-            ];
+            $exposes = $data['exposes'];
 
-            // Füge zur Liste bekannter Variablen hinzu
-            $knownVariables[strtolower($ident)] = $feature;
+            $features = array_map(function ($expose) {
+                return isset($expose['features']) ? $expose['features'] : [$expose];
+            }, $exposes);
+
+            $features = array_merge(...$features);
+
+            $filteredFeatures = array_filter($features, function ($feature) {
+                return isset($feature['property']);
+            });
+
+            foreach ($filteredFeatures as $feature) {
+                $variableName = trim(strtolower($feature['property']));
+                $knownVariables[$variableName] = $feature;
+            }
+        }
+
+        $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, 'Known Variables Array:', 0);
+        foreach ($knownVariables as $varName => $varProps) {
+            // $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, "'" . $varName . "'", 0);
         }
 
         return $knownVariables;
-    }
-
-    private function getVariableTypeString($variableType): string
-    {
-        return match($variableType) {
-            VARIABLETYPE_BOOLEAN => 'binary',
-            VARIABLETYPE_INTEGER => 'numeric',
-            VARIABLETYPE_FLOAT => 'numeric',
-            VARIABLETYPE_STRING => 'string',
-            default => 'unknown'
-        };
     }
 
     /**
@@ -2598,9 +2598,9 @@ abstract class ModulBase extends \IPSModule
      * Registriert eine Variable basierend auf den Feature-Informationen
      * @param array|string $feature Feature-Information oder Feature-ID
      * @param string|null $exposeType Optionaler Expose-Typ
-     * @return void
+     * @return mixed
      */
-    private function registerVariable($feature, $exposeType = null)
+    private function registerVariable($feature, $exposeType = null): mixed
     {
         // Während Migration keine Variablen erstellen
         if($this->GetBuffer(self::BUFFER_KEYS['PROCESSING_MIGRATION']) === 'true') {
@@ -2637,7 +2637,7 @@ abstract class ModulBase extends \IPSModule
         // Überprüfung auf spezielle Fälle
         if (isset(self::$specialVariables[$feature['property']])) {
             $this->registerSpecialVariable($feature);
-            return;
+            return null;
         }
 
         // Setze den Typ auf den übergebenen Expose-Typ, falls vorhanden
@@ -2661,7 +2661,7 @@ abstract class ModulBase extends \IPSModule
         $objectID = @$this->GetIDForIdent($ident);
         if ($objectID) {
             $this->SendDebug(__FUNCTION__ . ' :: Variable already exists: ', $ident, 0);
-            return;
+            return null;
         }
 
         // Bestimmen des Variablentyps basierend auf Typ, Feature und Einheit
@@ -2701,10 +2701,10 @@ abstract class ModulBase extends \IPSModule
             case 'composite':
                 $this->SendDebug(__FUNCTION__, 'Registering Composite Variable: ' . $ident, 0);
                 $this->registerColorVariable($ident, $feature);
-                return;
+                return null;
             default:
                 $this->SendDebug(__FUNCTION__, 'Unsupported variable type: ' . $variableType, 0);
-                return;
+                return null;
         }
 
         // Profil nach der Variablenerstellung zuordnen
@@ -2752,6 +2752,7 @@ abstract class ModulBase extends \IPSModule
             $this->registerPresetVariables($feature['presets'], $formattedLabel, $variableType, $feature);
             $this->SendDebug(__FUNCTION__, 'Registered presets for: ' . $formattedLabel, 0);
         }
+        return null;
     }
 
     /**
@@ -2823,11 +2824,11 @@ abstract class ModulBase extends \IPSModule
      * ];
      * $this->registerPresetVariables($presets, 'Brightness', 'int', ['property' => 'brightness', 'name' => 'Brightness']);
      */
-    private function registerPresetVariables(array $presets, string $label, string $variableType, array $feature)
+    private function registerPresetVariables(array $presets, string $label, string $variableType, array $feature): void
     {
         // Während Migration keine Variablen erstellen
         if($this->GetBuffer(self::BUFFER_KEYS['PROCESSING_MIGRATION']) === 'true') {
-            return false;
+            return;
         }
 
         $this->SendDebug(__FUNCTION__, 'Registering preset variables for: ' . $label, 0);
@@ -3056,5 +3057,5 @@ abstract class ModulBase extends \IPSModule
      *
      * @return bool
      */
-    abstract protected function UpdateDeviceInfo(): bool;
+    abstract protected function UpdateDeviceInfo(): ?bool;
 }
