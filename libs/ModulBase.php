@@ -2598,9 +2598,9 @@ abstract class ModulBase extends \IPSModule
      * Registriert eine Variable basierend auf den Feature-Informationen
      * @param array|string $feature Feature-Information oder Feature-ID
      * @param string|null $exposeType Optionaler Expose-Typ
-     * @return void
+     * @return mixed
      */
-    private function registerVariable($feature, $exposeType = null): ?bool
+    private function registerVariable($feature, $exposeType = null): mixed
     {
         // Während Migration keine Variablen erstellen
         if($this->GetBuffer(self::BUFFER_KEYS['PROCESSING_MIGRATION']) === 'true') {
@@ -2637,7 +2637,7 @@ abstract class ModulBase extends \IPSModule
         // Überprüfung auf spezielle Fälle
         if (isset(self::$specialVariables[$feature['property']])) {
             $this->registerSpecialVariable($feature);
-            return;
+            return null;
         }
 
         // Setze den Typ auf den übergebenen Expose-Typ, falls vorhanden
@@ -2661,7 +2661,7 @@ abstract class ModulBase extends \IPSModule
         $objectID = @$this->GetIDForIdent($ident);
         if ($objectID) {
             $this->SendDebug(__FUNCTION__ . ' :: Variable already exists: ', $ident, 0);
-            return;
+            return null;
         }
 
         // Bestimmen des Variablentyps basierend auf Typ, Feature und Einheit
@@ -2701,10 +2701,10 @@ abstract class ModulBase extends \IPSModule
             case 'composite':
                 $this->SendDebug(__FUNCTION__, 'Registering Composite Variable: ' . $ident, 0);
                 $this->registerColorVariable($ident, $feature);
-                return;
+                return null;
             default:
                 $this->SendDebug(__FUNCTION__, 'Unsupported variable type: ' . $variableType, 0);
-                return;
+                return null;
         }
 
         // Profil nach der Variablenerstellung zuordnen
@@ -2752,6 +2752,7 @@ abstract class ModulBase extends \IPSModule
             $this->registerPresetVariables($feature['presets'], $formattedLabel, $variableType, $feature);
             $this->SendDebug(__FUNCTION__, 'Registered presets for: ' . $formattedLabel, 0);
         }
+        return null;
     }
 
     /**
@@ -2823,11 +2824,11 @@ abstract class ModulBase extends \IPSModule
      * ];
      * $this->registerPresetVariables($presets, 'Brightness', 'int', ['property' => 'brightness', 'name' => 'Brightness']);
      */
-    private function registerPresetVariables(array $presets, string $label, string $variableType, array $feature): ?bool
+    private function registerPresetVariables(array $presets, string $label, string $variableType, array $feature): void
     {
         // Während Migration keine Variablen erstellen
         if($this->GetBuffer(self::BUFFER_KEYS['PROCESSING_MIGRATION']) === 'true') {
-            return false;
+            return;
         }
 
         $this->SendDebug(__FUNCTION__, 'Registering preset variables for: ' . $label, 0);
@@ -3056,5 +3057,5 @@ abstract class ModulBase extends \IPSModule
      *
      * @return bool
      */
-    abstract protected function UpdateDeviceInfo(): bool;
+    abstract protected function UpdateDeviceInfo(): ?bool;
 }
