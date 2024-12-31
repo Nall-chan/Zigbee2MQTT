@@ -241,7 +241,7 @@ abstract class ModulBase extends \IPSModule
             }
         }
     }
-    
+
     /**
      * ApplyChanges
      *

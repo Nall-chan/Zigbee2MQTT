@@ -65,7 +65,6 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
         return json_encode($Form);
     }
 
-
     /**
      * UpdateDeviceInfo
      *
