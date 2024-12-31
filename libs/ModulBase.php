@@ -808,8 +808,12 @@ abstract class ModulBase extends \IPSModule
      */
     protected function SetValue($ident, $value)
     {
-        $variableID = @$this->GetIDForIdent($ident);
-        if (!$variableID) {
+        if (!$this->HasActiveParent()) {
+            return;
+        }
+
+        $id = @$this->GetIDForIdent($ident);
+        if (!$id) {
             $this->SendDebug(__FUNCTION__, 'Variable nicht gefunden: ' . $ident, 0);
             return;
         }
@@ -821,20 +825,19 @@ abstract class ModulBase extends \IPSModule
             return;
         }
 
-        $adjustedValue = $this->adjustValueByType($variableID, $value);
-        $varType = IPS_GetVariable($variableID)['VariableType'];
+        $adjustedValue = $this->adjustValueByType($id, $value);
+        $varType = IPS_GetVariable($id)['VariableType'];
 
         // Profilverarbeitung nur für nicht-boolesche Werte
         if ($varType !== 0) {
-            $profileName = IPS_GetVariable($variableID)['VariableCustomProfile'];
+            $profileName = IPS_GetVariable($id)['VariableCustomProfile'];
             if ($profileName && IPS_VariableProfileExists($profileName)) {
                 $profileAssociations = IPS_GetVariableProfile($profileName)['Associations'];
                 foreach ($profileAssociations as $association) {
                     if ($association['Name'] == $value) {
                         $adjustedValue = $association['Value'];
                         $this->SendDebug(__FUNCTION__, 'Profilwert gefunden: ' . $value . ' -> ' . $adjustedValue, 0);
-                        $ValueIdent = IPS_GetObject($variableID)['ObjectIdent'];
-                        parent::SetValue($ValueIdent, $adjustedValue);
+                        parent::SetValue($ident, $adjustedValue);
                         return;
                     }
                 }
@@ -1025,13 +1028,26 @@ abstract class ModulBase extends \IPSModule
     private function processVariable($key, $value, $payload, $knownVariables)
     {
         $lowerKey = strtolower($key);
+        $ident = $key;
 
-        // Prüfen, ob die Variable bekannt ist
-        if (!array_key_exists($lowerKey, $knownVariables)) {
-            $this->SendDebug(__FUNCTION__, 'Variable unbekannt, übersprungen: ' . $key, 0);
+        // Prüfe zuerst, ob eine Variable mit diesem Ident in Symcon existiert
+        $variableID = @$this->GetIDForIdent($ident);
+        if ($variableID) {
+            $this->SendDebug(__FUNCTION__, 'Existierende Variable gefunden: ' . $ident, 0);
+            $this->SetValue($ident, $value);
             return;
         }
 
+        // Wenn keine existierende Variable gefunden wurde, prüfe auf bekannte Variablen aus JSON
+        if (!array_key_exists($lowerKey, $knownVariables)) {
+            $this->SendDebug(__FUNCTION__, 'Variable weder in Symcon noch in JSON bekannt, übersprungen: ' . $key, 0);
+            return;
+        }
+
+        // Restliche Logik für neue Variablen aus JSON...
+        $variableProps = $knownVariables[$lowerKey];
+
+        // Rest der bestehenden Methode...
         $variableProps = $knownVariables[$lowerKey];
         $ident = $key;
 
@@ -1288,7 +1304,7 @@ abstract class ModulBase extends \IPSModule
     private function handlePresetVariable($ident, $value)
     {
         // Extrahiere den Identifikator der Hauptvariable
-        $mainIdent = str_replace('presets', '', $ident);
+        $mainIdent = str_replace('_presets', '', $ident);
         $this->SendDebug(__FUNCTION__, "Aktion über presets erfolgt, Weiterleitung zur eigentlichen Variable: $mainIdent", 0);
         $this->SendDebug(__FUNCTION__, "Aktion über presets erfolgt, Schreibe zur PresetVariable Variable: $ident", 0);
 
