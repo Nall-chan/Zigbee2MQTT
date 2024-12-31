@@ -66,6 +66,52 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
     }
 
     /**
+     * Destroy
+     *
+     * Diese Methode wird aufgerufen, wenn die Instanz gelöscht wird.
+     * Sie sorgt dafür, dass die zugehörige .json-Datei entfernt wird.
+     *
+     * @return void
+     */
+    public function Destroy()
+    {
+        // Wichtig: Zuerst die Parent Destroy Methode aufrufen
+        parent::Destroy();
+
+        // Holen der InstanceID
+        $instanceID = $this->InstanceID;
+
+        // Holen des Kernel-Verzeichnisses
+        $kernelDir = IPS_GetKernelDir();
+
+        // Definieren des Verzeichnisnamens
+        $verzeichnisName = 'Zigbee2MQTTExposes';
+
+        // Konstruktion des vollständigen Pfads zum Verzeichnis
+        $vollerPfad = $kernelDir . $verzeichnisName . DIRECTORY_SEPARATOR;
+
+        // Konstruktion des erwarteten Dateinamens mit InstanceID und Wildcard für ieeeAddr
+        $dateiNamePattern = $instanceID . '.json';
+
+        // Vollständiger Pfad mit Muster
+        $dateiPfad = $vollerPfad . $dateiNamePattern;
+
+        // Suche nach Dateien, die dem Muster entsprechen
+        $files = glob($dateiPfad);
+
+        // Überprüfung und Löschung der gefundenen Dateien
+        foreach ($files as $file) {
+            if (is_file($file)) {
+                if (unlink($file)) {
+                    $this->LogMessage("Datei erfolgreich gelöscht: $file", KL_SUCCESS);
+                } else {
+                    $this->LogMessage("Fehler beim Löschen der Datei: $file", KL_ERROR);
+                }
+            }
+        }
+    }
+
+    /**
      * UpdateDeviceInfo
      *
      * Exposes von der Erweiterung in Z2M anfordern und verarbeiten.
@@ -127,20 +173,6 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
         return true;
 
     }
-    
-    private function UpdateDeviceIcon(string $Model): void
-    {
-        $Url = 'https://raw.githubusercontent.com/Koenkk/zigbee2mqtt.io/master/public/images/devices/' . $Model . '.png';
-        $this->SendDebug('loadImage', $Url, 0);
-        $ImageRaw = @file_get_contents($Url);
-        if ($ImageRaw !== false) {
-            $Icon = 'data:image/png;base64,' . base64_encode($ImageRaw);
-            $this->WriteAttributeString('Icon', $Icon);
-            $this->WriteAttributeString('Model', $Model);
-        } else {
-            $this->LogMessage('Fehler beim Herunterladen des Icons von URL: ' . $Url, KL_WARNING);
-        }
-    }
 
     protected function SaveExposesToJson(array $Result): void
     {
@@ -170,49 +202,17 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
         }
     }
 
-    /**
-     * Destroy
-     *
-     * Diese Methode wird aufgerufen, wenn die Instanz gelöscht wird.
-     * Sie sorgt dafür, dass die zugehörige .json-Datei entfernt wird.
-     *
-     * @return void
-     */
-    public function Destroy()
+    private function UpdateDeviceIcon(string $Model): void
     {
-        // Wichtig: Zuerst die Parent Destroy Methode aufrufen
-        parent::Destroy();
-
-        // Holen der InstanceID
-        $instanceID = $this->InstanceID;
-
-        // Holen des Kernel-Verzeichnisses
-        $kernelDir = IPS_GetKernelDir();
-
-        // Definieren des Verzeichnisnamens
-        $verzeichnisName = 'Zigbee2MQTTExposes';
-
-        // Konstruktion des vollständigen Pfads zum Verzeichnis
-        $vollerPfad = $kernelDir . $verzeichnisName . DIRECTORY_SEPARATOR;
-
-        // Konstruktion des erwarteten Dateinamens mit InstanceID und Wildcard für ieeeAddr
-        $dateiNamePattern = $instanceID . '.json';
-
-        // Vollständiger Pfad mit Muster
-        $dateiPfad = $vollerPfad . $dateiNamePattern;
-
-        // Suche nach Dateien, die dem Muster entsprechen
-        $files = glob($dateiPfad);
-
-        // Überprüfung und Löschung der gefundenen Dateien
-        foreach ($files as $file) {
-            if (is_file($file)) {
-                if (unlink($file)) {
-                    $this->LogMessage("Datei erfolgreich gelöscht: $file", KL_SUCCESS);
-                } else {
-                    $this->LogMessage("Fehler beim Löschen der Datei: $file", KL_ERROR);
-                }
-            }
+        $Url = 'https://raw.githubusercontent.com/Koenkk/zigbee2mqtt.io/master/public/images/devices/' . $Model . '.png';
+        $this->SendDebug('loadImage', $Url, 0);
+        $ImageRaw = @file_get_contents($Url);
+        if ($ImageRaw !== false) {
+            $Icon = 'data:image/png;base64,' . base64_encode($ImageRaw);
+            $this->WriteAttributeString('Icon', $Icon);
+            $this->WriteAttributeString('Model', $Model);
+        } else {
+            $this->LogMessage('Fehler beim Herunterladen des Icons von URL: ' . $Url, KL_WARNING);
         }
     }
 }

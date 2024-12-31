@@ -290,21 +290,21 @@ class Zigbee2MQTTBridge extends IPSModule
      */
     public function InstallSymconExtension()
     {
-        //todo -> 
+        //todo ->
         // /bridge/request/extension/get gibt es nicht....
         // und die Z2M/ZH Version ist ausschlaggebend
-        /*       
+        /*
         $Topic = '/bridge/request/extension/get';
         $Payload = ['name' => 'IPSymconExtension'];
         $Result = $this->SendData($Topic, $Payload);
-        
+
         if ($Result) {
             // Response auswerten und Version extrahieren
             $Response = json_decode($Result, true);
             if (isset($Response['data'])) {
                 // JavaScript ausführen um Version zu erhalten
                 $version = $Response['data']['version'] ?? null;
-                
+
                 if ($version && version_compare($version, '4.6', '<')) {
                     $this->LogMessage('Installation nicht erforderlich - Version ' . $version . ' > 4.5.3', KL_NOTIFY);
                     return true;
@@ -313,7 +313,7 @@ class Zigbee2MQTTBridge extends IPSModule
         }
 
         // Installation nur durchführen wenn Version <= 4.6 oder Version nicht ermittelbar
-        */
+         */
         if (empty($this->ExtensionName)) {
             $ExtensionName = 'IPSymconExtension.js';
         }
