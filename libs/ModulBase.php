@@ -2600,7 +2600,7 @@ abstract class ModulBase extends \IPSModule
      * @param string|null $exposeType Optionaler Expose-Typ
      * @return void
      */
-    private function registerVariable($feature, $exposeType = null)
+    private function registerVariable($feature, $exposeType = null): ?bool
     {
         // Während Migration keine Variablen erstellen
         if($this->GetBuffer(self::BUFFER_KEYS['PROCESSING_MIGRATION']) === 'true') {
@@ -2823,7 +2823,7 @@ abstract class ModulBase extends \IPSModule
      * ];
      * $this->registerPresetVariables($presets, 'Brightness', 'int', ['property' => 'brightness', 'name' => 'Brightness']);
      */
-    private function registerPresetVariables(array $presets, string $label, string $variableType, array $feature)
+    private function registerPresetVariables(array $presets, string $label, string $variableType, array $feature): ?bool
     {
         // Während Migration keine Variablen erstellen
         if($this->GetBuffer(self::BUFFER_KEYS['PROCESSING_MIGRATION']) === 'true') {
