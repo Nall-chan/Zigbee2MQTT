@@ -39,7 +39,6 @@ class MyLogger {
 }
 
 class IPSymconExtension {
-    static VERSION = '4.6';  // Statische Versionsvariable
     constructor(zigbee, mqtt, state, publishEntityState, eventBus, enableDisableExtension, restartCallback, addExtension, settings, baseLogger) {
         this.zigbee = zigbee;
         this.mqtt = mqtt;
@@ -52,10 +51,6 @@ class IPSymconExtension {
         this.symconExtensionTopic = 'SymconExtension';
         this.eventBus.onMQTTMessage(this, this.onMQTTMessage.bind(this));
         this.logger.info('Loaded IP-Symcon Extension');
-    }
-    // Getter-Methode für die Version
-    static getVersion() {
-        return IPSymconExtension.VERSION;
     }
 
     async start() {
