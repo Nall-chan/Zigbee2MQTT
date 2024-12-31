@@ -750,7 +750,7 @@ abstract class ModulBase extends \IPSModule
             }
 
             // Allgemeine Variablen verarbeiten
-            $this->processVariable($key, $value, $payloadWithTypes, $knownVariables);
+            $this->processVariable($key, $value, $knownVariables);
         }
         return '';
     }
@@ -1025,7 +1025,7 @@ abstract class ModulBase extends \IPSModule
      * @param array $knownVariables Eine Liste der bekannten Variablen, die zur Verarbeitung verwendet werden.
      * @return void
      */
-    private function processVariable($key, $value, $payload, $knownVariables)
+    private function processVariable($key, $value, $knownVariables)
     {
         $lowerKey = strtolower($key);
         $ident = $key;
@@ -1046,10 +1046,6 @@ abstract class ModulBase extends \IPSModule
 
         // Restliche Logik für neue Variablen aus JSON...
         $variableProps = $knownVariables[$lowerKey];
-
-        // Rest der bestehenden Methode...
-        $variableProps = $knownVariables[$lowerKey];
-        $ident = $key;
 
         // Spezielle Behandlung für Brightness in Lichtgruppen
         foreach (self::$VariableUseStandardProfile as $profile) {
