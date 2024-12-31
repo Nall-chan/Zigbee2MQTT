@@ -975,7 +975,8 @@
             "X Axis": "X Achse",
             "Y Axis": "Y Achse",
             "Z Axis": "Z Achse",
-            "Zigbee2MQTT did not response on Topic %s": "Zigbee2MQTT antwortet nicht auf Topic %s"
+            "Zigbee2MQTT did not response on Topic %s": "Zigbee2MQTT antwortet nicht auf Topic %s",
+            "Error on create folder: ": "Fehler beim Erstellen von dem Ordner: "
         }
     }
 }

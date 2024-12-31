@@ -180,50 +180,71 @@ abstract class ModulBase extends \IPSModule
     // Kernfunktionen
 
     /**
+     * Create
+     *
      * Wird einmalig beim Erstellen einer Instanz aufgerufen
      *
      * Führt folgende Aktionen aus:
-     * - Verbindet mit dem MQTT-Parent ({C6D2AEB3-6E1F-4B2E-8E69-3A1A00246850})
+     * - Verbindet mit der erstbesten MQTT-Server-Instanz
      * - Registriert Properties für MQTT-Basis-Topic und MQTT-Topic
      * - Initialisiert TransactionData Array
      * - Erstellt Zigbee2MQTTExposes Verzeichnis wenn nicht vorhanden
      * - Prüft und erstellt JSON-Datei für Geräteinfos
      *
-     * @return void
-     *
-     * @throws Exception Wenn das Zigbee2MQTTExposes Verzeichnis nicht erstellt werden kann
-     *
-     * @see checkAndCreateJsonFile()
      * @see ConnectParent()
      * @see RegisterPropertyString()
+     * @return void
      */
     public function Create()
     {
         //Never delete this line!
         parent::Create();
 
-        $this->ConnectParent('{C6D2AEB3-6E1F-4B2E-8E69-3A1A00246850}');
+        $this->ConnectParent(self::GUID_MQTT_SERVER);
         $this->RegisterPropertyString(self::MQTT_BASE_TOPIC, '');
         $this->RegisterPropertyString(self::MQTT_TOPIC, '');
         $this->TransactionData = [];
 
         // Vollständigen Pfad zum Verzeichnis erstellen
-        $neuesVerzeichnis = rtrim(IPS_GetKernelDir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'Zigbee2MQTTExposes';
+        $ExposeDirectory = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY;
 
         // Verzeichnis erstellen wenn nicht vorhanden
-        if (!is_dir($neuesVerzeichnis)) {
-            if (!mkdir($neuesVerzeichnis)) {
-                $this->SendDebug(__FUNCTION__, 'Fehler beim Erstellen des Verzeichnisses: ' . $neuesVerzeichnis, 0);
+        if (!is_dir($ExposeDirectory)) {
+            if (!mkdir($ExposeDirectory)) {
+                $this->SendDebug(__FUNCTION__, $this->Translate('Error on create folder: ') . $ExposeDirectory, 0);
             }
-        }
-
-        // JSON-Prüfung nur wenn MQTTTopic gesetzt
-        if (!empty($this->ReadPropertyString(self::MQTT_TOPIC))) {
-            $this->checkAndCreateJsonFile();
         }
     }
 
     /**
+     * Destroy
+     *
+     * Diese Methode wird aufgerufen, wenn die Instanz gelöscht wird.
+     * Sie sorgt dafür, dass die zugehörige .json-Datei entfernt wird.
+     *
+     * @return void
+     */
+    public function Destroy()
+    {
+        // Wichtig: Zuerst die Parent Destroy Methode aufrufen
+        parent::Destroy();
+
+        // Vollständiger Pfad zur JSON-Datei
+        $file = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY . DIRECTORY_SEPARATOR . $this->InstanceID . '.json';
+
+        // Überprüfung und Löschung der Datei
+        if (is_file($file)) {
+            if (unlink($file)) {
+                $this->LogMessage('Datei erfolgreich gelöscht: ' . $file, KL_SUCCESS);
+            } else {
+                $this->LogMessage('Fehler beim Löschen der Datei: ' . $file, KL_ERROR);
+            }
+        }
+    }
+    
+    /**
+     * ApplyChanges
+     *
      * Wird aufgerufen bei Änderungen in der Modulkonfiguration
      *
      * Führt folgende Aktionen aus:
@@ -238,20 +259,18 @@ abstract class ModulBase extends \IPSModule
      * - Parent muss aktiv sein
      * - System muss bereit sein (KR_READY)
      *
-     * @return void
-     *
-     * @throws Exception Bei fehlgeschlagener Filter-Konfiguration
-     *
      * @see SetReceiveDataFilter()
      * @see checkAndCreateJsonFile()
      * @see SetStatus()
+     *
+     * @return void
      */
     public function ApplyChanges()
     {
         //Never delete this line!
         parent::ApplyChanges();
 
-        $this->ConnectParent('{C6D2AEB3-6E1F-4B2E-8E69-3A1A00246850}');
+        $this->ConnectParent(self::GUID_MQTT_SERVER);
         $BaseTopic = $this->ReadPropertyString(self::MQTT_BASE_TOPIC);
         $MQTTTopic = $this->ReadPropertyString(self::MQTT_TOPIC);
         $this->TransactionData = [];
@@ -267,12 +286,12 @@ abstract class ModulBase extends \IPSModule
         $this->SendDebug('Filter', '.*(' . $Filter1 . '|' . $Filter2 . ').*', 0);
         $this->SetReceiveDataFilter('.*(' . $Filter1 . '|' . $Filter2 . ').*');
 
-        $this->SetStatus(IS_ACTIVE);
-
         // Nur ein UpdateDeviceInfo wenn Parent aktiv und System bereit
         if (($this->HasActiveParent()) && (IPS_GetKernelRunlevel() == KR_READY) && ($this->GetStatus() != IS_CREATING)) {
             $this->checkAndCreateJsonFile();
         }
+
+        $this->SetStatus(IS_ACTIVE);
     }
 
     /**
@@ -947,8 +966,8 @@ abstract class ModulBase extends \IPSModule
         $mqttTopic = $this->ReadPropertyString(self::MQTT_TOPIC);
         $fullTopic = implode('/', $topics);
 
-        if ($fullTopic === self::SYMCON_DEVICE_INFO . $mqttTopic ||
-            $fullTopic === self::SYMCON_GROUP_INFO . $mqttTopic) {
+        if ($fullTopic === self::SYMCON_DEVICE_INFO_RESPONSE . $mqttTopic ||
+            $fullTopic === self::SYMCON_GROUP_INFO_RESPONSE . $mqttTopic) {
             $payload = json_decode(mb_convert_encoding($messageData['Payload'], 'UTF-8', 'ISO-8859-1'), true);
             if (isset($payload['transaction'])) {
                 $this->UpdateTransaction($payload);
@@ -2408,7 +2427,6 @@ abstract class ModulBase extends \IPSModule
      */
     private function checkAndCreateJsonFile(): void
     {
-        $instanceID = $this->InstanceID;
         $mqttTopic = $this->ReadPropertyString(self::MQTT_TOPIC);
 
         // Erst prüfen ob MQTTTopic gesetzt ist
@@ -2417,14 +2435,11 @@ abstract class ModulBase extends \IPSModule
             return;
         }
 
-        $kernelDir = rtrim(IPS_GetKernelDir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
-        $verzeichnisName = 'Zigbee2MQTTExposes';
-        $vollerPfad = $kernelDir . $verzeichnisName . DIRECTORY_SEPARATOR;
-        $jsonFile = $vollerPfad . $instanceID . '.json';
+        $jsonFile = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY . DIRECTORY_SEPARATOR . $this->InstanceID . '.json';
 
         // Prüfe ob JSON existiert
         if (!file_exists($jsonFile)) {
-            $this->SendDebug(__FUNCTION__, 'JSON-Datei nicht gefunden für Instance: ' . $instanceID, 0);
+            $this->SendDebug(__FUNCTION__, 'JSON-Datei nicht gefunden für Instance: ' . $this->InstanceID, 0);
 
             // Nur fortfahren wenn Parent aktiv
             if (!$this->HasActiveParent()) {
@@ -2490,12 +2505,7 @@ abstract class ModulBase extends \IPSModule
      */
     private function getKnownVariables(): array
     {
-        $instanceID = $this->InstanceID;
-
-        $kernelDir = rtrim(IPS_GetKernelDir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
-        $verzeichnisName = 'Zigbee2MQTTExposes';
-        $vollerPfad = $kernelDir . $verzeichnisName . DIRECTORY_SEPARATOR;
-        $dateiPfadPattern = $vollerPfad . $instanceID . '.json';
+        $dateiPfadPattern = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY . DIRECTORY_SEPARATOR . $this->InstanceID . '.json';
 
         $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, 'Suche nach Dateien mit Muster: ' . $dateiPfadPattern, 0);
         $files = glob($dateiPfadPattern);

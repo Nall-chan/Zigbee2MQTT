@@ -48,6 +48,7 @@
             "Effect": "Effekt",
             "Get Device Infos": "Geräteinformationen abrufen",
             "Zigbee2MQTT did not response on Topic %s": "Zigbee2MQTT antwortet nicht auf Topic %s",
+            "Error on create folder: ":"Fehler beim Erstellen von dem Ordner: ",
             "Group not found. Check topic": "Gruppe nicht gefunden. Topic prüfen.",
             "Group Id": "Gruppen ID"
         }

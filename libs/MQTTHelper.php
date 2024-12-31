@@ -18,10 +18,15 @@ trait Constants
     /** @var string Topic für Verfügbarkeitsstatus */
     protected const AVAILABILITY_TOPIC = 'availability';
     /** @var string Topic für Geräteinfo-Antworten */
-    protected const SYMCON_DEVICE_INFO = 'SymconExtension/response/getDeviceInfo/';
+    protected const SYMCON_DEVICE_INFO_REQUEST = 'SymconExtension/request/getDeviceInfo/';
+    /** @var string Topic für Geräteinfo-Antworten */
+    protected const SYMCON_DEVICE_INFO_RESPONSE = 'SymconExtension/response/getDeviceInfo/';
     /** @var string Topic für Gruppeninfo-Antworten */
-    protected const SYMCON_GROUP_INFO = 'SymconExtension/response/getGroupInfo/';
-
+    protected const SYMCON_GROUP_INFO_REQUEST = 'SymconExtension/request/getGroupInfo/';
+    /** @var string Topic für Gruppeninfo-Antworten */
+    protected const SYMCON_GROUP_INFO_RESPONSE = 'SymconExtension/response/getGroupInfo/';
+    /** @var string GUID des MQTT Servers */
+    protected const GUID_MQTT_SERVER = '{C6D2AEB3-6E1F-4B2E-8E69-3A1A00246850}';
 }
 /**
  * @property array $TransactionData Array welches in einem Instanz-Buffer abgelegt wird und aktuelle Anfragen und Antworten von/zur Z2M Bridge enthält

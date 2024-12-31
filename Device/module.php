@@ -65,51 +65,6 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
         return json_encode($Form);
     }
 
-    /**
-     * Destroy
-     *
-     * Diese Methode wird aufgerufen, wenn die Instanz gelöscht wird.
-     * Sie sorgt dafür, dass die zugehörige .json-Datei entfernt wird.
-     *
-     * @return void
-     */
-    public function Destroy()
-    {
-        // Wichtig: Zuerst die Parent Destroy Methode aufrufen
-        parent::Destroy();
-
-        // Holen der InstanceID
-        $instanceID = $this->InstanceID;
-
-        // Holen des Kernel-Verzeichnisses
-        $kernelDir = IPS_GetKernelDir();
-
-        // Definieren des Verzeichnisnamens
-        $verzeichnisName = 'Zigbee2MQTTExposes';
-
-        // Konstruktion des vollständigen Pfads zum Verzeichnis
-        $vollerPfad = $kernelDir . $verzeichnisName . DIRECTORY_SEPARATOR;
-
-        // Konstruktion des erwarteten Dateinamens mit InstanceID und Wildcard für ieeeAddr
-        $dateiNamePattern = $instanceID . '.json';
-
-        // Vollständiger Pfad mit Muster
-        $dateiPfad = $vollerPfad . $dateiNamePattern;
-
-        // Suche nach Dateien, die dem Muster entsprechen
-        $files = glob($dateiPfad);
-
-        // Überprüfung und Löschung der gefundenen Dateien
-        foreach ($files as $file) {
-            if (is_file($file)) {
-                if (unlink($file)) {
-                    $this->LogMessage("Datei erfolgreich gelöscht: $file", KL_SUCCESS);
-                } else {
-                    $this->LogMessage("Fehler beim Löschen der Datei: $file", KL_ERROR);
-                }
-            }
-        }
-    }
 
     /**
      * UpdateDeviceInfo
@@ -127,7 +82,7 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
             return false;
         }
 
-        $Result = $this->SendData('/SymconExtension/request/getDeviceInfo/' . $mqttTopic);
+        $Result = $this->SendData(self::SYMCON_DEVICE_INFO_REQUEST . $mqttTopic);
 
         if (!$Result) {
             return false;
@@ -184,8 +139,8 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
         }
 
         // Definieren des Verzeichnisnamens
-        $kernelDir = rtrim(IPS_GetKernelDir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
-        $verzeichnisName = 'Zigbee2MQTTExposes';
+        $kernelDir = IPS_GetKernelDir();
+        $verzeichnisName = self::EXPOSES_DIRECTORY;
         $vollerPfad = $kernelDir . $verzeichnisName . DIRECTORY_SEPARATOR;
 
         if (!file_exists($vollerPfad) && !mkdir($vollerPfad, 0755, true)) {
