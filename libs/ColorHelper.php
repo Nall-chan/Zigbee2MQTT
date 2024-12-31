@@ -386,7 +386,7 @@ trait ColorHelper
      * @param  mixed $t ???
      * @return float
      */
-    private function hueToRGB($p, $q, $t): float
+    protected function hueToRGB($p, $q, $t): float
     {
         if ($t < 0) {
             $t += 1;
@@ -412,7 +412,7 @@ trait ColorHelper
      * @param int $hex Der HEX-Farbwert.
      * @return array Ein Array mit den Schlüsseln 'x' und 'y'.
      */
-    function HexToXY(int $hex): array
+    protected function HexToXY(int $hex): array
     {
         // HEX in RGB umwandeln
         $r = (($hex >> 16) & 0xFF) / 255.0;
@@ -486,17 +486,17 @@ trait ColorHelper
     }
 
     /**
- * Gibt den maximalen Helligkeitswert aus der Konfiguration zurück.
- *
- * Diese Methode liest die gespeicherte Helligkeitskonfiguration aus dem Buffer und
- * extrahiert den maximalen Helligkeitswert. Falls keine Konfiguration vorhanden ist
- * oder der Wert nicht gesetzt wurde, wird der Standardwert 255 zurückgegeben.
- *
- * @return int Der maximale Helligkeitswert (Standard: 255)
- */
-    private function getBrightnessMaxValue(): int
+     * Gibt den maximalen Helligkeitswert aus der Konfiguration zurück.
+     *
+     * Diese Methode liest die gespeicherte Helligkeitskonfiguration aus dem Buffer und
+     * extrahiert den maximalen Helligkeitswert. Falls keine Konfiguration vorhanden ist
+     * oder der Wert nicht gesetzt wurde, wird der Standardwert 255 zurückgegeben.
+     *
+     * @return int Der maximale Helligkeitswert (Standard: 255)
+     */
+    protected function getBrightnessMaxValue(): int
     {
         $config = json_decode($this->GetBuffer('brightnessConfig'), true);
-        return isset($config['max']) ? (int)$config['max'] : 255;
+        return isset($config['max']) ? (int) $config['max'] : 255;
     }
 }

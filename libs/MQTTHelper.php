@@ -5,10 +5,31 @@ declare(strict_types=1);
 namespace Zigbee2MQTT;
 
 /**
+ * Definition Konstanten
+ */
+trait Constants
+{
+    /** @var string Verzeichnisname für die Exposes JSON Dateien */
+    protected const EXPOSES_DIRECTORY = 'Zigbee2MQTTExposes';
+    /** @var string Basispfad für MQTT-Nachrichten */
+    protected const MQTT_BASE_TOPIC = 'MQTTBaseTopic';
+    /** @var string Spezifisches MQTT-Topic für dieses Gerät */
+    protected const MQTT_TOPIC = 'MQTTTopic';
+    /** @var string Topic für Verfügbarkeitsstatus */
+    protected const AVAILABILITY_TOPIC = 'availability';
+    /** @var string Topic für Geräteinfo-Antworten */
+    protected const SYMCON_DEVICE_INFO = 'SymconExtension/response/getDeviceInfo/';
+    /** @var string Topic für Gruppeninfo-Antworten */
+    protected const SYMCON_GROUP_INFO = 'SymconExtension/response/getGroupInfo/';
+
+}
+/**
  * @property array $TransactionData Array welches in einem Instanz-Buffer abgelegt wird und aktuelle Anfragen und Antworten von/zur Z2M Bridge enthält
  */
 trait SendData
 {
+    use Constants;
+
     /** @var mixed $MQTTDataArray
      *  Vorlage Daten Array zum versenden an einen MQTT-Splitter
      */
@@ -30,7 +51,7 @@ trait SendData
      */
     public function Command(string $topic, string $value)
     {
-        return $this->SendData('/' . $this->ReadPropertyString('MQTTTopic') . '/' . $topic, json_decode($value, true), 0);
+        return $this->SendData('/' . $this->ReadPropertyString(self::MQTT_TOPIC) . '/' . $topic, json_decode($value, true), 0);
     }
 
     /**
@@ -66,7 +87,7 @@ trait SendData
 
         $this->SendDebug(__FUNCTION__ . ':Topic', $Topic, 0);
         $this->SendDebug(__FUNCTION__ . ':Payload', json_encode($Payload), 0);
-        $DataJSON = self::BuildRequest($this->ReadPropertyString('MQTTBaseTopic') . $Topic, $Payload);
+        $DataJSON = self::BuildRequest($this->ReadPropertyString(self::MQTT_BASE_TOPIC) . $Topic, $Payload);
         $this->SendDataToParent($DataJSON);
 
         if ($Timeout) {

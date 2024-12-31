@@ -43,31 +43,29 @@ class Zigbee2MQTTGroup extends \Zigbee2MQTT\ModulBase
      */
     protected function UpdateDeviceInfo(): bool
     {
-        $mqttTopic = $this->ReadPropertyString('MQTTTopic');
+        $mqttTopic = $this->ReadPropertyString(self::MQTT_TOPIC);
         if (empty($mqttTopic)) {
-            IPS_LogMessage(__CLASS__, "MQTTTopic ist nicht gesetzt.");
+            $this->LogMessage('MQTTTopic ist nicht gesetzt.', KL_WARNING);
             return false;
         }
 
         $Result = $this->SendData('/SymconExtension/request/getGroupInfo/' . $mqttTopic);
-        $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__ . ' result', json_encode($Result), 0);
-
-        if ($Result === false) {
-            IPS_LogMessage(__CLASS__, "SendData für MQTTTopic '$mqttTopic' fehlgeschlagen.");
+        if (!$Result) {
             return false;
         }
+        $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__ . ' result', json_encode($Result), 0);
 
-        if (array_key_exists('foundGroup', $Result)) {
+        if (!array_key_exists('foundGroup', $Result)) {
+            trigger_error($this->Translate('Group not found. Check topic'), E_USER_NOTICE);
+            return false;
+
+        }
             unset($Result['foundGroup']);
             // Aufruf der Methode aus der ModulBase-Klasse
             $this->mapExposesToVariables($Result);
             $this->SaveExposesToJson($Result);
             return true;
         }
-
-        trigger_error($this->Translate('Group not found. Check topic'), E_USER_NOTICE);
-        return false;
-    }
 
     /**
      * SaveExposesToJson
@@ -78,38 +76,31 @@ class Zigbee2MQTTGroup extends \Zigbee2MQTT\ModulBase
      *
      * @return void
      */
-    private function SaveExposesToJson(array $Result): void
+    protected function SaveExposesToJson(array $Result): void
     {
-        // Definieren des Verzeichnisnamens
-        $verzeichnisName = 'Zigbee2MQTTExposes';
-        $kernelDir = rtrim(IPS_GetKernelDir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
-        $neuesVerzeichnis = $kernelDir . $verzeichnisName;
+        // JSON-Daten mit Pretty-Print erstellen
+        $jsonData = json_encode($Result, JSON_PRETTY_PRINT);
+        if ($jsonData === false) {
+            $this->LogMessage('Fehler beim JSON-Encoding: ' . json_last_error_msg(), KL_ERROR);
+            return;
+        }
 
-        // Gruppenspezifische Informationen
-        $groupID = $this->ReadPropertyInteger('GroupId');
-        if ($groupID === 0) {
-            IPS_LogMessage(__CLASS__, "GroupId ist nicht gesetzt. Exposes werden nicht gespeichert.");
+        // Definieren des Verzeichnisnamens
+        $kernelDir = rtrim(IPS_GetKernelDir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+        $verzeichnisName = 'Zigbee2MQTTExposes';
+        $vollerPfad = $kernelDir . $verzeichnisName . DIRECTORY_SEPARATOR;
+
+        if (!file_exists($vollerPfad) && !mkdir($vollerPfad, 0755, true)) {
+            $this->LogMessage('Fehler beim Erstellen des Verzeichnisses "' . $verzeichnisName . '"', KL_ERROR);
             return;
         }
 
         // Dateipfad für die JSON-Datei basierend auf InstanceID und groupID
-        $instanceID = $this->InstanceID;
-        $dateiPfad = $neuesVerzeichnis . DIRECTORY_SEPARATOR . $instanceID . '.json';
-
-        // JSON-Daten mit Pretty-Print erstellen
-        $jsonData = json_encode($Result, JSON_PRETTY_PRINT);
-        if ($jsonData === false) {
-            IPS_LogMessage(__CLASS__, "Fehler beim JSON-Encoding der Exposes für Gruppe ID '$groupID': " . json_last_error_msg());
-            return;
-        }
+        $dateiPfad = $vollerPfad . $this->InstanceID . '.json';
 
         // Schreiben der JSON-Daten in die Datei
-        if (file_put_contents($dateiPfad, $jsonData) !== false) {
-            IPS_LogMessage(__CLASS__, "Exposes erfolgreich als '{$instanceID}_{$groupID}.json' im Verzeichnis '$verzeichnisName' gespeichert.");
-            $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, "Datei erfolgreich geschrieben: " . $dateiPfad, 0);
-        } else {
-            IPS_LogMessage(__CLASS__, "Fehler beim Schreiben von '{$instanceID}_{$groupID}.json' im Verzeichnis '$verzeichnisName'.");
-            $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, "Fehler beim Schreiben der Datei: " . $dateiPfad, 0);
+        if (file_put_contents($dateiPfad, $jsonData) === false) {
+            $this->LogMessage('Fehler beim Schreiben der JSON-Datei.', KL_ERROR);
         }
     }
 
@@ -151,9 +142,9 @@ class Zigbee2MQTTGroup extends \Zigbee2MQTT\ModulBase
         foreach ($files as $file) {
             if (is_file($file)) {
                 if (unlink($file)) {
-                    IPS_LogMessage(__CLASS__, "Datei erfolgreich gelöscht: $file");
+                    $this->LogMessage('Datei erfolgreich gelöscht: ' . $file, KL_SUCCESS);
                 } else {
-                    IPS_LogMessage(__CLASS__, "Fehler beim Löschen der Datei: $file");
+                    $this->LogMessage('Fehler beim Löschen der Datei: ' . $file, KL_ERROR);
                 }
             }
         }

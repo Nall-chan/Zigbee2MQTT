@@ -23,59 +23,43 @@ abstract class ModulBase extends \IPSModule
     use VariableProfileHelper;
     use SendData;
 
-// Definition Konstanten und statische Arrays
-
     /**
-     * Konstanten und arrays für die MQTT und Symcon Integration
-     *
-     * Kommunikationskonstanten:
-     * @const string MQTT_BASE_TOPIC          Basispfad für MQTT-Nachrichten
-     * @const string MQTT_TOPIC               Spezifisches MQTT-Topic für dieses Gerät
-     * @const string AVAILABILITY_TOPIC       Topic für Verfügbarkeitsstatus
-     * @const string SYMCON_DEVICE_INFO      Pfad für Geräteinfo-Antworten
-     * @const string SYMCON_GROUP_INFO       Pfad für Gruppeninfo-Antworten
-     *
-     * Statusdefinitionen:
-     * @const int STATUS_INACTIVE            Gerät/Modul ist inaktiv (IS_INACTIVE)
-     * @const int STATUS_ACTIVE             Gerät/Modul ist aktiv (IS_ACTIVE)
-     * @const int STATUS_CREATING           Gerät/Modul wird erstellt (IS_CREATING)
-     *
-     * State Pattern Definition:
-     * @const array STATE_PATTERN           Definiert Nomenklatur für State-Variablen
-     *      Komponenten:
-     *      - BASE:     'state' (Basisbezeichner)
+     * @var array STATE_PATTERN
+     * Definiert Nomenklatur für State-Variablen
+     *      KEY:
+     *      - BASE     'state' (Basisbezeichner)
      *      - SUFFIX:   Zusatzbezeichner
      *          - NUMERIC:   _1, _2, etc.
      *          - DIRECTION: _left, _right
      *          - COMBINED:  _left_1, _right_2
-     *
-     *      Pattern-Typen:
      *      - MQTT:    Validiert MQTT-Payload (state, state_l1)
      *      - SYMCON:  Validiert Symcon-Variablen (state, stateL1)
      */
-    private const MQTT_BASE_TOPIC = 'MQTTBaseTopic';
-    private const MQTT_TOPIC = 'MQTTTopic';
-    private const STATUS_INACTIVE = IS_INACTIVE;
-    private const STATUS_ACTIVE = IS_ACTIVE;
-    private const STATUS_CREATING = IS_CREATING;
-    private const AVAILABILITY_TOPIC = 'availability';
-    private const SYMCON_DEVICE_INFO = 'SymconExtension/response/getDeviceInfo/';
-    private const SYMCON_GROUP_INFO = 'SymconExtension/response/getGroupInfo/';
     private const STATE_PATTERN = [
-        // Basis-Komponenten
-        'PREFIX' => '', 'BASE' => 'state', 'SUFFIX' => ['NUMERIC' => '_[0-9]+', 'DIRECTION' => '_(?:left|right)', 'COMBINED' => '_(?:left|right)_[0-9]+'],
-
-        // Fertige Pattern
+        'PREFIX' => '',
+        'BASE'   => 'state',
+        'SUFFIX' => [
+            'NUMERIC'   => '_[0-9]+',
+            'DIRECTION' => '_(?:left|right)',
+            'COMBINED'  => '_(?:left|right)_[0-9]+'
+        ],
         'MQTT' => '/^state(?:_[a-z0-9]+)?$/i',  // Für MQTT-Payload
         'SYMCON' => '/^[Ss]tate(?:(?:[Ll][0-9]+)|(?:[Ll]eft|[Rr]ight)(?:[Ll][0-9]+)?)?$/'
     ];
+
+    /**
+     * @var array BUFFER_KEYS
+     * Definiert die benutzen Namen für die Instanzbuffer
+     * - PROCESSING_MIGRATION true bei laufender Migration
+     * - MQTT_SUSPENDED MQTT true bei Nachrichten nicht verarbeiten
+     */
     private const BUFFER_KEYS = [
         'PROCESSING_MIGRATION' => 'processingMigration',
         'MQTT_SUSPENDED' => 'mqttSuspended'
     ];
 
-    /** @var array $floatUnits
-     * Erkennung Float
+    /**
+     * @var array FLOAT_UNITS
      * Entscheidet über Float oder Integer profile
      */
     private const FLOAT_UNITS = [
@@ -90,7 +74,8 @@ abstract class ModulBase extends \IPSModule
     /** @var string $ExtensionTopic Muss überschrieben werden für den ReceiveFilter */
     protected static $ExtensionTopic = '';
 
-    /** @var array<array{type: string, feature: string, profile: string, variableType: string}
+    /**
+     * @var array<array{type: string, feature: string, profile: string, variableType: string}
      * Ein Array, das Standardprofile für bestimmte Gerätetypen und Eigenschaften definiert.
      *
      * Jedes Element des Arrays enthält folgende Schlüssel:
@@ -129,17 +114,23 @@ abstract class ModulBase extends \IPSModule
     ];
 
     /**
+     * @var array<string,array{
+     *   type: int,
+     *   name: string,
+     *   profile: string,
+     *   scale?: float,
+     *   ident?: string,
+     *   enableAction: bool
+     *
      * Definiert spezielle Variablen mit vordefinierten Eigenschaften
      *
-     * Beispiel:
-     * @var array<string,array{
-     *   type: int,                 // VARIABLETYPE_* Konstante
-     *   name: string,              // Anzeigename der Variable
-     *   profile: string,           // Profilname oder leer
-     *   scale?: float,            // Optional: Skalierungsfaktor
-     *   ident?: string,           // Optional: Benutzerdefinierter Identifier
-     *   enableAction: bool        // Aktionen erlaubt (true/false)
-     * }>
+     * Schlüssel:
+     *   - type: int Variablentyp
+     *   - name: string Anzeigename der Variable
+     *   - profile: string Profilname oder leer
+     *   - scale?: float Optional: Skalierungsfaktor
+     *   - ident?: string Optional: Benutzerdefinierter Identifier
+     *   - enableAction: bool Aktionen erlaubt (true/false)
      */
     protected static $specialVariables = [
         'last_seen' => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Last Seen', 'profile' => '~UnixTimestamp', 'scale' => 0.001, 'enableAction' => false],
@@ -222,12 +213,12 @@ abstract class ModulBase extends \IPSModule
         // Verzeichnis erstellen wenn nicht vorhanden
         if (!is_dir($neuesVerzeichnis)) {
             if (!mkdir($neuesVerzeichnis)) {
-                $this->SendDebug(__FUNCTION__, "Fehler beim Erstellen des Verzeichnisses: " . $neuesVerzeichnis, 0);
+                $this->SendDebug(__FUNCTION__, 'Fehler beim Erstellen des Verzeichnisses: ' . $neuesVerzeichnis, 0);
             }
         }
 
         // JSON-Prüfung nur wenn MQTTTopic gesetzt
-        if (!empty($this->ReadPropertyString('MQTTTopic'))) {
+        if (!empty($this->ReadPropertyString(self::MQTT_TOPIC))) {
             $this->checkAndCreateJsonFile();
         }
     }
@@ -265,7 +256,7 @@ abstract class ModulBase extends \IPSModule
         $MQTTTopic = $this->ReadPropertyString(self::MQTT_TOPIC);
         $this->TransactionData = [];
         if (empty($BaseTopic) || empty($MQTTTopic)) {
-            $this->SetStatus(self::STATUS_INACTIVE);
+            $this->SetStatus(IS_INACTIVE);
             $this->SetReceiveDataFilter('NOTHING_TO_RECEIVE'); //block all
             return;
         }
@@ -276,11 +267,10 @@ abstract class ModulBase extends \IPSModule
         $this->SendDebug('Filter', '.*(' . $Filter1 . '|' . $Filter2 . ').*', 0);
         $this->SetReceiveDataFilter('.*(' . $Filter1 . '|' . $Filter2 . ').*');
 
-
-        $this->SetStatus(self::STATUS_ACTIVE);
+        $this->SetStatus(IS_ACTIVE);
 
         // Nur ein UpdateDeviceInfo wenn Parent aktiv und System bereit
-        if (($this->HasActiveParent()) && (IPS_GetKernelRunlevel() == KR_READY) && ($this->GetStatus() != self::STATUS_CREATING)) {
+        if (($this->HasActiveParent()) && (IPS_GetKernelRunlevel() == KR_READY) && ($this->GetStatus() != IS_CREATING)) {
             $this->checkAndCreateJsonFile();
         }
     }
@@ -312,7 +302,7 @@ abstract class ModulBase extends \IPSModule
      */
     public function RequestAction($ident, $value): void
     {
-        $this->SendDebug(__FUNCTION__, "Aufgerufen für Ident: $ident mit Wert: " . json_encode($value), 0);
+        $this->SendDebug(__FUNCTION__, 'Aufgerufen für Ident: ' . $ident . ' mit Wert: ' . json_encode($value), 0);
 
         $handled = match (true) {
             //Behandelt UpdateInfo
@@ -330,7 +320,7 @@ abstract class ModulBase extends \IPSModule
         };
         // Debug-Ausgabe bei nicht behandelten Ident
         if ($handled === false) {
-            $this->SendDebug(__FUNCTION__, "Keine passende Aktion für Ident: $ident gefunden", 0);
+            $this->SendDebug(__FUNCTION__, 'Keine passende Aktion für Ident: ' . $ident . ' gefunden', 0);
         }
     }
 
@@ -368,7 +358,7 @@ abstract class ModulBase extends \IPSModule
             return '';
         }
         // Instanz im CREATE-Status überspringen
-        if ($this->GetStatus() == self::STATUS_CREATING) {
+        if ($this->GetStatus() == IS_CREATING) {
             return '';
         }
         // Basis-Anforderungen validieren
@@ -415,9 +405,6 @@ abstract class ModulBase extends \IPSModule
         $this->SetBuffer(self::BUFFER_KEYS['MQTT_SUSPENDED'], 'true');
         $this->SetBuffer(self::BUFFER_KEYS['PROCESSING_MIGRATION'], 'true');
 
-        // Zuerst immer den Aufruf an die Elternklasse durchführen!
-        parent::Migrate($JSONData);
-
         // 1) Suche alle Kinder-Objekte dieser Instanz
         // 2) Prüfe, ob ihr Ident z. B. mit "Z2M_" beginnt
         // 3) Bilde den neuen Ident (snake_case) und setze ihn
@@ -443,14 +430,14 @@ abstract class ModulBase extends \IPSModule
             }
 
             // Neuen Ident bilden
-            $newIdent = $this->convertToSnakeCase($oldIdent);
+            $newIdent = self::convertToSnakeCase($oldIdent);
 
             // Versuchen zu setzen
             $result = @IPS_SetIdent($childID, $newIdent);
             if ($result === false) {
-                $this->LogMessage(__FUNCTION__ . " : Fehler: Ident '{$newIdent}' konnte nicht für Variable #{$childID} gesetzt werden!", KL_ERROR);
+                $this->LogMessage(__FUNCTION__ . ' : Fehler: Ident "' . $newIdent . '" konnte nicht für Variable #{$childID} gesetzt werden!', KL_ERROR);
             } else {
-                $this->LogMessage(__FUNCTION__ . " : Variable #{$childID}: '{$oldIdent}' wurde geändert zu '{$newIdent}'", KL_NOTIFY);
+                $this->LogMessage(__FUNCTION__ . ' : Variable #' . $childID . ': "' . $oldIdent . '" wurde geändert zu "' . $newIdent . '"', KL_NOTIFY);
             }
         }
 
@@ -467,7 +454,7 @@ abstract class ModulBase extends \IPSModule
      * - "color_temp" -> "color_temp"
      * - "brightnessABC" -> "brightness_a_b_c"
      */
-    private function convertToSnakeCase(string $oldIdent): string
+    private static function convertToSnakeCase(string $oldIdent): string
     {
         // 1) Prefix "Z2M_" entfernen
         $withoutPrefix = preg_replace('/^Z2M_/', '', $oldIdent);

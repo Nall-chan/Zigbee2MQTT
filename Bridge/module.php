@@ -29,7 +29,7 @@ class Zigbee2MQTTBridge extends IPSModule
         //Never delete this line!
         parent::Create();
         $this->ConnectParent('{C6D2AEB3-6E1F-4B2E-8E69-3A1A00246850}');
-        $this->RegisterPropertyString('MQTTBaseTopic', '');
+        $this->RegisterPropertyString(self::MQTT_BASE_TOPIC, '');
         $Version = 'unknown';
         $File = file(dirname(__DIR__) . '/libs/IPSymconExtension.js');
         $Start = strpos($File[2], 'Version: ');
@@ -54,7 +54,7 @@ class Zigbee2MQTTBridge extends IPSModule
         //Never delete this line!
         parent::ApplyChanges();
         $this->ConnectParent('{C6D2AEB3-6E1F-4B2E-8E69-3A1A00246850}');
-        $BaseTopic = $this->ReadPropertyString('MQTTBaseTopic');
+        $BaseTopic = $this->ReadPropertyString(self::MQTT_BASE_TOPIC);
         if (empty($BaseTopic)) {
             $this->SetStatus(IS_INACTIVE);
             $this->SetReceiveDataFilter('NOTHING_TO_RECEIVE'); //block all
@@ -102,7 +102,7 @@ class Zigbee2MQTTBridge extends IPSModule
             if ($this->actualExtensionVersion == $ExtVersion) {
                 $this->UpdateFormField('InstallExtension', 'enabled', false);
             } else {
-                if (!empty($BaseTopic)){
+                if (!empty($BaseTopic)) {
                     //$this->LogMessage($this->Translate('Symcon Extension in Zigbee2MQTT is outdated. Please update the extension.'), KL_ERROR);
                     @$this->InstallSymconExtension();
                 }
@@ -122,7 +122,7 @@ class Zigbee2MQTTBridge extends IPSModule
         if ($this->GetStatus() == IS_CREATING) {
             return '';
         }
-        $BaseTopic = $this->ReadPropertyString('MQTTBaseTopic');
+        $BaseTopic = $this->ReadPropertyString(self::MQTT_BASE_TOPIC);
         if (empty($BaseTopic)) {
             return '';
         }

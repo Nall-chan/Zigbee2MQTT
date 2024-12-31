@@ -74,60 +74,60 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
      */
     protected function UpdateDeviceInfo(): bool
     {
-        try {
-            $mqttTopic = $this->ReadPropertyString('MQTTTopic');
-            if (empty($mqttTopic)) {
-                IPS_LogMessage(__CLASS__, "MQTTTopic ist nicht gesetzt.");
-                return false;
-            }
 
-            $Result = $this->SendData('/SymconExtension/request/getDeviceInfo/' . $mqttTopic);
-            $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__ . ' result', json_encode($Result), 0);
-
-            if (empty($Result) || !is_array($Result)) {
-                IPS_LogMessage(__CLASS__, "Keine Daten empfangen für MQTTTopic '$mqttTopic'.");
-                return false;
-            }
-
-            if (!array_key_exists('ieeeAddr', $Result)) {
-                IPS_LogMessage(__CLASS__, "Keine IEEE-Adresse in der Antwort gefunden.");
-                return false;
-            }
-
-            // IEEE-Adresse verarbeiten
-            $currentIEEE = $this->ReadPropertyString('IEEE');
-            if (empty($currentIEEE) && ($currentIEEE !== $Result['ieeeAddr'])) {
-                IPS_SetProperty($this->InstanceID, 'IEEE', $Result['ieeeAddr']);
-                IPS_ApplyChanges($this->InstanceID);
-            }
-
-            // Model und Icon verarbeiten
-            if (array_key_exists('model', $Result) && $Result['model'] !== 'Unknown Model') {
-                $Model = $Result['model'];
-                if ($this->ReadAttributeString('Model') !== $Model) {
-                    $this->UpdateDeviceIcon($Model);
-                }
-            }
-
-            // JSON-Datei speichern
-            if (isset($Result['ieeeAddr']) && isset($Result['exposes'])) {
-                $this->SaveDeviceJSON($Result);
-            }
-
-            // Exposes verarbeiten
-            if (isset($Result['exposes'])) {
-                $this->mapExposesToVariables($Result['exposes']);
-                return true;
-            }
-
-            return false;
-
-        } catch (Exception $e) {
-            IPS_LogMessage(__CLASS__, "Fehler in UpdateDeviceInfo: " . $e->getMessage());
+        $mqttTopic = $this->ReadPropertyString(self::MQTT_TOPIC);
+        if (empty($mqttTopic)) {
+            $this->LogMessage('MQTTTopic ist nicht gesetzt.', KL_WARNING);
             return false;
         }
-    }
 
+        $Result = $this->SendData('/SymconExtension/request/getDeviceInfo/' . $mqttTopic);
+
+        if (!$Result) {
+            return false;
+        }
+
+        $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__ . ' result', json_encode($Result), 0);
+
+        if (!array_key_exists('ieeeAddr', $Result)) {
+            $this->LogMessage('Keine IEEE-Adresse in der Antwort gefunden.', KL_WARNING);
+            return false;
+        }
+
+        // IEEE-Adresse verarbeiten
+        $currentIEEE = $this->ReadPropertyString('IEEE');
+        if (empty($currentIEEE) && ($currentIEEE !== $Result['ieeeAddr'])) {
+            IPS_SetProperty($this->InstanceID, 'IEEE', $Result['ieeeAddr']);
+            IPS_ApplyChanges($this->InstanceID);
+        }
+
+        // Model und Icon verarbeiten
+        if (array_key_exists('model', $Result) && $Result['model'] !== 'Unknown Model') {
+            $Model = $Result['model'];
+            if ($this->ReadAttributeString('Model') !== $Model) {
+                $this->UpdateDeviceIcon($Model);
+            }
+        }
+
+        // JSON-Datei speichern
+        if (isset($Result['ieeeAddr']) && isset($Result['exposes'])) {
+            $this->SaveExposesToJson([
+                'symconId'  => $this->InstanceID,
+                'ieeeAddr'  => $Result['ieeeAddr'],
+                'model'     => $Result['model'],
+                'exposes'   => $Result['exposes']
+            ]);
+        }
+
+        // Exposes verarbeiten
+        if (!isset($Result['exposes'])) {
+            return false;
+        }
+        $this->mapExposesToVariables($Result['exposes']);
+        return true;
+
+    }
+    
     private function UpdateDeviceIcon(string $Model): void
     {
         $Url = 'https://raw.githubusercontent.com/Koenkk/zigbee2mqtt.io/master/public/images/devices/' . $Model . '.png';
@@ -138,37 +138,35 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
             $this->WriteAttributeString('Icon', $Icon);
             $this->WriteAttributeString('Model', $Model);
         } else {
-            IPS_LogMessage(__CLASS__, "Fehler beim Herunterladen des Icons von URL: $Url");
+            $this->LogMessage('Fehler beim Herunterladen des Icons von URL: ' . $Url, KL_WARNING);
         }
     }
 
-    private function SaveDeviceJSON(array $Result): void
+    protected function SaveExposesToJson(array $Result): void
     {
-        $dataToSave = [
-            'symconId'  => $this->InstanceID,
-            'ieeeAddr'  => $Result['ieeeAddr'],
-            'model'     => $Result['model'],
-            'exposes'   => $Result['exposes']
-        ];
-
-        $jsonData = json_encode($dataToSave, JSON_PRETTY_PRINT);
+        // JSON-Daten mit Pretty-Print erstellen
+        $jsonData = json_encode($Result, JSON_PRETTY_PRINT);
         if ($jsonData === false) {
-            IPS_LogMessage(__CLASS__, "Fehler beim JSON-Encoding: " . json_last_error_msg());
+            $this->LogMessage('Fehler beim JSON-Encoding: ' . json_last_error_msg(), KL_ERROR);
             return;
         }
 
+        // Definieren des Verzeichnisnamens
         $kernelDir = rtrim(IPS_GetKernelDir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
         $verzeichnisName = 'Zigbee2MQTTExposes';
         $vollerPfad = $kernelDir . $verzeichnisName . DIRECTORY_SEPARATOR;
 
         if (!file_exists($vollerPfad) && !mkdir($vollerPfad, 0755, true)) {
-            IPS_LogMessage(__CLASS__, "Fehler beim Erstellen des Verzeichnisses '$verzeichnisName'.");
+            $this->LogMessage('Fehler beim Erstellen des Verzeichnisses "' . $verzeichnisName . '"', KL_ERROR);
             return;
         }
 
+        // Dateipfad für die JSON-Datei basierend auf InstanceID und groupID
         $dateiPfad = $vollerPfad . $this->InstanceID . '.json';
+
+        // Schreiben der JSON-Daten in die Datei
         if (file_put_contents($dateiPfad, $jsonData) === false) {
-            IPS_LogMessage(__CLASS__, "Fehler beim Schreiben der JSON-Datei.");
+            $this->LogMessage('Fehler beim Schreiben der JSON-Datei.', KL_ERROR);
         }
     }
 
@@ -210,9 +208,9 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
         foreach ($files as $file) {
             if (is_file($file)) {
                 if (unlink($file)) {
-                    IPS_LogMessage(__CLASS__, "Datei erfolgreich gelöscht: $file");
+                    $this->LogMessage("Datei erfolgreich gelöscht: $file", KL_SUCCESS);
                 } else {
-                    IPS_LogMessage(__CLASS__, "Fehler beim Löschen der Datei: $file");
+                    $this->LogMessage("Fehler beim Löschen der Datei: $file", KL_ERROR);
                 }
             }
         }

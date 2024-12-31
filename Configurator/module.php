@@ -45,7 +45,7 @@ class Zigbee2MQTTConfigurator extends IPSModule
         //Never delete this line!
         parent::Create();
         $this->ConnectParent('{C6D2AEB3-6E1F-4B2E-8E69-3A1A00246850}');
-        $this->RegisterPropertyString('MQTTBaseTopic', '');
+        $this->RegisterPropertyString(self::MQTT_BASE_TOPIC, '');
         $this->TransactionData = [];
     }
 
@@ -59,7 +59,7 @@ class Zigbee2MQTTConfigurator extends IPSModule
         //Never delete this line!
         parent::ApplyChanges();
 
-        $BaseTopic = $this->ReadPropertyString('MQTTBaseTopic');
+        $BaseTopic = $this->ReadPropertyString(self::MQTT_BASE_TOPIC);
         if (empty($BaseTopic)) {
             $this->SetStatus(IS_INACTIVE);
             $this->SetReceiveDataFilter('NOTHING_TO_RECEIVE'); //block all
@@ -97,7 +97,7 @@ class Zigbee2MQTTConfigurator extends IPSModule
         if ($this->GetStatus() == IS_CREATING) {
             return '';
         }
-        $BaseTopic = $this->ReadPropertyString('MQTTBaseTopic');
+        $BaseTopic = $this->ReadPropertyString(self::MQTT_BASE_TOPIC);
         $Devices = [];
         $Groups = [];
         $Form = json_decode(file_get_contents(__DIR__ . '/form.json'), true);
@@ -127,7 +127,7 @@ class Zigbee2MQTTConfigurator extends IPSModule
             $BridgeIDs = array_filter(IPS_GetInstanceListByModuleID('{00160D82-9E2F-D1BD-6D0B-952F945332C5}'), [$this, 'FilterInstances']);
             $BridgeID = 0;
             foreach ($BridgeIDs as $BridgeID) {
-                if (@IPS_GetProperty($BridgeID, 'MQTTBaseTopic') == $BaseTopic) {
+                if (@IPS_GetProperty($BridgeID, self::MQTT_BASE_TOPIC) == $BaseTopic) {
                     break;
                 }
             }
@@ -197,9 +197,9 @@ class Zigbee2MQTTConfigurator extends IPSModule
                     'moduleID'      => '{E5BB36C6-A70B-EB23-3716-9151A09AC8A2}',
                     'location'      => $Location,
                     'configuration' => [
-                        'MQTTBaseTopic'    => $BaseTopic,
-                        'MQTTTopic'        => $device['friendly_name'],
-                        'IEEE'             => $device['ieeeAddr']
+                        self::MQTT_BASE_TOPIC    => $BaseTopic,
+                        self::MQTT_TOPIC         => $device['friendly_name'],
+                        'IEEE'                   => $device['ieeeAddr']
                     ]
                 ];
             array_push($ValuesDevices, $Value);
@@ -292,9 +292,9 @@ class Zigbee2MQTTConfigurator extends IPSModule
                     'moduleID'      => '{11BF3773-E940-469B-9DD7-FB9ACD7199A2}',
                     'location'      => $Location,
                     'configuration' => [
-                        'MQTTBaseTopic'    => $BaseTopic,
-                        'MQTTTopic'        => $group['friendly_name'],
-                        'GroupId'          => $group['ID']
+                        self::MQTT_BASE_TOPIC    => $BaseTopic,
+                        self::MQTT_TOPIC         => $group['friendly_name'],
+                        'GroupId'                => $group['ID']
                     ]
                 ];
             array_push($ValuesGroups, $Value);
@@ -352,7 +352,7 @@ class Zigbee2MQTTConfigurator extends IPSModule
         if ($this->GetStatus() == IS_CREATING) {
             return '';
         }
-        $BaseTopic = $this->ReadPropertyString('MQTTBaseTopic');
+        $BaseTopic = $this->ReadPropertyString(self::MQTT_BASE_TOPIC);
         if (empty($BaseTopic)) {
             return '';
         }
@@ -510,7 +510,7 @@ class Zigbee2MQTTConfigurator extends IPSModule
         $InstanceIDList = array_filter(IPS_GetInstanceListByModuleID($GUID), [$this, 'FilterInstances']);
         foreach ($InstanceIDList as $InstanceID) {
             if (@IPS_GetProperty($InstanceID, 'MQTTBaseTopic') == $BaseTopic) {
-                $Devices[$InstanceID] = @IPS_GetProperty($InstanceID, 'MQTTTopic');
+                $Devices[$InstanceID] = @IPS_GetProperty($InstanceID, self::MQTT_TOPIC);
             }
         }
         return $Devices;
