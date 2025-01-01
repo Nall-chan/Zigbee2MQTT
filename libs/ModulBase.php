@@ -201,6 +201,8 @@ abstract class ModulBase extends \IPSModule
      * - Erstellt Zigbee2MQTTExposes Verzeichnis wenn nicht vorhanden
      * - Prüft und erstellt JSON-Datei für Geräteinfos
      *
+     * @throws Exception Error on create Expose Directory
+     *
      * @see ConnectParent()
      * @see RegisterPropertyString()
      * @return void
@@ -216,15 +218,8 @@ abstract class ModulBase extends \IPSModule
         $this->RegisterAttributeFloat(self::ATTRIBUTE_MODUL_VERSION, 5.0);
         $this->TransactionData = [];
 
-        // Vollständigen Pfad zum Verzeichnis erstellen
-        $ExposeDirectory = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY;
+        self::createExposesDirectory();
 
-        // Verzeichnis erstellen wenn nicht vorhanden
-        if (!is_dir($ExposeDirectory)) {
-            if (!mkdir($ExposeDirectory)) {
-                $this->SendDebug(__FUNCTION__, $this->Translate('Error on create folder: ') . $ExposeDirectory, 0);
-            }
-        }
         // Statische Profile
         $this->RegisterProfileBoolean(
             'Z2M.DeviceStatus',
@@ -257,15 +252,15 @@ abstract class ModulBase extends \IPSModule
         // Nur wenn Instanz gelöscht wurde.
         if (!IPS_InstanceExists($this->InstanceID)) {
             // Vollständiger Pfad zur JSON-Datei
-            $file = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY . DIRECTORY_SEPARATOR . $this->InstanceID . '.json';
+            $jsonFile = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY . DIRECTORY_SEPARATOR . $this->InstanceID . '.json';
 
             // Überprüfung und Löschung der Datei
-            if (is_file($file)) {
-                if (unlink($file)) {
+            if (is_file($jsonFile)) {
+                if (unlink($jsonFile)) {
                     // us
-                    IPS_LogMessage(__CLASS__, 'File successfully deleted: ' . $file);
+                    IPS_LogMessage(__CLASS__, 'File successfully deleted: ' . $jsonFile);
                 } else {
-                    IPS_LogMessage(__CLASS__, 'Error on delete file: ' . $file);
+                    IPS_LogMessage(__CLASS__, 'Error on delete file: ' . $jsonFile);
                 }
             }
         }
@@ -318,6 +313,7 @@ abstract class ModulBase extends \IPSModule
 
         // Nur ein UpdateDeviceInfo wenn Parent aktiv und System bereit
         if (($this->HasActiveParent()) && (IPS_GetKernelRunlevel() == KR_READY) && ($this->GetStatus() != IS_CREATING)) {
+            /** @todo Muss die Datei nicht neu geladen werden, wenn sich die IEEE Adresse ändert? */
             $this->checkAndCreateJsonFile();
         }
 
@@ -855,6 +851,8 @@ abstract class ModulBase extends \IPSModule
      * Die JSON-Datei wird im Format "InstanzID.json" im Verzeichnis "Zigbee2MQTTExposes" gespeichert
      * und enthält die Expose-Informationen des Zigbee-Geräts.
      *
+     * @throws Exception Error on create Expose Directory
+     *
      * @param  array $Result
      * @return bool
      */
@@ -868,24 +866,32 @@ abstract class ModulBase extends \IPSModule
         }
 
         // Definieren des Verzeichnisnamens
-        $kernelDir = IPS_GetKernelDir();
-        $verzeichnisName = self::EXPOSES_DIRECTORY;
-        $vollerPfad = $kernelDir . $verzeichnisName . DIRECTORY_SEPARATOR;
-
-        if (!file_exists($vollerPfad) && !mkdir($vollerPfad, 0755, true)) {
-            $this->LogMessage('Fehler beim Erstellen des Verzeichnisses "' . $verzeichnisName . '"', KL_ERROR);
-            return false;
-        }
-
-        // Dateipfad für die JSON-Datei basierend auf InstanceID und groupID
-        $dateiPfad = $vollerPfad . $this->InstanceID . '.json';
+        $jsonFile = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY . DIRECTORY_SEPARATOR . $this->InstanceID . '.json';
 
         // Schreiben der JSON-Daten in die Datei
-        if (file_put_contents($dateiPfad, $jsonData) === false) {
+        if (file_put_contents($jsonFile, $jsonData) === false) {
             $this->LogMessage('Fehler beim Schreiben der JSON-Datei.', KL_ERROR);
             return false;
         }
         return true;
+    }
+
+    /**
+     * createExposesDirectory
+     *
+     * @return bool
+     */
+    private static function createExposesDirectory()
+    {
+        // Vollständigen Pfad zum Verzeichnis erstellen
+        $ExposeDirectory = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY;
+
+        // Verzeichnis erstellen wenn nicht vorhanden
+        if (!is_dir($ExposeDirectory)) {
+            if (!mkdir($ExposeDirectory)) {
+                throw new \Exception('Error on create Expose Directory');
+            }
+        }
     }
 
     /**
@@ -1647,7 +1653,7 @@ abstract class ModulBase extends \IPSModule
                     return null;
                 }
             },
-            default => throw new InvalidArgumentException('Invalid color mode: ' . $mode),
+            default => throw new \InvalidArgumentException('Invalid color mode: ' . $mode),
         };
 
         if ($Payload !== null) {
@@ -2561,51 +2567,41 @@ abstract class ModulBase extends \IPSModule
      */
     private function getKnownVariables(): array
     {
-        $dateiPfadPattern = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY . DIRECTORY_SEPARATOR . $this->InstanceID . '.json';
-
-        $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, 'Suche nach Dateien mit Muster: ' . $dateiPfadPattern, 0);
-        $files = glob($dateiPfadPattern);
-
-        if (empty($files)) {
-            $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, 'Keine JSON-Dateien gefunden, die dem Muster entsprechen: ' . $dateiPfadPattern, 0);
-            return [];
-        }
+        $jsonFile = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY . DIRECTORY_SEPARATOR . $this->InstanceID . '.json';
 
         $knownVariables = [];
 
-        foreach ($files as $dateiPfad) {
-            $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, 'Verarbeite Datei: ' . $dateiPfad, 0);
-            if (!file_exists($dateiPfad)) {
-                $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, 'JSON-Datei nicht gefunden: ' . $dateiPfad, 0);
-                continue;
-            }
+        $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, 'Verarbeite Datei: ' . $jsonFile, 0);
+        if (!file_exists($jsonFile)) {
+            $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, 'JSON-Datei nicht gefunden: ' . $jsonFile, 0);
+            continue;
+        }
 
-            $jsonData = file_get_contents($dateiPfad);
-            $data = json_decode($jsonData, true);
+        $jsonData = file_get_contents($jsonFile);
+        $data = json_decode($jsonData, true);
 
-            if (json_last_error() !== JSON_ERROR_NONE || !isset($data['exposes'])) {
-                $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, 'Fehler beim Dekodieren der JSON-Datei oder fehlende "exposes" in Datei: ' . $dateiPfad . '. Fehler: ' . json_last_error_msg(), 0);
-                continue;
-            }
+        if (json_last_error() !== JSON_ERROR_NONE || !isset($data['exposes'])) {
+            $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, 'Fehler beim Dekodieren der JSON-Datei oder fehlende "exposes" in Datei: ' . $jsonFile . '. Fehler: ' . json_last_error_msg(), 0);
+            continue;
+        }
 
-            $exposes = $data['exposes'];
+        $exposes = $data['exposes'];
 
-            $features = array_map(function ($expose)
-            {
-                return isset($expose['features']) ? $expose['features'] : [$expose];
-            }, $exposes);
+        $features = array_map(function ($expose)
+        {
+            return isset($expose['features']) ? $expose['features'] : [$expose];
+        }, $exposes);
 
-            $features = array_merge(...$features);
+        $features = array_merge(...$features);
 
-            $filteredFeatures = array_filter($features, function ($feature)
-            {
-                return isset($feature['property']);
-            });
+        $filteredFeatures = array_filter($features, function ($feature)
+        {
+            return isset($feature['property']);
+        });
 
-            foreach ($filteredFeatures as $feature) {
-                $variableName = trim(strtolower($feature['property']));
-                $knownVariables[$variableName] = $feature;
-            }
+        foreach ($filteredFeatures as $feature) {
+            $variableName = trim(strtolower($feature['property']));
+            $knownVariables[$variableName] = $feature;
         }
 
         $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, 'Known Variables Array:', 0);
