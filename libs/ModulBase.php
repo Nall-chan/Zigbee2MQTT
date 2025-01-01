@@ -1123,9 +1123,8 @@ abstract class ModulBase extends \IPSModule
         }
         // light-Brightness kann immer das Profil ~Intensity.100 haben
         if ($ident === 'brightness') {
-            // Konvertiere 0-100 zurück zu Gerätebereich
-            $max_brightness = $this->getBrightnessMaxValue(); // Aus Expose-Daten holen
-            $deviceValue = $this->normalizeValueToRange($value, 0, 100, 0, $max_brightness);
+            // Konvertiere Prozentwert (0-100) in Gerätewert
+            $deviceValue = $this->normalizeValueToRange($value, null, null, 0, 100, true);
             $payload = ['brightness' => $deviceValue];
             $this->SendSetCommand($payload);
             return true;
@@ -1221,13 +1220,13 @@ abstract class ModulBase extends \IPSModule
                             'x' => $xy['x'],
                             'y' => $xy['y']
                         ],
-                        'brightness' => 255 // Beispielwert für Helligkeit
+                        'brightness' => 254 // Beispielwert für Helligkeit
                     ];
                     $this->SendSetCommand($payload);
                 } elseif (is_array($value)) {
                     // Prüfen auf x/y Werte im color Array
                     if (isset($value['color']) && isset($value['color']['x']) && isset($value['color']['y'])) {
-                        $brightness = $value['brightness'] ?? 255;
+                        $brightness = $value['brightness'] ?? 254;
                         $this->SendDebug(__FUNCTION__, 'Processing color with brightness: ' . $brightness, 0);
 
                         // Umrechnung der x und y Werte in einen HEX-Wert mit Helligkeit
@@ -1235,7 +1234,7 @@ abstract class ModulBase extends \IPSModule
                         $this->SetValueDirect('color', $hexValue);
                     } elseif (isset($value['x']) && isset($value['y'])) {
                         // Direkte x/y Werte
-                        $brightness = $value['brightness'] ?? 255;
+                        $brightness = $value['brightness'] ?? 254;
                         $hexValue = $this->XYToHex($value['x'], $value['y'], $brightness);
                         $this->SetValueDirect('color', $hexValue);
                     }
@@ -1665,9 +1664,8 @@ abstract class ModulBase extends \IPSModule
                 $this->SendDebug(__FUNCTION__, 'Converted value: ' . $adjustedValue, 0);
                 return $adjustedValue;
             case 'brightness':
-                // Konvertiere auf 0-100 Skala
-                $max_brightness = $this->getBrightnessMaxValue();
-                $adjustedValue = $this->normalizeValueToRange($value, 0, $max_brightness, 0, 100);
+                // Konvertiere Gerätewert in Prozentwert (0-100)
+                $adjustedValue = $this->normalizeValueToRange($value, null, null, 0, 100, false);
                 $this->SendDebug(__FUNCTION__, 'Converted brightness value: ' . $adjustedValue, 0);
                 return $adjustedValue;
             case 'voltage':
@@ -2576,7 +2574,7 @@ abstract class ModulBase extends \IPSModule
                         if ($feature['property'] === 'brightness') {
                             $brightnessConfig = [
                                 'min' => $feature['value_min'] ?? 0,
-                                'max' => $feature['value_max'] ?? 255
+                                'max' => $feature['value_max'] ?? 254
                             ];
                             $this->SetBuffer('brightnessConfig', json_encode($brightnessConfig));
                             $this->SendDebug(__FUNCTION__, 'Brightness Config: ' . json_encode($brightnessConfig), 0);
