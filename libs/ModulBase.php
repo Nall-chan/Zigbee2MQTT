@@ -256,19 +256,19 @@ abstract class ModulBase extends \IPSModule
     {
         // Nur wenn Instanz gelöscht wurde.
         if (!IPS_InstanceExists($this->InstanceID)) {
-        // Vollständiger Pfad zur JSON-Datei
-        $file = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY . DIRECTORY_SEPARATOR . $this->InstanceID . '.json';
+            // Vollständiger Pfad zur JSON-Datei
+            $file = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY . DIRECTORY_SEPARATOR . $this->InstanceID . '.json';
 
-        // Überprüfung und Löschung der Datei
-        if (is_file($file)) {
-            if (unlink($file)) {
-                // us
-                IPS_LogMessage(__CLASS__, 'File successfully deleted: ' . $file);
-            } else {
-                IPS_LogMessage(__CLASS__, 'Error on delete file: ' . $file);
+            // Überprüfung und Löschung der Datei
+            if (is_file($file)) {
+                if (unlink($file)) {
+                    // us
+                    IPS_LogMessage(__CLASS__, 'File successfully deleted: ' . $file);
+                } else {
+                    IPS_LogMessage(__CLASS__, 'Error on delete file: ' . $file);
+                }
             }
         }
-    }
         parent::Destroy();
     }
 
@@ -1475,8 +1475,8 @@ abstract class ModulBase extends \IPSModule
      */
     private function handleStringVariableNoResponse(string $ident, string $value): bool
     {
-            $this->SendDebug(__FUNCTION__, 'Behandlung String ohne Rückmeldung: ' . $ident, 0);
-            $payload = [$ident => $value];
+        $this->SendDebug(__FUNCTION__, 'Behandlung String ohne Rückmeldung: ' . $ident, 0);
+        $payload = [$ident => $value];
         if ($this->SendSetCommand($payload)) {
             $this->SetValue($ident, $value);
             return true;
@@ -2450,28 +2450,28 @@ abstract class ModulBase extends \IPSModule
          * @todo Hier stimmt noch was nicht. RegisterProfileFloatEx und IntegerEx können gleich alle Assoziationen verarbeiten und übersetzen schon.
          * Somit ist hier unnötiger Code zu entfernen
          */
-            if (!IPS_VariableProfileExists($profileName)) {
-                // Neues Profil anlegen
-                if ($variableType === 'float') {
-                    if (!$this->RegisterProfileFloatEx($profileName, '', '', '', [])) {
-                        $this->LogMessage(sprintf('%s: Could not create float profile %s', __FUNCTION__, $profileName), KL_DEBUG);
-                    }
-                } else {
-                    if (!$this->RegisterProfileIntegerEx($profileName, '', '', '', [])) {
-                        $this->LogMessage(sprintf('%s: Could not create integer profile %s', __FUNCTION__, $profileName), KL_DEBUG);
-                    }
+        if (!IPS_VariableProfileExists($profileName)) {
+            // Neues Profil anlegen
+            if ($variableType === 'float') {
+                if (!$this->RegisterProfileFloatEx($profileName, '', '', '', [])) {
+                    $this->LogMessage(sprintf('%s: Could not create float profile %s', __FUNCTION__, $profileName), KL_DEBUG);
+                }
+            } else {
+                if (!$this->RegisterProfileIntegerEx($profileName, '', '', '', [])) {
+                    $this->LogMessage(sprintf('%s: Could not create integer profile %s', __FUNCTION__, $profileName), KL_DEBUG);
                 }
             }
+        }
 
-            // Füge die Presets zum Profil hinzu
-            foreach ($presets as $preset) {
-                // Preset-Wert an den Variablentyp anpassen
-                $presetValue = ($variableType === 'float') ? floatval($preset['value']) : intval($preset['value']);
-                $presetName = $this->Translate(ucwords(str_replace('_', ' ', $preset['name'])));
+        // Füge die Presets zum Profil hinzu
+        foreach ($presets as $preset) {
+            // Preset-Wert an den Variablentyp anpassen
+            $presetValue = ($variableType === 'float') ? floatval($preset['value']) : intval($preset['value']);
+            $presetName = $this->Translate(ucwords(str_replace('_', ' ', $preset['name'])));
 
-                $this->SendDebug(__FUNCTION__, sprintf('Adding preset: %s with value %s', $presetName, $presetValue), 0);
-                IPS_SetVariableProfileAssociation($profileName, $presetValue, $presetName, '', -1);
-            }
+            $this->SendDebug(__FUNCTION__, sprintf('Adding preset: %s with value %s', $presetName, $presetValue), 0);
+            IPS_SetVariableProfileAssociation($profileName, $presetValue, $presetName, '', -1);
+        }
 
         return $profileName;
     }
@@ -2506,21 +2506,21 @@ abstract class ModulBase extends \IPSModule
         if (file_exists($jsonFile)) {
             return;
         }
-            $this->SendDebug(__FUNCTION__, 'JSON-Datei nicht gefunden für Instance: ' . $this->InstanceID, 0);
+        $this->SendDebug(__FUNCTION__, 'JSON-Datei nicht gefunden für Instance: ' . $this->InstanceID, 0);
 
-            // Nur fortfahren wenn Parent aktiv
-            if (!$this->HasActiveParent()) {
-                $this->SendDebug(__FUNCTION__, 'Parent nicht aktiv, überspringe UpdateDeviceInfo', 0);
-                return;
-            }
+        // Nur fortfahren wenn Parent aktiv
+        if (!$this->HasActiveParent()) {
+            $this->SendDebug(__FUNCTION__, 'Parent nicht aktiv, überspringe UpdateDeviceInfo', 0);
+            return;
+        }
 
         if (IPS_GetKernelRunlevel() != KR_READY) {
-                        return;
-                    }
+            return;
+        }
         $this->SendDebug(__FUNCTION__, 'Starte UpdateDeviceInfo für Topic: ' . $mqttTopic, 0);
         if (!$this->UpdateDeviceInfo()) {
             $this->SendDebug(__FUNCTION__, 'UpdateDeviceInfo fehlgeschlagen', 0);
-                }
+        }
 
     }
 

@@ -22,9 +22,6 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
         $this->RegisterPropertyString('IEEE', '');
         $this->RegisterAttributeString('Model', '');
         $this->RegisterAttributeString('Icon', '');
-
-        // Setze Standardstatus
-        $this->SetStatus(201); // Inaktiv bis IEEE konfiguriert
     }
 
     /**
@@ -34,27 +31,20 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
      */
     public function ApplyChanges()
     {
-        // Prüfe zuerst ob IEEE-Adresse vorhanden
         $ieee = $this->ReadPropertyString('IEEE');
+        $this->SetSummary($ieee);
+
         if (empty($ieee)) {
             $this->LogMessage('Keine IEEE-Adresse konfiguriert', KL_WARNING);
-            $this->SetStatus(201); // Instanz inaktiv
-            return;
         }
 
         // Führe parent::ApplyChanges zuerst aus
         parent::ApplyChanges();
 
-        // Setze Zusammenfassung nur wenn Instanz erfolgreich initialisiert
-        if ($this->GetStatus() == 102) { // 102 = aktiv
-            $this->SetSummary($ieee);
-        }
     }
 
     /**
      * GetConfigurationForm
-     *
-     * @todo Expertenbutton um Schreibschutz vom Feld ieeeAddr aufzuheben.
      *
      * @return string
      */
@@ -106,7 +96,7 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
         }
         if (!isset($Result['ieeeAddr'])) {
             $this->LogMessage($this->Translate('IEEE-Address missing.'), KL_WARNING);
-            $Result['ieeeAddr']='';
+            $Result['ieeeAddr'] = '';
         }
 
         // IEEE-Adresse bei Modulupdate von 4.x auf 5.x in der Instanz-Konfig ergänzen.
@@ -131,11 +121,11 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
 
         // JSON-Datei speichern
         $SaveResult = $this->SaveExposesToJson([
-                'symconId'  => $this->InstanceID,
-                'ieeeAddr'  => $Result['ieeeAddr'],
-                'model'     => $Result['model'],
-                'exposes'   => $Result['exposes']
-            ]);
+            'symconId'  => $this->InstanceID,
+            'ieeeAddr'  => $Result['ieeeAddr'],
+            'model'     => $Result['model'],
+            'exposes'   => $Result['exposes']
+        ]);
 
         $this->mapExposesToVariables($Result['exposes']);
         return $SaveResult;

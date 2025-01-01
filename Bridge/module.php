@@ -141,7 +141,7 @@ class Zigbee2MQTTBridge extends IPSModule
         $this->SendDebug('MQTT Payload', utf8_decode($Buffer['Payload']), 0);
         $Payload = json_decode(utf8_decode($Buffer['Payload']), true);
         switch ($Topic) {
-            case 'request': //nothing todo
+            case 'request': //nothing
                 break;
             case 'response': //response from request
                 if (isset($Payload['transaction'])) {

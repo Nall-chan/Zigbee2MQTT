@@ -48,7 +48,7 @@
             "type": "PopupAlert",
             "visible": false,
             "popup": {
-                "closeCaption":"Close",
+                "closeCaption": "Close",
                 "buttons": [
                     {
                         "caption": "I understand",
