@@ -18,15 +18,17 @@ trait Constants
     /** @var string Topic für Verfügbarkeit */
     protected const AVAILABILITY_TOPIC = 'availability';
     /** @var string Topic für die Extension-Anfragen */
-    protected const SYMCON_EXTENSION_REQUEST = 'SymconExtension/request/';
+    protected const SYMCON_EXTENSION_REQUEST = '/SymconExtension/request/';
     /** @var string Topic für die Extension-Antworten */
-    protected const SYMCON_EXTENSION_RESPONSE = 'SymconExtension/response/';
+    protected const SYMCON_EXTENSION_RESPONSE = '/SymconExtension/response/';
     /** @var string Topic für Extension Listen-Anfragen */
-    protected const SYMCON_EXTENSION_LIST_REQUEST = 'SymconExtension/lists/request/';
+    protected const SYMCON_EXTENSION_LIST_REQUEST = '/SymconExtension/lists/request/';
     /** @var string Topic für Extension Listen-Anfragen */
-    protected const SYMCON_EXTENSION_LIST_RESPONSE = 'SymconExtension/lists/response/';
+    protected const SYMCON_EXTENSION_LIST_RESPONSE = '/SymconExtension/lists/response/';
     /** @var string GUID des MQTT Servers */
     protected const GUID_MQTT_SERVER = '{C6D2AEB3-6E1F-4B2E-8E69-3A1A00246850}';
+    /** @var string Name des Attribut welches die Modul-Version enthält */
+    protected const ATTRIBUTE_MODUL_VERSION = 'Version';
 }
 /**
  * @property array $TransactionData Array welches in einem Instanz-Buffer abgelegt wird und aktuelle Anfragen und Antworten von/zur Z2M Bridge enthält
@@ -121,7 +123,7 @@ trait SendData
         $Sleep = intdiv($Timeout, 1000);
         for ($i = 0; $i < 1000; $i++) {
             $Buffer = $this->TransactionData;
-            if (!array_key_exists($TransactionId, $Buffer)) {
+            if (!isset($Buffer[$TransactionId])) {
                 return false;
             }
             if (count($Buffer[$TransactionId])) {
@@ -172,7 +174,7 @@ trait SendData
             throw new \Exception($this->Translate('TransactionData is locked'), E_USER_NOTICE);
         }
         $TransactionData = $this->TransactionData;
-        if (array_key_exists($Data['transaction'], $TransactionData)) {
+        if (isset($TransactionData[$Data['transaction']])) {
             $TransactionData[$Data['transaction']] = $Data;
             $this->TransactionData = $TransactionData;
             $this->unlock('TransactionData');

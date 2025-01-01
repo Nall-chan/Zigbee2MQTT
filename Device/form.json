@@ -17,10 +17,20 @@
                             "caption": "MQTT Topic"
                         },
                         {
-                            "type": "ValidationTextBox",
-                            "name": "IEEE",
-                            "caption": "IEEE Address",
-                            "enabled": false
+                            "type": "RowLayout",
+                            "items": [
+                                {
+                                    "type": "ValidationTextBox",
+                                    "name": "IEEE",
+                                    "caption": "IEEE Address",
+                                    "enabled": false
+                                },
+                                {
+                                    "type": "Button",
+                                    "label": "Change IEEE Address",
+                                    "onClick": "IPS_RequestAction($id, 'ShowIeeeEditWarning', true);"
+                                }
+                            ]
                         }
                     ]
                 },
@@ -34,6 +44,33 @@
     ],
     "actions": [
         {
+            "name": "IeeeWarning",
+            "type": "PopupAlert",
+            "visible": false,
+            "popup": {
+                "closeCaption":"Close",
+                "buttons": [
+                    {
+                        "caption": "I understand",
+                        "onClick": "IPS_RequestAction($id, 'EnableIeeeEdit', true);"
+                    }
+                ],
+                "items": [
+                    {
+                        "name": "ErrorTitle",
+                        "type": "Label",
+                        "bold": true,
+                        "caption": "Warning!"
+                    },
+                    {
+                        "name": "ErrorText",
+                        "type": "Label",
+                        "caption": "Please use this function carefully!\r\nAn incorrect IEEE address can lead to malfunctions."
+                    }
+                ]
+            }
+        },
+        {
             "type": "Button",
             "label": "Get Device Infos",
             "onClick": "IPS_RequestAction($id, 'UpdateInfo', true);"
@@ -43,11 +80,11 @@
         },
         {
             "type": "Label",
-            "caption": "Spenden / Schenkung"
+            "caption": "Donations"
         },
         {
             "type": "Label",
-            "caption": "Dieses Modul ist für die nicht kommerzielle Nutzung kostenlos, Schenkungen als Unterstützung für den Autor werden hier akzeptiert:    "
+            "caption": "This module is free for non-commercial use,\r\nDonations in support of the author are accepted here:"
         },
         {
             "type": "RowLayout",

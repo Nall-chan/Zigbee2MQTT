@@ -66,6 +66,26 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
     }
 
     /**
+     * RequestAction
+     *
+     * @param  string $ident
+     * @param  mixed $value
+     * @return void
+     */
+    public function RequestAction($ident, $value)
+    {
+        if ($ident == 'ShowIeeeEditWarning') {
+            $this->UpdateFormField('IeeeWarning', 'visible', true);
+            return;
+        }
+        if ($ident == 'EnableIeeeEdit') {
+            $this->UpdateFormField('IEEE', 'enabled', true);
+            return;
+        }
+        parent::RequestAction($ident, $value);
+    }
+
+    /**
      * UpdateDeviceInfo
      *
      * Exposes von der Erweiterung in Z2M anfordern und verarbeiten.
@@ -84,7 +104,7 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
             return false;
 
         }
-        if (!array_key_exists('ieeeAddr', $Result)) {
+        if (!isset($Result['ieeeAddr'])) {
             $this->LogMessage($this->Translate('IEEE-Address missing.'), KL_WARNING);
             $Result['ieeeAddr']='';
         }
@@ -97,7 +117,7 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
         }
 
         // Model und Icon verarbeiten
-        if (array_key_exists('model', $Result) && $Result['model'] !== 'Unknown Model') {
+        if (isset($Result['model']) && $Result['model'] !== 'Unknown Model') {
             $Model = $Result['model'];
             if ($this->ReadAttributeString('Model') !== $Model) {
                 $this->UpdateDeviceIcon($Model);
@@ -105,7 +125,7 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
         }
 
         // Exposes enthalten?
-        if (!array_key_exists('exposes', $Result)) {
+        if (!isset($Result['exposes'])) {
             return false;
         }
 

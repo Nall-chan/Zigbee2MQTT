@@ -37,6 +37,26 @@ class Zigbee2MQTTGroup extends \Zigbee2MQTT\ModulBase
     }
 
     /**
+     * RequestAction
+     *
+     * @param  string $ident
+     * @param  mixed $value
+     * @return void
+     */
+    public function RequestAction($ident, $value)
+    {
+        if ($ident == 'ShowGroupIdEditWarning') {
+            $this->UpdateFormField('GroupIdWarning', 'visible', true);
+            return;
+        }
+        if ($ident == 'EnableGroupIdEdit') {
+            $this->UpdateFormField('GroupId', 'enabled', true);
+            return;
+        }
+        parent::RequestAction($ident, $value);
+    }
+
+    /**
      * UpdateDeviceInfo
      *
      * Exposes von der Erweiterung in Z2M anfordern und verarbeiten.
@@ -50,7 +70,7 @@ class Zigbee2MQTTGroup extends \Zigbee2MQTT\ModulBase
         if (!$Result) {
             return false;
         }
-        if (!array_key_exists('foundGroup', $Result)) {
+        if (!isset($Result['foundGroup'])) {
             trigger_error($this->Translate('Group not found. Check topic.'), E_USER_NOTICE);
             return false;
 
