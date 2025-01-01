@@ -15,16 +15,16 @@ trait Constants
     protected const MQTT_BASE_TOPIC = 'MQTTBaseTopic';
     /** @var string Spezifisches MQTT-Topic für dieses Gerät */
     protected const MQTT_TOPIC = 'MQTTTopic';
-    /** @var string Topic für Verfügbarkeitsstatus */
+    /** @var string Topic für Verfügbarkeit */
     protected const AVAILABILITY_TOPIC = 'availability';
-    /** @var string Topic für Geräteinfo-Antworten */
-    protected const SYMCON_DEVICE_INFO_REQUEST = 'SymconExtension/request/getDeviceInfo/';
-    /** @var string Topic für Geräteinfo-Antworten */
-    protected const SYMCON_DEVICE_INFO_RESPONSE = 'SymconExtension/response/getDeviceInfo/';
-    /** @var string Topic für Gruppeninfo-Antworten */
-    protected const SYMCON_GROUP_INFO_REQUEST = 'SymconExtension/request/getGroupInfo/';
-    /** @var string Topic für Gruppeninfo-Antworten */
-    protected const SYMCON_GROUP_INFO_RESPONSE = 'SymconExtension/response/getGroupInfo/';
+    /** @var string Topic für die Extension-Anfragen */
+    protected const SYMCON_EXTENSION_REQUEST = 'SymconExtension/request/';
+    /** @var string Topic für die Extension-Antworten */
+    protected const SYMCON_EXTENSION_RESPONSE = 'SymconExtension/response/';
+    /** @var string Topic für Extension Listen-Anfragen */
+    protected const SYMCON_EXTENSION_LIST_REQUEST = 'SymconExtension/lists/request/';
+    /** @var string Topic für Extension Listen-Anfragen */
+    protected const SYMCON_EXTENSION_LIST_RESPONSE = 'SymconExtension/lists/response/';
     /** @var string GUID des MQTT Servers */
     protected const GUID_MQTT_SERVER = '{C6D2AEB3-6E1F-4B2E-8E69-3A1A00246850}';
 }
@@ -97,6 +97,7 @@ trait SendData
 
         if ($Timeout) {
             $Result = $this->WaitForTransactionEnd($TransactionId, $Timeout);
+            $this->SendDebug(__FUNCTION__ . ' :Result', json_encode($Result), 0);
             if ($Result === false) {
                 trigger_error(sprintf($this->Translate('Zigbee2MQTT did not response on Topic %s'), $Topic), E_USER_NOTICE);
                 return false;

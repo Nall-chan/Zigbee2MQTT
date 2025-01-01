@@ -74,27 +74,22 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
      */
     protected function UpdateDeviceInfo(): bool
     {
-
-        $mqttTopic = $this->ReadPropertyString(self::MQTT_TOPIC);
-        if (empty($mqttTopic)) {
-            $this->LogMessage('MQTTTopic ist nicht gesetzt.', KL_WARNING);
-            return false;
-        }
-
-        $Result = $this->SendData(self::SYMCON_DEVICE_INFO_REQUEST . $mqttTopic);
-
+        // Aufruf der Methode aus der ModulBase-Klasse
+        $Result = $this->LoadDeviceInfo();
         if (!$Result) {
             return false;
         }
-
-        $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__ . ' result', json_encode($Result), 0);
-
-        if (!array_key_exists('ieeeAddr', $Result)) {
-            $this->LogMessage('Keine IEEE-Adresse in der Antwort gefunden.', KL_WARNING);
+        if (!count($Result)) {
+            trigger_error($this->Translate('Device not found. Check topic.'), E_USER_NOTICE);
             return false;
+
+        }
+        if (!array_key_exists('ieeeAddr', $Result)) {
+            $this->LogMessage($this->Translate('IEEE-Address missing.'), KL_WARNING);
+            $Result['ieeeAddr']='';
         }
 
-        // IEEE-Adresse verarbeiten
+        // IEEE-Adresse bei Modulupdate von 4.x auf 5.x in der Instanz-Konfig ergänzen.
         $currentIEEE = $this->ReadPropertyString('IEEE');
         if (empty($currentIEEE) && ($currentIEEE !== $Result['ieeeAddr'])) {
             IPS_SetProperty($this->InstanceID, 'IEEE', $Result['ieeeAddr']);
@@ -109,51 +104,22 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
             }
         }
 
+        // Exposes enthalten?
+        if (!array_key_exists('exposes', $Result)) {
+            return false;
+        }
+
         // JSON-Datei speichern
-        if (isset($Result['ieeeAddr']) && isset($Result['exposes'])) {
-            $this->SaveExposesToJson([
+        $SaveResult = $this->SaveExposesToJson([
                 'symconId'  => $this->InstanceID,
                 'ieeeAddr'  => $Result['ieeeAddr'],
                 'model'     => $Result['model'],
                 'exposes'   => $Result['exposes']
             ]);
-        }
 
-        // Exposes verarbeiten
-        if (!isset($Result['exposes'])) {
-            return false;
-        }
         $this->mapExposesToVariables($Result['exposes']);
-        return true;
+        return $SaveResult;
 
-    }
-
-    protected function SaveExposesToJson(array $Result): void
-    {
-        // JSON-Daten mit Pretty-Print erstellen
-        $jsonData = json_encode($Result, JSON_PRETTY_PRINT);
-        if ($jsonData === false) {
-            $this->LogMessage('Fehler beim JSON-Encoding: ' . json_last_error_msg(), KL_ERROR);
-            return;
-        }
-
-        // Definieren des Verzeichnisnamens
-        $kernelDir = IPS_GetKernelDir();
-        $verzeichnisName = self::EXPOSES_DIRECTORY;
-        $vollerPfad = $kernelDir . $verzeichnisName . DIRECTORY_SEPARATOR;
-
-        if (!file_exists($vollerPfad) && !mkdir($vollerPfad, 0755, true)) {
-            $this->LogMessage('Fehler beim Erstellen des Verzeichnisses "' . $verzeichnisName . '"', KL_ERROR);
-            return;
-        }
-
-        // Dateipfad für die JSON-Datei basierend auf InstanceID und groupID
-        $dateiPfad = $vollerPfad . $this->InstanceID . '.json';
-
-        // Schreiben der JSON-Daten in die Datei
-        if (file_put_contents($dateiPfad, $jsonData) === false) {
-            $this->LogMessage('Fehler beim Schreiben der JSON-Datei.', KL_ERROR);
-        }
     }
 
     private function UpdateDeviceIcon(string $Model): void

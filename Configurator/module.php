@@ -67,7 +67,7 @@ class Zigbee2MQTTConfigurator extends IPSModule
         }
         $this->SetStatus(IS_ACTIVE);
         //Setze Filter für ReceiveData
-        $this->SetReceiveDataFilter('.*"Topic":"' . $BaseTopic . '/SymconExtension/lists/response.*');
+        $this->SetReceiveDataFilter('.*"Topic":"' . $BaseTopic . '/' . self::SYMCON_EXTENSION_LIST_REQUEST . '.*');
     }
 
     /**
@@ -365,14 +365,11 @@ class Zigbee2MQTTConfigurator extends IPSModule
 
         $ReceiveTopic = $Buffer['Topic'];
         $this->SendDebug('MQTT FullTopic', $ReceiveTopic, 0);
-        $Topic = substr($ReceiveTopic, strlen($BaseTopic . '/SymconExtension/lists/'));
-        $Topics = explode('/', $Topic);
-        $Topic = array_shift($Topics);
-        $this->SendDebug('MQTT Topic', $Topic, 0);
-        $this->SendDebug('MQTT Payload', utf8_decode($Buffer['Payload']), 0);
-        if ($Topic != 'response') {
+        if (strpos($ReceiveTopic, $BaseTopic . self::SYMCON_EXTENSION_LIST_RESPONSE) !== 0) {
             return '';
         }
+        $this->SendDebug('MQTT Topic', $ReceiveTopic, 0);
+        $this->SendDebug('MQTT Payload', utf8_decode($Buffer['Payload']), 0);
         $Payload = json_decode(utf8_decode($Buffer['Payload']), true);
         if (isset($Payload['transaction'])) {
             $this->UpdateTransaction($Payload);
@@ -387,7 +384,7 @@ class Zigbee2MQTTConfigurator extends IPSModule
      */
     public function getDevices()
     {
-        $Result = @$this->SendData('/SymconExtension/lists/request/getDevices');
+        $Result = @$this->SendData(self::SYMCON_EXTENSION_LIST_REQUEST . 'getDevices');
         if ($Result) {
             return $Result['list'];
         }
@@ -401,7 +398,7 @@ class Zigbee2MQTTConfigurator extends IPSModule
      */
     public function getGroups()
     {
-        $Result = @$this->SendData('/SymconExtension/lists/request/getGroups');
+        $Result = @$this->SendData(self::SYMCON_EXTENSION_LIST_REQUEST . 'getGroups');
         if ($Result) {
             return $Result['list'];
         }

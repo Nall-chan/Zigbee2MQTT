@@ -71,7 +71,14 @@ abstract class ModulBase extends \IPSModule
         'mH', 'µH', '%', 'dB', 'dBA', 'dBC'
     ];
 
-    /** @var string $ExtensionTopic Muss überschrieben werden für den ReceiveFilter */
+    /**
+     * @var string $ExtensionTopic
+     * Muss überschrieben werden.
+     * - für den ReceiveFilter
+     * - für LoadDeviceInfo
+     * - überall wo das Topic der Extension genutzt wird
+     *
+     */
     protected static $ExtensionTopic = '';
 
     /**
@@ -222,6 +229,10 @@ abstract class ModulBase extends \IPSModule
      * Diese Methode wird aufgerufen, wenn die Instanz gelöscht wird.
      * Sie sorgt dafür, dass die zugehörige .json-Datei entfernt wird.
      *
+     * Achtung: Methoden vom ipsmodule:: sind hier nicht mehr verfügbar!
+     * Darum muss hier IPS_LogMessage benutzt werden.
+     * Entsprechend ist auch kein Translate mehr verfügbar!
+     *
      * @return void
      */
     public function Destroy()
@@ -235,9 +246,10 @@ abstract class ModulBase extends \IPSModule
         // Überprüfung und Löschung der Datei
         if (is_file($file)) {
             if (unlink($file)) {
-                $this->LogMessage('Datei erfolgreich gelöscht: ' . $file, KL_SUCCESS);
+                // us
+                IPS_LogMessage(__CLASS__, 'File successfully deleted: ' . $file);
             } else {
-                $this->LogMessage('Fehler beim Löschen der Datei: ' . $file, KL_ERROR);
+                IPS_LogMessage(__CLASS__, 'Error on delete file: ' . $file);
             }
         }
     }
@@ -282,7 +294,7 @@ abstract class ModulBase extends \IPSModule
 
         //Setze Filter für ReceiveData
         $Filter1 = preg_quote('"Topic":"' . $BaseTopic . '/' . $MQTTTopic);
-        $Filter2 = preg_quote('"Topic":"' . $BaseTopic . '/SymconExtension/response/' . static::$ExtensionTopic . $MQTTTopic);
+        $Filter2 = preg_quote('"Topic":"' . $BaseTopic . self::SYMCON_EXTENSION_RESPONSE . static::$ExtensionTopic . $MQTTTopic);
         $this->SendDebug('Filter', '.*(' . $Filter1 . '|' . $Filter2 . ').*', 0);
         $this->SetReceiveDataFilter('.*(' . $Filter1 . '|' . $Filter2 . ').*');
 
@@ -319,7 +331,7 @@ abstract class ModulBase extends \IPSModule
      * @see handleStateVariable()
      * @see handleStandardVariable()
      */
-    public function RequestAction($ident, $value): void
+    public function RequestAction($ident, $value)
     {
         $this->SendDebug(__FUNCTION__, 'Aufgerufen für Ident: ' . $ident . ' mit Wert: ' . json_encode($value), 0);
 
@@ -767,6 +779,25 @@ abstract class ModulBase extends \IPSModule
     }
 
     /**
+     * LoadDeviceInfo
+     *
+     * @return array|bool Enthält die Antwort als Array, oder True bei inaktivem Timeout, oder false im Fehlerfall.
+     */
+    protected function LoadDeviceInfo()
+    {
+        $mqttTopic = $this->ReadPropertyString(self::MQTT_TOPIC);
+        if (empty($mqttTopic)) {
+            $this->LogMessage($this->Translate('MQTTTopic not configured.'), KL_WARNING);
+            return false;
+        }
+
+        $Result = $this->SendData(self::SYMCON_EXTENSION_REQUEST . static::$ExtensionTopic . $mqttTopic);
+
+        if (!$Result) {
+            return false;
+        }
+    }
+    /**
      * UpdateDeviceInfo
      *
      * Muss überschrieben werden
@@ -779,10 +810,40 @@ abstract class ModulBase extends \IPSModule
     /**
      * SaveExposesToJson
      *
+     * Speichert die Exposes in einer JSON-Datei.
+     *
      * @param  array $Result
-     * @return void
+     * @return bool
      */
-    abstract protected function SaveExposesToJson(array $Result): void;
+    protected function SaveExposesToJson(array $Result): bool
+    {
+        // JSON-Daten mit Pretty-Print erstellen
+        $jsonData = json_encode($Result, JSON_PRETTY_PRINT);
+        if ($jsonData === false) {
+            $this->LogMessage('Fehler beim JSON-Encoding: ' . json_last_error_msg(), KL_ERROR);
+            return false;
+        }
+
+        // Definieren des Verzeichnisnamens
+        $kernelDir = IPS_GetKernelDir();
+        $verzeichnisName = self::EXPOSES_DIRECTORY;
+        $vollerPfad = $kernelDir . $verzeichnisName . DIRECTORY_SEPARATOR;
+
+        if (!file_exists($vollerPfad) && !mkdir($vollerPfad, 0755, true)) {
+            $this->LogMessage('Fehler beim Erstellen des Verzeichnisses "' . $verzeichnisName . '"', KL_ERROR);
+            return false;
+        }
+
+        // Dateipfad für die JSON-Datei basierend auf InstanceID und groupID
+        $dateiPfad = $vollerPfad . $this->InstanceID . '.json';
+
+        // Schreiben der JSON-Daten in die Datei
+        if (file_put_contents($dateiPfad, $jsonData) === false) {
+            $this->LogMessage('Fehler beim Schreiben der JSON-Datei.', KL_ERROR);
+            return false;
+        }
+        return true;
+    }
 
     /**
      * Diese Hilfsfunktion entfernt das Prefix "Z2M_" und
@@ -966,8 +1027,7 @@ abstract class ModulBase extends \IPSModule
         $mqttTopic = $this->ReadPropertyString(self::MQTT_TOPIC);
         $fullTopic = implode('/', $topics);
 
-        if ($fullTopic === self::SYMCON_DEVICE_INFO_RESPONSE . $mqttTopic ||
-            $fullTopic === self::SYMCON_GROUP_INFO_RESPONSE . $mqttTopic) {
+        if ($fullTopic === self::SYMCON_EXTENSION_RESPONSE . static::$ExtensionTopic . $mqttTopic) {
             $payload = json_decode(mb_convert_encoding($messageData['Payload'], 'UTF-8', 'ISO-8859-1'), true);
             if (isset($payload['transaction'])) {
                 $this->UpdateTransaction($payload);
@@ -2438,7 +2498,9 @@ abstract class ModulBase extends \IPSModule
         $jsonFile = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY . DIRECTORY_SEPARATOR . $this->InstanceID . '.json';
 
         // Prüfe ob JSON existiert
-        if (!file_exists($jsonFile)) {
+        if (file_exists($jsonFile)) {
+            return;
+        }
             $this->SendDebug(__FUNCTION__, 'JSON-Datei nicht gefunden für Instance: ' . $this->InstanceID, 0);
 
             // Nur fortfahren wenn Parent aktiv
@@ -2447,25 +2509,14 @@ abstract class ModulBase extends \IPSModule
                 return;
             }
 
-            // Prüfe erneut Parent Status nach Wartezeit
-            if ($this->HasActiveParent() && (IPS_GetKernelRunlevel() == KR_READY)) {
-                $this->SendDebug(__FUNCTION__, 'Starte UpdateDeviceInfo für Topic: ' . $mqttTopic, 0);
-                if (!$this->UpdateDeviceInfo()) {
-                    $this->SendDebug(__FUNCTION__, 'UpdateDeviceInfo fehlgeschlagen - erster Versuch', 0);
-                    // Zweiter Versuch nach 3 Sekunden
-                    IPS_Sleep(20);
-                    if (!$this->UpdateDeviceInfo()) {
-                        $this->SendDebug(__FUNCTION__, 'UpdateDeviceInfo fehlgeschlagen - zweiter Versuch', 0);
+        if (IPS_GetKernelRunlevel() != KR_READY) {
                         return;
                     }
+        $this->SendDebug(__FUNCTION__, 'Starte UpdateDeviceInfo für Topic: ' . $mqttTopic, 0);
+        if (!$this->UpdateDeviceInfo()) {
+            $this->SendDebug(__FUNCTION__, 'UpdateDeviceInfo fehlgeschlagen', 0);
                 }
 
-                // Prüfe ob JSON erstellt wurde
-                if (!file_exists($jsonFile)) {
-                    $this->SendDebug(__FUNCTION__, 'JSON-Datei konnte nicht erstellt werden', 0);
-                }
-            }
-        }
     }
 
     /**
