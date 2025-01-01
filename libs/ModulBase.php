@@ -865,6 +865,8 @@ abstract class ModulBase extends \IPSModule
             return false;
         }
 
+        self::createExposesDirectory();
+
         // Definieren des Verzeichnisnamens
         $jsonFile = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY . DIRECTORY_SEPARATOR . $this->InstanceID . '.json';
 
