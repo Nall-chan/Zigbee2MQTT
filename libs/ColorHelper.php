@@ -473,30 +473,78 @@ trait ColorHelper
         return $kelvinValue;
     }
 
-    protected function normalizeValueToRange($value, $oldMin, $oldMax, $newMin = 0, $newMax = 100)
+    protected function normalizeValueToRange($value, $oldMin = null, $oldMax = null, $newMin = 0, $newMax = 100, $toDevice = true)
     {
-        // Vermeidung Division durch 0
-        if ($oldMin == $oldMax) return $newMin;
+        // Wenn keine Min/Max Werte übergeben wurden, hole sie aus der Konfiguration
+        if ($oldMin === null) {
+            $oldMin = $this->getBrightnessValue('min');
+        }
+        if ($oldMax === null) {
+            $oldMax = $this->getBrightnessValue('max');
+        }
 
-        // Lineare Transformation
-        $normalizedValue = (($value - $oldMin) * ($newMax - $newMin)) / ($oldMax - $oldMin) + $newMin;
+        if ($toDevice) {
+            // Prozent -> Gerätewert
+            $this->SendDebug(__FUNCTION__, sprintf(
+                'Converting %d%% to device value (range %d-%d)',
+                $value,
+                $oldMin,
+                $oldMax
+            ), 0);
 
-        // Auf ganze Zahl runden
-        return max($newMin, min($newMax, round($normalizedValue)));
+            $value = max(0, min(100, $value));
+            // Konvertierung von Prozent (0-100) in Gerätewert (oldMin-oldMax)
+            $result = round(($value * ($oldMax - $oldMin) / 100) + $oldMin);
+        } else {
+            // Gerätewert -> Prozent
+            $this->SendDebug(__FUNCTION__, sprintf(
+                'Converting device value %d (range %d-%d) to percent',
+                $value,
+                $oldMin,
+                $oldMax
+            ), 0);
+
+            $value = max($oldMin, min($oldMax, $value));
+            $result = round((($value - $oldMin) * 100) / ($oldMax - $oldMin));
+        }
+
+        $this->SendDebug(__FUNCTION__, sprintf(
+            'Result: %d (%s)',
+            $result,
+            $toDevice ? 'device value' : 'percent'
+        ), 0);
+        return $result;
     }
 
     /**
-     * Gibt den maximalen Helligkeitswert aus der Konfiguration zurück.
+     * getBrightnessValue
+     *
+     * Gibt den maximalen und minimalen Helligkeitswert aus der Konfiguration zurück.
      *
      * Diese Methode liest die gespeicherte Helligkeitskonfiguration aus dem Buffer und
-     * extrahiert den maximalen Helligkeitswert. Falls keine Konfiguration vorhanden ist
-     * oder der Wert nicht gesetzt wurde, wird der Standardwert 255 zurückgegeben.
+     * extrahiert die max/min Helligkeitswerte. Falls keine Konfiguration vorhanden ist
+     * oder die Werte nicht gesetzt wurden, wird der Standardwert 0/254 zurückgegeben.
      *
-     * @return int Der maximale Helligkeitswert (Standard: 255)
+     * @return int Die min/max Helligkeitswerte (Standard: 0/254)
      */
-    protected function getBrightnessMaxValue(): int
+    private function getBrightnessValue(string $type = 'max'): int
     {
         $config = json_decode($this->GetBuffer('brightnessConfig'), true);
-        return isset($config['max']) ? (int) $config['max'] : 255;
+        $this->SendDebug(__FUNCTION__, 'Gelesene Brightness-Config: ' . print_r($config, true), 0);
+
+        $defaults = [
+            'min' => 0,
+            'max' => 254
+        ];
+
+        $value = isset($config[$type]) ? (int) $config[$type] : $defaults[$type];
+        $this->SendDebug(__FUNCTION__, sprintf(
+            'Brightness %s-Wert: %d (%s)',
+            $type,
+            $value,
+            isset($config[$type]) ? 'konfiguriert' : 'default'
+        ), 0);
+
+        return $value;
     }
 }
