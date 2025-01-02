@@ -23,6 +23,11 @@ abstract class ModulBase extends \IPSModule
     use VariableProfileHelper;
     use SendData;
 
+    /** @var string Name des Buffers für laufende Migration */
+    protected const BUFFER_PROCESSING_MIGRATION = 'processingMigration';
+    /** @var string Name des Buffers für MQTT Nachrichten nicht verarbeiten */
+    protected const BUFFER_MQTT_SUSPENDED = 'mqttSuspended';
+
     private const MINIMAL_MODUL_VERSION = 5.0;
 
     /**
@@ -47,17 +52,6 @@ abstract class ModulBase extends \IPSModule
         ],
         'MQTT'   => '/^state(?:_[a-z0-9]+)?$/i',  // Für MQTT-Payload
         'SYMCON' => '/^[Ss]tate(?:(?:[Ll][0-9]+)|(?:[Ll]eft|[Rr]ight)(?:[Ll][0-9]+)?)?$/'
-    ];
-
-    /**
-     * @var array BUFFER_KEYS
-     * Definiert die benutzen Namen für die Instanzbuffer
-     * - PROCESSING_MIGRATION true bei laufender Migration
-     * - MQTT_SUSPENDED MQTT true bei Nachrichten nicht verarbeiten
-     */
-    private const BUFFER_KEYS = [
-        'PROCESSING_MIGRATION' => 'processingMigration',
-        'MQTT_SUSPENDED'       => 'mqttSuspended'
     ];
 
     /**
@@ -253,7 +247,6 @@ abstract class ModulBase extends \IPSModule
         if (!IPS_InstanceExists($this->InstanceID)) {
             // Vollständiger Pfad zur JSON-Datei
             $jsonFile = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY . DIRECTORY_SEPARATOR . $this->InstanceID . '.json';
-
             // Überprüfung und Löschung der Datei
             if (is_file($jsonFile)) {
                 if (unlink($jsonFile)) {
@@ -404,30 +397,26 @@ abstract class ModulBase extends \IPSModule
     public function ReceiveData($JSONString)
     {
         // Während Migration keine MQTT Nachrichten verarbeiten
-        if ($this->GetBuffer(self::BUFFER_KEYS['MQTT_SUSPENDED']) === 'true') {
+        if ($this->GetBuffer(self::BUFFER_MQTT_SUSPENDED) === 'true') {
             return '';
         }
         // Instanz im CREATE-Status überspringen
         if ($this->GetStatus() == IS_CREATING) {
             return '';
         }
-
         // JSON-Nachricht dekodieren
         [$topics, $payload] = $this->validateAndParseMessage($JSONString);
         if (!$topics) {
             return '';
         }
-
         // Behandelt Verfügbarkeitsstatus
         if ($this->handleAvailability($topics, $payload)) {
             return '';
         }
-
         // Behandelt Symcon Extension Antworten
         if ($this->handleSymconExtensionResponses($topics, $payload)) {
             return '';
         }
-
         // Verarbeitet Payload
         return $this->processPayload($payload);
     }
@@ -459,13 +448,12 @@ abstract class ModulBase extends \IPSModule
         $j->attributes->{self::ATTRIBUTE_MODUL_VERSION} = self::MINIMAL_MODUL_VERSION;
 
         // Flag für laufende Migration setzen
-        $this->SetBuffer(self::BUFFER_KEYS['MQTT_SUSPENDED'], 'true');
-        $this->SetBuffer(self::BUFFER_KEYS['PROCESSING_MIGRATION'], 'true');
+        $this->SetBuffer(self::BUFFER_MQTT_SUSPENDED, 'true');
+        $this->SetBuffer(self::BUFFER_PROCESSING_MIGRATION, 'true');
 
         // 1) Suche alle Kinder-Objekte dieser Instanz
         // 2) Prüfe, ob ihr Ident z. B. mit "Z2M_" beginnt
         // 3) Bilde den neuen Ident (snake_case) und setze ihn
-
         $childrenIDs = IPS_GetChildrenIDs($this->InstanceID);
         foreach ($childrenIDs as $childID) {
             // Nur weitermachen, wenn es sich um eine Variable handelt
@@ -497,8 +485,8 @@ abstract class ModulBase extends \IPSModule
         }
 
         // Flag für beendete Migration wieder setzen
-        $this->SetBuffer(self::BUFFER_KEYS['MQTT_SUSPENDED'], 'false');
-        $this->SetBuffer(self::BUFFER_KEYS['PROCESSING_MIGRATION'], 'false');
+        $this->SetBuffer(self::BUFFER_MQTT_SUSPENDED, 'false');
+        $this->SetBuffer(self::BUFFER_PROCESSING_MIGRATION, 'false');
         return json_encode($j);
     }
 
@@ -589,12 +577,8 @@ abstract class ModulBase extends \IPSModule
      */
     protected function SetValue($ident, $value)
     {
-        if (!$this->HasActiveParent()) {
-            return;
-        }
-
-        $id = @$this->GetIDForIdent($ident);
-        if (!$id) {
+        $variableID = @$this->GetIDForIdent($ident);
+        if (!$variableID) {
             $this->SendDebug(__FUNCTION__, 'Variable nicht gefunden: ' . $ident, 0);
             return;
         }
@@ -605,17 +589,13 @@ abstract class ModulBase extends \IPSModule
             $this->SendDebug(__FUNCTION__, 'Wert ist ein Array, übersprungen: ' . $ident, 0);
             return;
         }
-
-        $adjustedValue = $this->adjustValueByType($id, $value);
-        $varType = IPS_GetVariable($id)['VariableType'];
+        $var = IPS_GetVariable($variableID)['VariableType'];
+        $varType = $var['VariableType'];
+        $adjustedValue = $this->adjustValueByType($var, $value);
 
         // Profilverarbeitung nur für nicht-boolesche Werte
         if ($varType !== 0) {
-            /**
-             *  @todo VariableCustomProfile dürfen wir nicht nutzen, sondern nur VariableProfile
-             * Somit muss eine Prüfung auch immer auf BEIDE Profile erfolgen, falls der User ein eigenes erstellt
-             */
-            $profileName = IPS_GetVariable($id)['VariableCustomProfile'];
+            $profileName = ($var['VariableCustomProfile'] != '' ? $var['VariableCustomProfile'] : $var['VariableProfile']);
             if ($profileName && IPS_VariableProfileExists($profileName)) {
                 $profileAssociations = IPS_GetVariableProfile($profileName)['Associations'];
                 foreach ($profileAssociations as $association) {
@@ -664,8 +644,6 @@ abstract class ModulBase extends \IPSModule
      *
      * @return void
      *
-     * @throws \Exception Wenn SetValue fehlschlägt (wird intern behandelt)
-     *
      * @internal Diese Methode wird hauptsächlich intern verwendet für:
      *          - Direkte Wertzuweisung ohne Profile
      *          - Array zu JSON Konvertierung
@@ -678,9 +656,8 @@ abstract class ModulBase extends \IPSModule
      * // Array als JSON
      * SetValueDirect("data", ["temp" => 22]);
      */
-    protected function SetValueDirect($ident, $value): void
+    protected function SetValueDirect(string $ident, mixed $value): void
     {
-        $this->SendDebug(__FUNCTION__ . ': Zu behandelnder Ident: ', $ident, 0);
         $variableID = @$this->GetIDForIdent($ident);
 
         if (!$variableID) {
@@ -700,16 +677,16 @@ abstract class ModulBase extends \IPSModule
         // Wert entsprechend Variablentyp konvertieren
         switch ($varType) {
             case VARIABLETYPE_BOOLEAN:
-                $value = boolval($value);
+                $value = (bool) $value;
                 break;
             case VARIABLETYPE_INTEGER:
-                $value = intval($value);
+                $value = (int) $value;
                 break;
             case VARIABLETYPE_FLOAT:
-                $value = floatval($value);
+                $value = (float) $value;
                 break;
             case VARIABLETYPE_STRING:
-                $value = strval($value);
+                $value = (string) $value;
                 break;
         }
 
@@ -732,25 +709,24 @@ abstract class ModulBase extends \IPSModule
      * @param array $Payload Assoziatives Array mit den Payload-Daten.
      *
      * @return array Das modifizierte Payload-Array mit den hinzugefügten Variablentypen.
+     *
+     * @see \IPSModule::GetIDForIdent()
+     * @see \IPSModule::SendDebug()
+     * @see json_encode()
+     * @see IPS_GetVariable()
      */
-    protected function AppendVariableTypes($Payload): array
+    protected function AppendVariableTypes(array $Payload): array
     {
         // Zeige das eingehende Payload im Debug
         $this->SendDebug(__FUNCTION__ . ' :: Line ' . __LINE__ . ' :: Eingehendes Payload: ', json_encode($Payload), 0);
 
         foreach ($Payload as $key => $value) {
-            // Konvertiere den Key in einen Variablen-Ident
-            $ident = $key;
-
             // Prüfe, ob die Variable existiert
-            $objectID = @$this->GetIDForIdent($ident);
+            $objectID = @$this->GetIDForIdent($key);
             // $this->SendDebug(__FUNCTION__ . ' :: Line ' . __LINE__ . ' :: Variable existiert für Ident: ', $ident, 0);
             if ($objectID) {
-                // Hole den Typ der existierenden Variablen
-                $variableType = IPS_GetVariable($objectID)['VariableType'];
-
                 // Füge dem Payload den Variablentyp als neuen Schlüssel hinzu
-                $Payload[$key . '_type'] = $variableType;
+                $Payload[$key . '_type'] = IPS_GetVariable($objectID)['VariableType'];
             }
         }
 
@@ -799,7 +775,7 @@ abstract class ModulBase extends \IPSModule
                                 'min' => $feature['value_min'] ?? 0,
                                 'max' => $feature['value_max'] ?? 255
                             ];
-                            $this->SetBuffer('brightnessConfig', json_encode($brightnessConfig));
+                            $this->SetBuffer(self::BUFFER_BRIGHTNESS_CONFIG, json_encode($brightnessConfig));
                             $this->SendDebug(__FUNCTION__, 'Brightness Config: ' . json_encode($brightnessConfig), 0);
                         }
                     }
@@ -1085,7 +1061,7 @@ abstract class ModulBase extends \IPSModule
                 continue;
             }
 
-            $this->SendDebug(__FUNCTION__, sprintf('Verarbeite: Key=%s, Value=%s', $key, is_array($value) ? json_encode($value) : strval($value)), 0);
+            $this->SendDebug(__FUNCTION__, sprintf('Verarbeite: Key=%s, Value=%s', $key, is_array($value) ? json_encode($value) : (string) $value), 0);
 
             // Sonderfälle prüfen und verarbeiten
             if ($this->processSpecialVariable($key, $value)) {
@@ -1114,7 +1090,7 @@ abstract class ModulBase extends \IPSModule
     private function getOrRegisterVariable($ident, $variableProps = null, $formattedLabel = null): ?int
     {
         // Während Migration keine Variablen erstellen
-        if ($this->GetBuffer(self::BUFFER_KEYS['PROCESSING_MIGRATION']) === 'true') {
+        if ($this->GetBuffer(self::BUFFER_PROCESSING_MIGRATION) === 'true') {
             return null;
         }
 
@@ -1249,10 +1225,10 @@ abstract class ModulBase extends \IPSModule
         if (is_bool($value)) {
             $value = $value ? 'ON' : 'OFF';
         }
-        // light-Brightness kann immer das Profil ~Intensity.100 haben
+        // light-Brightness wird immer das Profil ~Intensity.100 haben
         if ($ident === 'brightness') {
             // Konvertiere Prozentwert (0-100) in Gerätewert
-            $deviceValue = $this->normalizeValueToRange($value, null, null, 0, 100, true);
+            $deviceValue = $this->normalizeValueToRange($value, true);
             $payload = ['brightness' => $deviceValue];
             $this->SendSetCommand($payload);
             return true;
@@ -1350,7 +1326,7 @@ abstract class ModulBase extends \IPSModule
                 $this->SendDebug(__FUNCTION__, 'Color Value: ' . json_encode($value), 0);
                 if (is_int($value)) {
                     // Umrechnung des Integer-Werts in x und y
-                    $xy = $this->HexToXY($value);
+                    $xy = $this->IntToXY($value);
                     $payload = [
                         'color' => [
                             'x' => $xy['x'],
@@ -1366,12 +1342,12 @@ abstract class ModulBase extends \IPSModule
                         $this->SendDebug(__FUNCTION__, 'Processing color with brightness: ' . $brightness, 0);
 
                         // Umrechnung der x und y Werte in einen HEX-Wert mit Helligkeit
-                        $hexValue = $this->XYToHex($value['color']['x'], $value['color']['y'], $brightness);
+                        $hexValue = $this->xyToInt($value['color']['x'], $value['color']['y'], $brightness);
                         $this->SetValueDirect('color', $hexValue);
                     } elseif (isset($value['x']) && isset($value['y'])) {
                         // Direkte x/y Werte
                         $brightness = $value['brightness'] ?? 254;
-                        $hexValue = $this->XYToHex($value['x'], $value['y'], $brightness);
+                        $hexValue = $this->xyToInt($value['x'], $value['y'], $brightness);
                         $this->SetValueDirect('color', $hexValue);
                     }
                 } else {
@@ -1498,14 +1474,16 @@ abstract class ModulBase extends \IPSModule
      *
      * Diese Methode konvertiert den übergebenen Wert in den entsprechenden Typ der Variable.
      *
-     * @param int $variableID Die ID der Variable, deren Typ bestimmt werden soll.
+     * @param array $variableObject Ein Array von IPS_GetVariable()
      * @param mixed $value Der Wert, der angepasst werden soll.
      * @return mixed Der angepasste Wert basierend auf dem Variablentyp.
      */
-    private function adjustValueByType($variableID, $value)
+    private function adjustValueByType(array $variableObject, $value)
     {
-        $varType = IPS_GetVariable($variableID)['VariableType'];
-        $this->SendDebug(__FUNCTION__, 'Variable ID: ' . $variableID . ', Typ: ' . $varType . ', Ursprünglicher Wert: ' . json_encode($value), 0);
+        $varType = $variableObject['VariableType'];
+        $varID = $variableObject['VariableID'];
+
+        $this->SendDebug(__FUNCTION__, 'Variable ID: ' . $varID . ', Typ: ' . $varType . ', Ursprünglicher Wert: ' . json_encode($value), 0);
 
         switch ($varType) {
             case 0: // Boolean
@@ -1534,7 +1512,7 @@ abstract class ModulBase extends \IPSModule
                 $this->SendDebug(__FUNCTION__, 'Konvertiere zu string: ' . (string) $value, 0);
                 return (string) $value;
             default:
-                $this->SendDebug(__FUNCTION__, 'Unbekannter Variablentyp für ID ' . $variableID . ', Wert: ' . json_encode($value), 0);
+                $this->SendDebug(__FUNCTION__, 'Unbekannter Variablentyp für ID ' . $varID . ', Wert: ' . json_encode($value), 0);
                 return $value;
         }
     }
@@ -1580,7 +1558,7 @@ abstract class ModulBase extends \IPSModule
         $Payload = match ($mode) {
             'cie' => function () use ($color, $Z2MMode)
             {
-                $RGB = $this->HexToRGB($color);
+                $RGB = $this->IntToRGB($color);
                 $cie = $this->RGBToXy($RGB);
 
                 if ($Z2MMode === 'color') {
@@ -1596,7 +1574,7 @@ abstract class ModulBase extends \IPSModule
             {
                 $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__ . ' :: setColor - Input Color', json_encode($color), 0);
 
-                $RGB = $this->HexToRGB($color);
+                $RGB = $this->IntToRGB($color);
                 $HSB = $this->RGBToHSB($RGB[0], $RGB[1], $RGB[2]);
 
                 $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__ . ' :: setColor - RGB Values for HSB Conversion', 'R: ' . $RGB[0] . ', G: ' . $RGB[1] . ', B: ' . $RGB[2], 0);
@@ -1617,7 +1595,7 @@ abstract class ModulBase extends \IPSModule
             {
                 $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__ . ' :: setColor - Input Color', json_encode($color), 0);
 
-                $RGB = $this->HexToRGB($color);
+                $RGB = $this->IntToRGB($color);
                 $HSL = $this->RGBToHSL($RGB[0], $RGB[1], $RGB[2]);
 
                 $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__ . ' :: setColor - RGB Values for HSL Conversion', 'R: ' . $RGB[0] . ', G: ' . $RGB[1] . ', B: ' . $RGB[2], 0);
@@ -1638,7 +1616,7 @@ abstract class ModulBase extends \IPSModule
             {
                 $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__ . ' :: setColor - Input Color', json_encode($color), 0);
 
-                $RGB = $this->HexToRGB($color);
+                $RGB = $this->IntToRGB($color);
                 $HSV = $this->RGBToHSV($RGB[0], $RGB[1], $RGB[2]);
 
                 $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__ . ' :: setColor - RGB Values for HSV Conversion', 'R: ' . $RGB[0] . ', G: ' . $RGB[1] . ', B: ' . $RGB[2], 0);
@@ -1772,7 +1750,7 @@ abstract class ModulBase extends \IPSModule
         switch ($ident) {
             case 'last_seen':
                 // Umrechnung von Millisekunden auf Sekunden
-                $adjustedValue = intval($value / 1000);
+                $adjustedValue = intdiv($value, 1000);
                 $this->SendDebug(__FUNCTION__, 'Converted value: ' . $adjustedValue, 0);
                 return $adjustedValue;
             case 'color_mode':
@@ -1782,12 +1760,10 @@ abstract class ModulBase extends \IPSModule
                 return $adjustedValue;
             case 'color_temp_kelvin':
                 // Umrechnung von Kelvin zu Mired
-                $adjustedValue = strval(intval(round(1000000 / $value, 0)));
-                $this->SendDebug(__FUNCTION__, 'Converted value: ' . $adjustedValue, 0);
-                return $adjustedValue;
+                return $this->convertKelvinToMired($value);
             case 'brightness':
                 // Konvertiere Gerätewert in Prozentwert (0-100)
-                $adjustedValue = $this->normalizeValueToRange($value, null, null, 0, 100, false);
+                $adjustedValue = $this->normalizeValueToRange($value, false);
                 $this->SendDebug(__FUNCTION__, 'Converted brightness value: ' . $adjustedValue, 0);
                 return $adjustedValue;
             case 'voltage':
@@ -2299,7 +2275,7 @@ abstract class ModulBase extends \IPSModule
         $type = $expose['type'] ?? '';
         $feature = $expose['property'] ?? '';
         $unit = isset($expose['unit']) && is_string($expose['unit']) ? $expose['unit'] : '';
-        $value_step = isset($expose['value_step']) ? floatval($expose['value_step']) : 1.0;
+        $value_step = isset($expose['value_step']) ? (float) $expose['value_step'] : 1.0;
 
         // Bestimme Variablentyp
         $variableType = $this->getVariableTypeFromProfile($type, $feature, $unit, $value_step);
@@ -2324,10 +2300,10 @@ abstract class ModulBase extends \IPSModule
         // Profil entsprechend Variablentyp erstellen
         if (!IPS_VariableProfileExists($fullRangeProfileName)) {
             if ($variableType === 'float') {
-                $this->RegisterProfileFloat($fullRangeProfileName, '', '', $unitWithSpace, floatval($min), floatval($max), floatval($step), 2);
+                $this->RegisterProfileFloat($fullRangeProfileName, '', '', $unitWithSpace, (float) $min, (float) $max, (float) $step, 2);
                 $this->SendDebug(__FUNCTION__, 'Created Float Profile: ' . $fullRangeProfileName, 0);
             } else {
-                $this->RegisterProfileInteger($fullRangeProfileName, '', '', $unitWithSpace, intval($min), intval($max), intval($step));
+                $this->RegisterProfileInteger($fullRangeProfileName, '', '', $unitWithSpace, (int) $min, (int) $max, (float) $step);
                 $this->SendDebug(__FUNCTION__, 'Created Integer Profile: ' . $fullRangeProfileName, 0);
             }
         }
@@ -2435,7 +2411,7 @@ abstract class ModulBase extends \IPSModule
         // Füge die Presets zum Profil hinzu
         foreach ($presets as $preset) {
             // Preset-Wert an den Variablentyp anpassen
-            $presetValue = ($variableType === 'float') ? floatval($preset['value']) : intval($preset['value']);
+            $presetValue = ($variableType === 'float') ? (float) $preset['value'] : (int) $preset['value'];
             $presetName = $this->Translate(ucwords(str_replace('_', ' ', $preset['name'])));
 
             $this->SendDebug(__FUNCTION__, sprintf('Adding preset: %s with value %s', $presetName, $presetValue), 0);
@@ -2650,7 +2626,7 @@ abstract class ModulBase extends \IPSModule
     private function registerVariable($feature, $exposeType = null): mixed
     {
         // Während Migration keine Variablen erstellen
-        if ($this->GetBuffer(self::BUFFER_KEYS['PROCESSING_MIGRATION']) === 'true') {
+        if ($this->GetBuffer(self::BUFFER_PROCESSING_MIGRATION) === 'true') {
             return false;
         }
 
@@ -2702,7 +2678,7 @@ abstract class ModulBase extends \IPSModule
         $unit = $feature['unit'] ?? '';
         $ident = $property;
         $label = ucfirst(str_replace('_', ' ', $property));
-        $step = isset($feature['step']) ? floatval($feature['step']) : 1.0;
+        $step = isset($feature['step']) ? (float) $feature['step'] : 1.0;
 
         // Überprüfen, ob die Variable bereits existiert
         $objectID = @$this->GetIDForIdent($ident);
@@ -2827,7 +2803,7 @@ abstract class ModulBase extends \IPSModule
     private function registerColorVariable($ident, $feature): void
     {
         // Während Migration keine Variablen erstellen
-        if ($this->GetBuffer(self::BUFFER_KEYS['PROCESSING_MIGRATION']) === 'true') {
+        if ($this->GetBuffer(self::BUFFER_PROCESSING_MIGRATION) === 'true') {
             return;
         }
 
@@ -2885,7 +2861,7 @@ abstract class ModulBase extends \IPSModule
     private function registerPresetVariables(array $presets, string $label, string $variableType, array $feature): void
     {
         // Während Migration keine Variablen erstellen
-        if ($this->GetBuffer(self::BUFFER_KEYS['PROCESSING_MIGRATION']) === 'true') {
+        if ($this->GetBuffer(self::BUFFER_PROCESSING_MIGRATION) === 'true') {
             return;
         }
 
@@ -2924,7 +2900,7 @@ abstract class ModulBase extends \IPSModule
     private function registerSpecialVariable($feature): void
     {
         // Während Migration keine Variablen erstellen
-        if ($this->GetBuffer(self::BUFFER_KEYS['PROCESSING_MIGRATION']) === 'true') {
+        if ($this->GetBuffer(self::BUFFER_PROCESSING_MIGRATION) === 'true') {
             return;
         }
 

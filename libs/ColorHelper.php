@@ -6,6 +6,9 @@ namespace Zigbee2MQTT;
 
 trait ColorHelper
 {
+    /** @var string Name des Buffers für Config der Helligkeit */
+    protected const BUFFER_BRIGHTNESS_CONFIG = 'brightnessConfig';
+
     /**
      * RGBToHSL
      *
@@ -14,7 +17,7 @@ trait ColorHelper
      * @param  int $b blue
      * @return array index mit keys hue, saturation, lightness
      */
-    protected function RGBToHSL($r, $g, $b)
+    protected function RGBToHSL(int $r, int $g, int $b): array
     {
         $r /= 255;
         $g /= 255;
@@ -52,48 +55,11 @@ trait ColorHelper
     }
 
     /**
-     * HSLToRGB
-     *
-     * @param  int $h hue
-     * @param  int $s saturation
-     * @param  int $l lightness
-     * @return array index r für red, index g für green, index b für blue
-     */
-    protected function HSLToRGB($h, $s, $l)
-    {
-        $h /= 360;
-        $s /= 100;
-        $l /= 100;
-
-        if ($s == 0) {
-            $r = $g = $b = $l * 255; // Monochrome Farben
-        } else {
-            $q = $l < 0.5 ? $l * (1 + $s) : $l + $s - $l * $s;
-            $p = 2 * $l - $q;
-            $r = $this->hueToRGB($p, $q, $h + 1 / 3);
-            $g = $this->hueToRGB($p, $q, $h);
-            $b = $this->hueToRGB($p, $q, $h - 1 / 3);
-        }
-
-        $RGB = [
-            'r' => round($r * 255),
-            'g' => round($g * 255),
-            'b' => round($b * 255),
-        ];
-
-        // Debug-Ausgabe für die berechneten RGB-Werte
-        $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__ . ' :: HSL to RGB Conversion', 'H: ' . ($h * 360) . ', S: ' . ($s * 100) . ', L: ' . ($l * 100) . ' => R: ' . $RGB['r'] . ', G: ' . $RGB['g'] . ', B: ' . $RGB['b'], 0);
-
-        return $RGB;
-    }
-
-    /**
-     * HexToRGB
-     * @Burki24 Funktionsbezeichnung ist irreführend, da $Value int und kein Hex-String ist.
-     * @param  int $value Ist kein Hex (String) sondern ein int,
+     * IntToRGB
+     * @param  int $value 32Bit Farbwert 0xRRGGBB,
      * @return array index 0 int red, index 1 int green, index 2 int blue
      */
-    protected function HexToRGB($value)
+    protected function IntToRGB(int $value): array
     {
         $RGB = [];
         $RGB[0] = (($value >> 16) & 0xFF);
@@ -104,123 +70,14 @@ trait ColorHelper
     }
 
     /**
-     * HSToRGB
-     * @Burki24 Warum ist brightness fest auf 1 (100%)? HSVToRGB ist quasi identisch
-     * @param  int $hue
-     * @param  int $saturation
-     * @return string HTML-Farbe (warum nicht wieder ein int oder array?)
-     */
-    protected function HSToRGB($hue, $saturation)
-    {
-        $hue /= 360;
-        $saturation /= 100;
-        $brightness = 1;
-        if ($saturation == 0) {
-            $r = $g = $b = $brightness;
-        } else {
-            $hue *= 6;
-            $i = floor($hue);
-            $f = $hue - $i;
-            $p = $brightness * (1 - $saturation);
-            $q = $brightness * (1 - $saturation * $f);
-            $t = $brightness * (1 - $saturation * (1 - $f));
-            switch ($i) {
-                case 0: $r = $brightness;
-                    $g = $t;
-                    $b = $p;
-                    break;
-                case 1: $r = $q;
-                    $g = $brightness;
-                    $b = $p;
-                    break;
-                case 2: $r = $p;
-                    $g = $brightness;
-                    $b = $t;
-                    break;
-                case 3: $r = $p;
-                    $g = $q;
-                    $b = $brightness;
-                    break;
-                case 4: $r = $t;
-                    $g = $p;
-                    $b = $brightness;
-                    break;
-                default: $r = $brightness;
-                    $g = $p;
-                    $b = $q;
-                    break;
-            }
-        }
-        $r = round($r * 255);
-        $g = round($g * 255);
-        $b = round($b * 255);
-        $colorHS = sprintf('#%02x%02x%02x', $r, $g, $b);
-        return $colorHS;
-    }
-
-    /**
-     * HSVToRGB
-     *
-     * @param  int $hue
-     * @param  int $saturation
-     * @param  int $value oder brightness
-     * @return string HTML-Farbe (warum nicht wieder ein int oder array?)
-     */
-    protected function HSVToRGB($hue, $saturation, $value)
-    {
-        $hue /= 360;
-        $saturation /= 100;
-        $value /= 100;
-        $i = floor($hue * 6);
-        $f = $hue * 6 - $i;
-        $p = $value * (1 - $saturation);
-        $q = $value * (1 - $f * $saturation);
-        $t = $value * (1 - (1 - $f) * $saturation);
-        switch ($i % 6) {
-            case 0: $r = $value;
-                $g = $t;
-                $b = $p;
-                break;
-            case 1: $r = $q;
-                $g = $value;
-                $b = $p;
-                break;
-            case 2: $r = $p;
-                $g = $value;
-                $b = $t;
-                break;
-            case 3: $r = $p;
-                $g = $q;
-                $b = $value;
-                break;
-            case 4: $r = $t;
-                $g = $p;
-                $b = $value;
-                break;
-            case 5: $r = $value;
-                $g = $p;
-                $b = $q;
-                break;
-        }
-        $r = round($r * 255);
-        $g = round($g * 255);
-        $b = round($b * 255);
-        $colorRGB = sprintf('#%02x%02x%02x', $r, $g, $b);
-        $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__ . ' :: HSVToRGB', 'R: ' . $r . ' G: ' . $g . ' B: ' . $b, 0);
-        $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__ . ' :: HSVToRGB', 'RGB ' . $colorRGB, 0);
-
-        return $colorRGB;
-    }
-
-    /**
      * RGBToHSV
      *
-     * @param  mixed $R red
-     * @param  mixed $G green
-     * @param  mixed $B blue
+     * @param  int $R red
+     * @param  int $G green
+     * @param  int $B blue
      * @return array index mit keys hue, saturation, value (brightness)
      */
-    protected function RGBToHSV($R, $G, $B)
+    protected function RGBToHSV(int $R, int $G, int $B): array
     {
         $R /= 255;
         $G /= 255;
@@ -259,7 +116,7 @@ trait ColorHelper
      * @param  int $B blue
      * @return array index mit keys hue, saturation, brightness
      */
-    protected function RGBToHSB($R, $G, $B)
+    protected function RGBToHSB(int $R, int $G, int $B): array
     {
         $R /= 255;
         $G /= 255;
@@ -287,14 +144,14 @@ trait ColorHelper
     }
 
     /**
-     * xyToHEX
+     * xyToInt
      *
      * @param  float $x
      * @param  float $y
      * @param  int $bri brightness
      * @return int Integer-Wert der Farbe
      */
-    protected function xyToHEX($x, $y, $bri = 255)
+    protected function xyToInt(float $x, float $y, int $bri = 255): int
     {
         // Normalisierung der Brightness (0-1)
         $Y = $bri / 255;
@@ -341,7 +198,7 @@ trait ColorHelper
      * @param  array $RGB mit index 0 int red, index 1 int green, index 2 int blue
      * @return array mit index x, y, bri
      */
-    protected function RGBToXy($RGB)
+    protected function RGBToXy(array $RGB): array
     {
         $r = $RGB[0] / 255;
         $g = $RGB[1] / 255;
@@ -377,47 +234,19 @@ trait ColorHelper
     }
 
     /**
-     * hueToRGB
+     * IntToXY
      *
-     * @Schnittcher Hilfe :)
-     * @Burki24  Hilfe :)
-     * @param  mixed $p ???
-     * @param  mixed $q ???
-     * @param  mixed $t ???
-     * @return float
-     */
-    protected function hueToRGB($p, $q, $t): float
-    {
-        if ($t < 0) {
-            $t += 1;
-        }
-        if ($t > 1) {
-            $t -= 1;
-        }
-        if ($t < 1 / 6) {
-            return $p + ($q - $p) * 6 * $t;
-        }
-        if ($t < 1 / 2) {
-            return $q;
-        }
-        if ($t < 2 / 3) {
-            return $p + ($q - $p) * (2 / 3 - $t) * 6;
-        }
-        return $p;
-    }
-
-    /**
-     * Konvertiert einen HEX-Farbwert in XY-Farbkoordinaten.
+     * Konvertiert einen Integer-Farbwert in XY-Farbkoordinaten.
      *
-     * @param int $hex Der HEX-Farbwert.
+     * @param int $value 32Bit Farbwert 0xRRGGBB,
      * @return array Ein Array mit den Schlüsseln 'x' und 'y'.
      */
-    protected function HexToXY(int $hex): array
+    protected function IntToXY(int $value): array
     {
         // HEX in RGB umwandeln
-        $r = (($hex >> 16) & 0xFF) / 255.0;
-        $g = (($hex >> 8) & 0xFF) / 255.0;
-        $b = ($hex & 0xFF) / 255.0;
+        $r = (($value >> 16) & 0xFF) / 255.0;
+        $g = (($value >> 8) & 0xFF) / 255.0;
+        $b = ($value & 0xFF) / 255.0;
 
         // Gamma-Korrektur
         $r = ($r > 0.04045) ? pow(($r + 0.055) / (1.0 + 0.055), 2.4) : ($r / 12.92);
@@ -443,13 +272,13 @@ trait ColorHelper
      * @param  int $value Kelvin-Wert
      * @return int Mired-Wert
      */
-    protected function convertKelvinToMired($value): int
+    protected function convertKelvinToMired(int $value): int
     {
         if ($value >= 1000) {
-            $miredValue = intval(round(1000000 / $value, 0));
+            $miredValue = intdiv(1000000, $value);
             $this->SendDebug(__FUNCTION__, 'Kelvin zu Mired konvertiert: ' . $miredValue, 0);
         } else {
-            $miredValue = intval($value);
+            $miredValue = (int) $value;
             $this->SendDebug(__FUNCTION__, 'Wert unter 1000, Keine Konvertierung: ' . $miredValue, 0);
         }
         return $miredValue;
@@ -461,10 +290,10 @@ trait ColorHelper
      * @param  int $value Mired-Wert
      * @return int Kelvin-Wert
      */
-    protected function convertMiredToKelvin($value)
+    protected function convertMiredToKelvin(int $value): int
     {
         if ($value > 0) {
-            $kelvinValue = intval(round(1000000 / $value, 0));
+            $kelvinValue = intdiv(1000000, $value);
             $this->SendDebug(__FUNCTION__, 'Mired zu Kelvin konvertiert: ' . $kelvinValue, 0);
         } else {
             $kelvinValue = 0;
@@ -473,15 +302,19 @@ trait ColorHelper
         return $kelvinValue;
     }
 
-    protected function normalizeValueToRange($value, $oldMin = null, $oldMax = null, $newMin = 0, $newMax = 100, $toDevice = true)
+    /**
+     * normalizeValueToRange
+     *
+     * Rechnet die Helligkeit zwischen dem absoluten Gerätewert und relativem Prozentwert um.
+     *
+     * @param  int $value Helligkeit
+     * @param  bool $toDevice `TRUE` wenn Richtung Gerät gerechnet wird, `FALSE` in Richtung Prozent.
+     * @return int Helligkeit
+     */
+    protected function normalizeValueToRange(int $value, bool $toDevice = true): int
     {
-        // Wenn keine Min/Max Werte übergeben wurden, hole sie aus der Konfiguration
-        if ($oldMin === null) {
-            $oldMin = $this->getBrightnessValue('min');
-        }
-        if ($oldMax === null) {
-            $oldMax = $this->getBrightnessValue('max');
-        }
+        $oldMin = $this->getBrightnessValue('min');
+        $oldMax = $this->getBrightnessValue('max');
 
         if ($toDevice) {
             // Prozent -> Gerätewert
@@ -494,7 +327,7 @@ trait ColorHelper
 
             $value = max(0, min(100, $value));
             // Konvertierung von Prozent (0-100) in Gerätewert (oldMin-oldMax)
-            $result = round(($value * ($oldMax - $oldMin) / 100) + $oldMin);
+            $result = (int) (($value * ($oldMax - $oldMin) / 100) + $oldMin);
         } else {
             // Gerätewert -> Prozent
             $this->SendDebug(__FUNCTION__, sprintf(
@@ -505,7 +338,7 @@ trait ColorHelper
             ), 0);
 
             $value = max($oldMin, min($oldMax, $value));
-            $result = round((($value - $oldMin) * 100) / ($oldMax - $oldMin));
+            $result = intdiv(($value - $oldMin) * 100, $oldMax - $oldMin);
         }
 
         $this->SendDebug(__FUNCTION__, sprintf(
@@ -525,11 +358,12 @@ trait ColorHelper
      * extrahiert die max/min Helligkeitswerte. Falls keine Konfiguration vorhanden ist
      * oder die Werte nicht gesetzt wurden, wird der Standardwert 0/254 zurückgegeben.
      *
+     * @param  string $type min/max Typ welcher gelesen werden soll
      * @return int Die min/max Helligkeitswerte (Standard: 0/254)
      */
     private function getBrightnessValue(string $type = 'max'): int
     {
-        $config = json_decode($this->GetBuffer('brightnessConfig'), true);
+        $config = json_decode($this->GetBuffer(self::BUFFER_BRIGHTNESS_CONFIG), true);
         $this->SendDebug(__FUNCTION__, 'Gelesene Brightness-Config: ' . print_r($config, true), 0);
 
         $defaults = [
