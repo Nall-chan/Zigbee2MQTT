@@ -589,7 +589,7 @@ abstract class ModulBase extends \IPSModule
             $this->SendDebug(__FUNCTION__, 'Wert ist ein Array, übersprungen: ' . $ident, 0);
             return;
         }
-        $var = IPS_GetVariable($variableID)['VariableType'];
+        $var = IPS_GetVariable($variableID);
         $varType = $var['VariableType'];
         $adjustedValue = $this->adjustValueByType($var, $value);
 
@@ -1127,7 +1127,7 @@ abstract class ModulBase extends \IPSModule
      * @param array $knownVariables Eine Liste der bekannten Variablen, die zur Verarbeitung verwendet werden.
      * @return void
      */
-    private function processVariable($key, $value, $knownVariables): void
+    private function processVariable(string $key, mixed $value, array $knownVariables): void
     {
         $lowerKey = strtolower($key);
         $ident = $key;
@@ -1214,7 +1214,7 @@ abstract class ModulBase extends \IPSModule
      * @param mixed $value Der Wert, der mit der Standard-Variablen-Aktionsanforderung verbunden ist.
      * @return bool Gibt true zurück, wenn die Aktion erfolgreich verarbeitet wurde, andernfalls false.
      */
-    private function handleStandardVariable($ident, $value): bool
+    private function handleStandardVariable(string $ident, mixed $value): bool
     {
         $variableID = $this->getOrRegisterVariable($ident);
         if (!$variableID) {
