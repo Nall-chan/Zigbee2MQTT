@@ -28,7 +28,6 @@ class Zigbee2MQTTBridge extends IPSModule
     {
         //Never delete this line!
         parent::Create();
-        $this->ConnectParent(self::GUID_MQTT_SERVER);
         $this->RegisterPropertyString(self::MQTT_BASE_TOPIC, '');
         $Version = 'unknown';
         $File = file(dirname(__DIR__) . '/libs/IPSymconExtension.js');
@@ -53,7 +52,6 @@ class Zigbee2MQTTBridge extends IPSModule
         $this->TransactionData = [];
         //Never delete this line!
         parent::ApplyChanges();
-        $this->ConnectParent(self::GUID_MQTT_SERVER);
         $BaseTopic = $this->ReadPropertyString(self::MQTT_BASE_TOPIC);
         if (empty($BaseTopic)) {
             $this->SetStatus(IS_INACTIVE);
@@ -241,18 +239,18 @@ class Zigbee2MQTTBridge extends IPSModule
     /**
      * RequestAction
      *
-     * @param  string $Ident
-     * @param  mixed $Value
+     * @param  string $ident
+     * @param  mixed $value
      * @return void
      */
-    public function RequestAction($Ident, $Value)
+    public function RequestAction($ident, $value)
     {
-        switch ($Ident) {
+        switch ($ident) {
             case 'permit_join':
-                $this->SetPermitJoin((bool) $Value);
+                $this->SetPermitJoin((bool) $value);
                 break;
             case 'log_level':
-                $this->SetLogLevel((string) $Value);
+                $this->SetLogLevel((string) $value);
                 break;
             case 'restart_request':
                 $this->Restart();

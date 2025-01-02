@@ -1117,7 +1117,6 @@ abstract class ModulBase extends \IPSModule
      * @see \Zigbee2MQTT\ModulBase::ReceiveData()
      * @see \Zigbee2MQTT\ModulBase::mapExposesToVariables()
      * @see \Zigbee2MQTT\ModulBase::AppendVariableTypes()
-     * @see \Zigbee2MQTT\ModulBase::getKnownVariables()
      * @see \Zigbee2MQTT\ModulBase::processSpecialVariable()
      * @see \Zigbee2MQTT\ModulBase::processVariable()
      * @see \IPSModule::SendDebug()
@@ -1135,9 +1134,6 @@ abstract class ModulBase extends \IPSModule
         // Variablentypen anhängen
         $payloadWithTypes = $this->AppendVariableTypes($payload);
 
-        // Bekannte Variablen laden
-        $knownVariables = $this->getKnownVariables();
-
         // Payload-Daten verarbeiten
         foreach ($payloadWithTypes as $key => $value) {
             // Typ-Informationen überspringen
@@ -1153,7 +1149,7 @@ abstract class ModulBase extends \IPSModule
             }
 
             // Allgemeine Variablen verarbeiten
-            $this->processVariable($key, $value, $knownVariables);
+            $this->processVariable($key, $value);
         }
         return '';
     }
@@ -1177,7 +1173,7 @@ abstract class ModulBase extends \IPSModule
      * @see \IPSModule::SendDebug()
      * @see \IPSModule::GetIDForIdent()
      */
-    private function getOrRegisterVariable($ident, $variableProps = null, $formattedLabel = null): ?int
+    private function getOrRegisterVariable(string $ident, ?array $variableProps = null, ?string $formattedLabel = null): ?int
     {
         // Während Migration keine Variablen erstellen
         if ($this->GetBuffer(self::BUFFER_PROCESSING_MIGRATION) === 'true') {
@@ -1212,7 +1208,6 @@ abstract class ModulBase extends \IPSModule
      *
      * @param string $key Der Schlüssel im empfangenen Payload.
      * @param mixed $value Der Wert, der mit dem Schlüssel verbunden ist.
-     * @param array $knownVariables Eine Liste der bekannten Variablen, die zur Verarbeitung verwendet werden.
      *
      * @return void
      *
@@ -1221,13 +1216,14 @@ abstract class ModulBase extends \IPSModule
      * @see \Zigbee2MQTT\ModulBase::getOrRegisterVariable()
      * @see \Zigbee2MQTT\ModulBase::handleColorVariable()
      * @see \Zigbee2MQTT\ModulBase::convertMillivoltToVolt()
+     * @see \Zigbee2MQTT\ModulBase::getKnownVariables()
      * @see \IPSModule::SendDebug()
      * @see \IPSModule::GetIDForIdent()
      * @see strtolower()
      * @see is_array()
      * @see strpos()
      */
-    private function processVariable(string $key, mixed $value, array $knownVariables): void
+    private function processVariable(string $key, mixed $value): void
     {
         $lowerKey = strtolower($key);
         $ident = $key;
@@ -1239,6 +1235,9 @@ abstract class ModulBase extends \IPSModule
             $this->SetValue($ident, $value);
             return;
         }
+
+        // Bekannte Variablen laden
+        $knownVariables = $this->getKnownVariables();
 
         // Wenn keine existierende Variable gefunden wurde, prüfe auf bekannte Variablen aus JSON
         if (!isset($knownVariables[$lowerKey])) {
@@ -2426,11 +2425,24 @@ abstract class ModulBase extends \IPSModule
      * ];
      * $profile = $this->registerEnumProfile($expose, 'Z2M.Mode');
      * // Ergebnis: Z2M.Mode.a1b2c3d4
+     * ```
      *
      * @note Die Werte werden automatisch:
      *       - Sortiert für konsistente Hash-Generierung
      *       - In lesbare Form konvertiert (z.B. manual -> Manual)
      *       - In translations.json hinzugefügt falls nicht vorhanden
+     * 
+     * @see \Zigbee2MQTT\ModulBase::isValueInLocaleJson()
+     * @see \Zigbee2MQTT\ModulBase::addValueToTranslationsJson()
+     * @see \Zigbee2MQTT\ModulBase::RegisterProfileStringEx()
+     * @see \IPSModule::SendDebug()
+     * @see sort()
+     * @see implode()
+     * @see dechex()
+     * @see crc32()
+     * @see ucwords()
+     * @see str_replace()
+     * @see json_encode()
      */
     private function registerEnumProfile(array $expose, string $ProfileName): string
     {
@@ -2490,8 +2502,6 @@ abstract class ModulBase extends \IPSModule
      *               - 'mainProfile': string - Name des Hauptprofils
      *               - 'presetProfile': string|null - Name des Preset-Profils, falls vorhanden
      *
-     * @throws \Exception Wenn ein Standard-Profil ungültig ist
-     *
      * Beispiel:
      * ```php
      * $expose = [
@@ -2504,8 +2514,15 @@ abstract class ModulBase extends \IPSModule
      * ];
      * $result = $this->registerNumericProfile($expose);
      * ```
+     * 
+     * @see \Zigbee2MQTT\ModulBase::getVariableTypeFromProfile()
+     * @see \Zigbee2MQTT\ModulBase::getStandardProfile()
+     * @see \Zigbee2MQTT\ModulBase::isValidStandardProfile()
+     * @see \Zigbee2MQTT\ModulBase::getFullRangeProfileName()
+     * @see strtolower()
+     * @see strtoupper()
      */
-    private function registerNumericProfile($expose)
+    private function registerNumericProfile(array $expose):array
     {
         // Frühe Typ-Bestimmung
         $type = $expose['type'] ?? '';
@@ -2527,7 +2544,7 @@ abstract class ModulBase extends \IPSModule
         }
 
         // Eigenes Profil erstellen
-        $fullRangeProfileName = $this->getFullRangeProfileName($expose);
+        $fullRangeProfileName = self::getFullRangeProfileName($expose);
         $min = $expose['value_min'] ?? 0;
         $max = $expose['value_max'] ?? 0;
         $step = $expose['value_step'] ?? 1.0;
@@ -2566,6 +2583,10 @@ abstract class ModulBase extends \IPSModule
      * @param string $valueOff
      *
      * @return string Der Name des erstellten Profils
+     * 
+     * @see \Zigbee2MQTT\ModulBase::RegisterProfileStringEx()
+     * @see \IPSModule::SendDebug()
+     * @see json_encode()
      */
     private function registerCustomStringProfile(string $ProfileName, string $valueOn, string $valueOff): string
     {
@@ -2613,6 +2634,18 @@ abstract class ModulBase extends \IPSModule
      * @param array $feature Die Expose-Daten, die die Eigenschaften des Features enthalten, einschließlich Min- und Max-Werten.
      *
      * @return string Der Name des erstellten Profils.
+     * 
+     * @todo Assoziationen überarbeiten
+     * 
+     * @see \Zigbee2MQTT\ModulBase::RegisterProfileFloatEx()
+     * @see \Zigbee2MQTT\ModulBase::RegisterProfileIntegerEx()
+     * @see \IPSModule::LogMessage()
+     * @see \IPSModule::Translate()
+     * @see IPS_SetVariableProfileAssociation()
+     * @see IPS_VariableProfileExists()
+     * @see str_replace()
+     * @see sprintf()
+     * @see ucwords()
      */
     private function registerPresetProfile(array $presets, string $label, string $variableType, array $feature): string
     {
@@ -2668,8 +2701,16 @@ abstract class ModulBase extends \IPSModule
      * 3. Überprüft auf aktiven IO-Parent
      * 4. Ruft UpdateDeviceInfo auf um Geräteinformationen zu aktualisieren
      *
-     * @see UpdateDeviceInfo
      * @return void
+     * 
+     * @see \Zigbee2MQTT\ModulBase::UpdateDeviceInfo()
+     * @see \IPSModule::ReadPropertyString()
+     * @see \IPSModule::SendDebug()
+     * @see \IPSModule::HasActiveParent()
+     * @see IPS_GetKernelDir()
+     * @see IPS_GetKernelRunlevel()
+     * @see file_exists()
+     * 
      */
     private function checkAndCreateJsonFile(): void
     {
@@ -2732,15 +2773,24 @@ abstract class ModulBase extends \IPSModule
      *
      * @internal Diese Methode wird intern vom Modul verwendet
      *
-     * @throws \Exception Indirekt durch file_get_contents() wenn die Datei nicht gelesen werden kann
-     *
      * @return array Ein assoziatives Array mit bekannten Variablen, wobei der Key der normalisierte Property-Name ist
      *               und der Value die komplette Feature-Definition enthält.
      *               Format: ['property_name' => ['property' => 'name', ...]]
      *               Leeres Array wenn keine Variablen gefunden wurden.
      *
-     * @see registerVariable() Verwendet die zurückgegebenen Variablen zur Registrierung
-     * @see DecodeData() Nutzt die Variablen zur Datendekodierung
+     * @see \Zigbee2MQTT\ModulBase::registerVariable() Verwendet die zurückgegebenen Variablen zur Registrierung, über
+     * @see \Zigbee2MQTT\ModulBase::processVariable() 
+     * @see \IPSModule::SendDebug()
+     * @see IPS_GetKernelDir()
+     * @see file_exists()
+     * @see file_get_contents()
+     * @see json_decode()
+     * @see json_encode()
+     * @see array_map()
+     * @see array_merge()
+     * @see array_filter()
+     * @see trim()
+     * @see strtolower()
      */
     private function getKnownVariables(): array
     {
@@ -2754,9 +2804,12 @@ abstract class ModulBase extends \IPSModule
         }            
         }
 
-        $jsonData = file_get_contents($jsonFile);
-        $data = json_decode($jsonData, true);
+        $jsonData = @file_get_contents($jsonFile);
+        if (!$jsonData){
+            return [];
+        }
 
+        $data = json_decode($jsonData, true);
         if (json_last_error() !== JSON_ERROR_NONE || !isset($data['exposes'])) {
             $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, 'Fehler beim Dekodieren der JSON-Datei oder fehlende "exposes" in Datei: ' . $jsonFile . '. Fehler: ' . json_last_error_msg(), 0);
         }
@@ -2857,9 +2910,11 @@ abstract class ModulBase extends \IPSModule
      * Registriert eine Variable basierend auf den Feature-Informationen
      * @param array|string $feature Feature-Information oder Feature-ID
      * @param string|null $exposeType Optionaler Expose-Typ
+     * 
      * @return mixed
+     * 
      */
-    private function registerVariable($feature, $exposeType = null): mixed
+    private function registerVariable(mixed $feature, ?string $exposeType = null): mixed
     {
         // Während Migration keine Variablen erstellen
         if ($this->GetBuffer(self::BUFFER_PROCESSING_MIGRATION) === 'true') {
@@ -3268,7 +3323,7 @@ abstract class ModulBase extends \IPSModule
      * @param array $feature Ein Array, das die Eigenschaften des Features enthält.
      * @return string Der vollständige Name des Variablenprofils.
      */
-    private function getFullRangeProfileName($feature): string
+    private static function getFullRangeProfileName($feature): string
     {
         $name = 'Z2M.' . $feature['name'];
         $valueMin = $feature['value_min'] ?? null;
@@ -3291,6 +3346,8 @@ abstract class ModulBase extends \IPSModule
      *
      * @param string $ProfileName Der ProfileName, für den das Zustandsmuster erstellt werden soll.
      * @return string|null Der Name des erstellten Profils oder null, wenn kein Zustandsmuster existiert.
+     * 
+     * @see \Zigbee2MQTT\ModulBase::RegisterProfileStringEx()
      */
     private function registerStateMappingProfile(string $ProfileName): ?string
     {
