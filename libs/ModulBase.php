@@ -195,11 +195,14 @@ abstract class ModulBase extends \IPSModule
      * - Erstellt Zigbee2MQTTExposes Verzeichnis wenn nicht vorhanden
      * - Prüft und erstellt JSON-Datei für Geräteinfos
      *
-     * @throws Exception Error on create Expose Directory
-     *
-     * @see ConnectParent()
-     * @see RegisterPropertyString()
      * @return void
+     *
+     * @throws \Exception Error on create Expose Directory
+     *
+     * @see \IPSModule::RegisterPropertyString()
+     * @see \IPSModule::RegisterAttributeFloat()
+     * @see \Zigbee2MQTT\ModulBase::createExposesDirectory()
+     * @see \Zigbee2MQTT\ModulBase::RegisterProfileBoolean()
      */
     public function Create()
     {
@@ -239,6 +242,10 @@ abstract class ModulBase extends \IPSModule
      * Darum muss hier IPS_LogMessage benutzt werden.
      * Entsprechend ist auch kein Translate mehr verfügbar!
      *
+     * @see \IPSModule::Destroy()
+     * @see IPS_InstanceExists()
+     * @see IPS_LogMessage()
+     *
      * @return void
      */
     public function Destroy()
@@ -277,18 +284,22 @@ abstract class ModulBase extends \IPSModule
      * - Parent muss aktiv sein
      * - System muss bereit sein (KR_READY)
      *
-     * @see SetReceiveDataFilter()
-     * @see checkAndCreateJsonFile()
-     * @see SetStatus()
-     *
      * @return void
+     *
+     * @see \IPSModule::ApplyChanges()
+     * @see \IPSModule::ReadPropertyString()
+     * @see \IPSModule::SetReceiveDataFilter()
+     * @see \IPSModule::HasActiveParent()
+     * @see \IPSModule::GetStatus()
+     * @see \IPSModule::SetStatus()
+     * @see \Zigbee2MQTT\ModulBase::checkAndCreateJsonFile()
+     * @see IPS_GetKernelRunlevel()
      */
     public function ApplyChanges()
     {
         //Never delete this line!
         parent::ApplyChanges();
 
-        $this->ConnectParent(self::GUID_MQTT_SERVER);
         $BaseTopic = $this->ReadPropertyString(self::MQTT_BASE_TOPIC);
         $MQTTTopic = $this->ReadPropertyString(self::MQTT_TOPIC);
         $this->TransactionData = [];
@@ -335,11 +346,15 @@ abstract class ModulBase extends \IPSModule
      *
      * @return void
      *
-     * @see handlePresetVariable()
-     * @see handleStringVariableNoResponse()
-     * @see handleColorVariable()
-     * @see handleStateVariable()
-     * @see handleStandardVariable()
+     * @see \IPSModule::RequestAction()
+     * @see \IPSModule::SendDebug()
+     * @see \Zigbee2MQTT\ModulBase::UpdateDeviceInfo()
+     * @see \Zigbee2MQTT\ModulBase::handlePresetVariable()
+     * @see \Zigbee2MQTT\ModulBase::handleStringVariableNoResponse()
+     * @see \Zigbee2MQTT\ModulBase::handleColorVariable()
+     * @see \Zigbee2MQTT\ModulBase::handleStateVariable()
+     * @see \Zigbee2MQTT\ModulBase::handleStandardVariable()
+     * @see json_encode()
      */
     public function RequestAction($ident, $value)
     {
@@ -372,27 +387,25 @@ abstract class ModulBase extends \IPSModule
      *
      * Diese Methode wird automatisch aufgerufen, wenn eine MQTT-Nachricht empfangen wird.
      * Der Verarbeitungsablauf ist wie folgt:
-     * 1. Prüft ob Instanz im CREATE-Status ist
-     * 2. Validiert Basis-Anforderungen (MQTT Topics)
-     * 3. Dekodiert die JSON-Nachricht
-     * 4. Extrahiert das MQTT-Topic
-     * 5. Verarbeitet spezielle Nachrichtentypen:
+     * 1. Prüft ob die Instanz noch bei der Migration ist
+     * 2. Prüft ob Instanz im CREATE-Status ist
+     * 3. Lässt den JSONString prüfen und zerlegen
+     * 4. Verarbeitet spezielle Nachrichtentypen:
      *    - Verfügbarkeitsstatus (availability)
      *    - Symcon Extension Antworten
-     *    - Expose-Informationen
+     * 5. Wenn keine spezielle Nachricht, dann Payload verarbeiten lassen
      *
      * @param string $JSONString Die empfangene MQTT-Nachricht im JSON-Format
      *
      * @return string Leerer String als Rückgabewert
      *
-     * @throws Exception Bei JSON-Dekodierungsfehlern
-     *
-     * @see validateBasicRequirements()
-     * @see parseMessage()
-     * @see extractTopic()
-     * @see handleAvailability()
-     * @see handleSymconResponses()
-     * @see processPayload()
+     * @see \IPSModule::ReceiveData()
+     * @see \IPSModule::GetBuffer()
+     * @see \IPSModule::GetStatus()
+     * @see \Zigbee2MQTT\ModulBase::validateAndParseMessage()
+     * @see \Zigbee2MQTT\ModulBase::handleAvailability()
+     * @see \Zigbee2MQTT\ModulBase::handleSymconExtensionResponses()
+     * @see \Zigbee2MQTT\ModulBase::processPayload()
      */
     public function ReceiveData($JSONString)
     {
@@ -435,6 +448,15 @@ abstract class ModulBase extends \IPSModule
      *
      * @param string $JSONData JSON-Daten mit allen Properties und Attributen
      * @return string JSON-Daten mit allen Properties und Attributen
+     *
+     * @see \IPSModule::Migrate()
+     * @see \IPSModule::SetBuffer()
+     * @see \IPSModule::LogMessage()
+     * @see IPS_GetChildrenIDs()
+     * @see IPS_GetObject()
+     * @see IPS_SetIdent()
+     * @see json_decode()
+     * @see json_encode()
      */
     public function Migrate($JSONData)
     {
@@ -496,21 +518,18 @@ abstract class ModulBase extends \IPSModule
      * Sendet einen Set-Befehl an das Gerät über MQTT
      *
      * Diese Methode generiert das MQTT-Topic für den Set-Befehl basierend auf der Konfiguration
-     * und sendet das übergebene Payload an das Gerät.
+     * und sendet das übergebene Array über SendData an das Gerät.
      *
-     * Format:
-     * - Topic: /<MQTTTopic>/set
-     * - Payload: Array mit Schlüssel-Wert-Paaren
-     *
-     * @param array $Payload Das Payload, das an das Gerät gesendet werden soll
+     * @param array $Payload Array mit Schlüssel-Wert-Paaren, das an das Gerät gesendet werden soll
      *
      * @return bool True wenn die Daten versendet werden konnten, sonst false
      *
      * @throws \Exception Bei Fehlern während des Sendens
      *
-     * @see SendData()
-     * @see ReadPropertyString()
-     * @see SendDebug()
+     * @see \IPSModule::ReadPropertyString()
+     * @see \IPSModule::SendDebug()
+     * @see \Zigbee2MQTT\ModulBase::SendData()
+     * @see json_encode()
      */
     public function SendSetCommand(array $Payload): bool
     {
@@ -532,8 +551,8 @@ abstract class ModulBase extends \IPSModule
      * Setzt den Wert einer Variable unter Berücksichtigung verschiedener Typen und Formatierungen
      *
      * Verarbeitung:
-     * 1. Prüft Existenz der Variable
-     * 2. Konvertiert Wert entsprechend Variablentyp
+     * 1. Prüft Existenz der Variable, Abbruch wenn Variable nicht vorhanden
+     * 2. Konvertiert Wert entsprechend Variablentyp (adjustValueByType)
      * 3. Wendet Profilzuordnungen an
      * 4. Behandelt Spezialfälle (z.B. ColorTemp)
      *
@@ -559,21 +578,35 @@ abstract class ModulBase extends \IPSModule
      *                    Bool: true/false oder "ON"/"OFF"
      *                    Int/Float: Numerischer Wert
      *                    String: Textwert
-     *                    Array: Wird ignoriert
+     *                    Array: Wird ignoriert (Todo: Warum? Was ist mit UpdateStatus?)
      *
      * @return void
      *
-     * @example
+     * Beispiel:
+     * ```php
      * // States
-     * SetValue("state", "ON");         // Setzt bool true
-     * SetValue("stateL1", false);      // Setzt "OFF"
+     * $this->SetValue("state", "ON");         // Setzt bool true
+     * $this->SetValue("stateL1", false);      // Setzt "OFF"
      *
      * // Farben & Temperatur
-     * SetValue("color_temp", 4000);     // Setzt Farbtemp + Kelvin
-     * SetValue("color", 0xFF0000);     // Setzt Rot
+     * $this->SetValue("color_temp", 4000);     // Setzt Farbtemp + Kelvin
+     * $this->SetValue("color", 0xFF0000);     // Setzt Rot
      *
      * // Profile
-     * SetValue("mode", "auto");        // Nutzt Profilzuordnung
+     * $this->SetValue("mode", "auto");        // Nutzt Profilzuordnung
+     * ```
+     *
+     * @see \Zigbee2MQTT\ModulBase::adjustValueByType()
+     * @see \Zigbee2MQTT\ModulBase::convertMiredToKelvin()
+     * @see \Zigbee2MQTT\ModulBase::SetValueDirect()
+     * @see \IPSModule::SetValue()
+     * @see \IPSModule::GetIDForIdent()
+     * @see \IPSModule::SendDebug()
+     * @see is_array()
+     * @see json_encode()
+     * @see IPS_GetVariable()
+     * @see IPS_VariableProfileExists()
+     * @see IPS_GetVariableProfile()
      */
     protected function SetValue($ident, $value)
     {
@@ -644,17 +677,26 @@ abstract class ModulBase extends \IPSModule
      *
      * @return void
      *
+     * Beispiel:
+     * ```php
+     * // Boolean setzen
+     * $this->SetValueDirect("state", true);
+     *
+     * // Array als JSON
+     * $this->SetValueDirect("data", ["temp" => 22]);
+     * ```
+     *
      * @internal Diese Methode wird hauptsächlich intern verwendet für:
      *          - Direkte Wertzuweisung ohne Profile
      *          - Array zu JSON Konvertierung
      *          - Debug-Werte setzen
      *
-     * @example
-     * // Boolean setzen
-     * SetValueDirect("state", true);
-     *
-     * // Array als JSON
-     * SetValueDirect("data", ["temp" => 22]);
+     * @see \IPSModule::SetValue()
+     * @see \IPSModule::GetIDForIdent()
+     * @see \IPSModule::SendDebug()
+     * @see is_array()
+     * @see json_encode()
+     * @see IPS_GetVariable()
      */
     protected function SetValueDirect(string $ident, mixed $value): void
     {
@@ -749,6 +791,15 @@ abstract class ModulBase extends \IPSModule
      * @param array $exposes Ein Array von Exposes, das die Geräteeigenschaften oder Sensoren beschreibt.
      *
      * @return void
+     *
+     * @see \Zigbee2MQTT\ModulBase::registerVariable()
+     * @see \Zigbee2MQTT\ModulBase::convertLabelToName()
+     * @see \Zigbee2MQTT\ModulBase::getVariableTypeFromProfile()
+     * @see \Zigbee2MQTT\ModulBase::registerPresetVariables()
+     * @see \IPSModule::SetBuffer()
+     * @see \IPSModule::SendDebug()
+     * @see is_array()
+     * @see json_encode()
      */
     protected function mapExposesToVariables(array $exposes): void
     {
@@ -797,6 +848,10 @@ abstract class ModulBase extends \IPSModule
      * Lädt die Geräte oder Gruppen Infos über die SymconExtension von Zigbee2MQTT
      *
      * @return array|false Enthält die Antwort als Array, oder false im Fehlerfall.
+     *
+     * @see \Zigbee2MQTT\ModulBase::SendData()
+     * @see \IPSModule::ReadPropertyString()
+     * @see \IPSModule::LogMessage()
      */
     protected function LoadDeviceInfo()
     {
@@ -827,10 +882,14 @@ abstract class ModulBase extends \IPSModule
      * Die JSON-Datei wird im Format "InstanzID.json" im Verzeichnis "Zigbee2MQTTExposes" gespeichert
      * und enthält die Expose-Informationen des Zigbee-Geräts.
      *
-     * @throws \Exception Error on create Expose Directory
-     *
      * @param  array $Result
      * @return bool
+     *
+     * @see \Zigbee2MQTT\ModulBase::createExposesDirectory()
+     * @see \IPSModule::LogMessage()
+     * @see json_encode()
+     * @see file_put_contents()
+     * @see IPS_GetKernelDir()
      */
     protected function SaveExposesToJson(array $Result): bool
     {
@@ -857,9 +916,15 @@ abstract class ModulBase extends \IPSModule
     /**
      * createExposesDirectory
      *
-     * @return bool
+     * @return void
+     *
+     * @throws \Exception Error on create Expose Directory
+     *
+     * @see is_dir()
+     * @see mkdir()
+     * @see IPS_GetKernelDir()
      */
-    private static function createExposesDirectory()
+    private static function createExposesDirectory(): void
     {
         // Vollständigen Pfad zum Verzeichnis erstellen
         $ExposeDirectory = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY;
@@ -881,6 +946,12 @@ abstract class ModulBase extends \IPSModule
      * Beispiele:
      * - "color_temp" -> "color_temp"
      * - "brightnessABC" -> "brightness_a_b_c"
+     * @param  string $oldIdent
+     * @return string
+     *
+     * @see preg_replace()
+     * @see ltrim()
+     * @see strtolower()
      */
     private static function convertToSnakeCase(string $oldIdent): string
     {
@@ -921,10 +992,16 @@ abstract class ModulBase extends \IPSModule
      *
      * @return array Decodiertes Topic und Payload-Array oder false,false Array bei Fehlern
      *
+     * @see \IPSModule::ReadPropertyString()
+     * @see \IPSModule::SendDebug()
      * @see json_decode()
-     * @see SendDebug()
+     * @see json_last_error()
+     * @see json_last_error_msg()
+     * @see substr()
+     * @see strlen()
+     * @see utf8_decode()
      */
-    private function validateAndParseMessage($JSONString): array
+    private function validateAndParseMessage(string $JSONString): array
     {
         $baseTopic = $this->ReadPropertyString(self::MQTT_BASE_TOPIC);
         $mqttTopic = $this->ReadPropertyString(self::MQTT_TOPIC);
@@ -967,11 +1044,11 @@ abstract class ModulBase extends \IPSModule
      *
      * @return bool True wenn Verfügbarkeit verarbeitet wurde, sonst False
      *
-     * @throws \Exception Bei Fehlern während der Profil- oder Variablenerstellung
-     *
      * @see \Zigbee2MQTT\ModulBase::RegisterProfileBoolean()
      * @see \Zigbee2MQTT\ModulBase::RegisterVariableBoolean()
-     * @see \Zigbee2MQTT\ModulBase::SetValue()
+     * @see \IPSModule::Translate()
+     * @see \IPSModule::SetValue()
+     * @see end()
      */
     private function handleAvailability(array $topics, array $payload): bool
     {
@@ -1002,8 +1079,9 @@ abstract class ModulBase extends \IPSModule
      *
      * @return bool True wenn eine Symcon-Antwort verarbeitet wurde, sonst False
      *
-     * @see UpdateTransaction
-     * @see ReadPropertyString
+     * @see \Zigbee2MQTT\ModulBase::UpdateTransaction()
+     * @see \IPSModule::ReadPropertyString()
+     * @see implode()
      */
     private function handleSymconExtensionResponses(array $topics, array $payload): bool
     {
@@ -1023,23 +1101,29 @@ abstract class ModulBase extends \IPSModule
      *
      * Verarbeitet die empfangenen MQTT-Payload-Daten
      *
-     * Verarbeitungsschritte:
-     * 1. JSON-Dekodierung des Payloads mit UTF-8 Konvertierung
-     * 2. Prüfung der JSON-Decodierung auf Fehler
-     * 3. Debug-Ausgabe bei Fehlern
-     *
      * @param array $payload Array mit den MQTT-Nachrichtendaten
      *
      * @return string Leerer String
      *
-     * @throws Exception Bei Fehler in der JSON-Dekodierung (wird intern behandelt)
-     *
-     * @internal Diese Methode wird vom MQTT-Handler aufgerufen
-     *
-     * @example
+     * Beispiel:
+     * ```php
      * // Verarbeitung einer MQTT-Nachricht
-     * $messageData = ['Payload' => '{"temperature": 21.5}'];
+     * $messageData = ['temperature' => 21.5];
      * $result = $this->processPayload($messageData);
+     * ```
+     *
+     * @internal Diese Methode wird von ReceiveData aufgerufen
+     *
+     * @see \Zigbee2MQTT\ModulBase::ReceiveData()
+     * @see \Zigbee2MQTT\ModulBase::mapExposesToVariables()
+     * @see \Zigbee2MQTT\ModulBase::AppendVariableTypes()
+     * @see \Zigbee2MQTT\ModulBase::getKnownVariables()
+     * @see \Zigbee2MQTT\ModulBase::processSpecialVariable()
+     * @see \Zigbee2MQTT\ModulBase::processVariable()
+     * @see \IPSModule::SendDebug()
+     * @see strpos()
+     * @see is_array()
+     * @see json_encode()
      */
     private function processPayload(array $payload): string
     {
@@ -1085,7 +1169,13 @@ abstract class ModulBase extends \IPSModule
      * @param string $ident Der Identifikator der Variable.
      * @param array|null $variableProps Die Eigenschaften der Variable, die registriert werden sollen, falls sie nicht existiert.
      * @param string|null $formattedLabel Das formatierte Label der Variable, falls vorhanden.
+     *
      * @return ?int Die ID der Variable oder NULL, wenn die Registrierung fehlschlägt.
+     *
+     * @see \Zigbee2MQTT\ModulBase::registerVariable()
+     * @see \IPSModule::GetBuffer()
+     * @see \IPSModule::SendDebug()
+     * @see \IPSModule::GetIDForIdent()
      */
     private function getOrRegisterVariable($ident, $variableProps = null, $formattedLabel = null): ?int
     {
@@ -1096,7 +1186,6 @@ abstract class ModulBase extends \IPSModule
 
         $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2);
         $caller = isset($backtrace[1]['function']) ? $backtrace[1]['function'] : 'unknown';
-
         $this->SendDebug(__FUNCTION__, 'Aufruf von getOrRegisterVariable für Ident: ' . $ident . ' von Funktion: ' . $caller, 0);
 
         $variableID = @$this->GetIDForIdent($ident);
@@ -1116,16 +1205,27 @@ abstract class ModulBase extends \IPSModule
     /**
      * processVariable
      *
-     * Verarbeitet eine einzelne Variable aus dem empfangenen Payload.
+     * Verarbeitet eine einzelne Variable mit ihrem Wert.
      *
      * Diese Methode wird aufgerufen, um eine einzelne Variable aus dem empfangenen Payload zu verarbeiten.
      * Sie prüft, ob die Variable bekannt ist, registriert sie gegebenenfalls und setzt den Wert.
      *
      * @param string $key Der Schlüssel im empfangenen Payload.
      * @param mixed $value Der Wert, der mit dem Schlüssel verbunden ist.
-     * @param array $payload Das gesamte empfangene Payload.
      * @param array $knownVariables Eine Liste der bekannten Variablen, die zur Verarbeitung verwendet werden.
+     *
      * @return void
+     *
+     * @see \Zigbee2MQTT\ModulBase::SetValue()
+     * @see \Zigbee2MQTT\ModulBase::processSpecialVariable()
+     * @see \Zigbee2MQTT\ModulBase::getOrRegisterVariable()
+     * @see \Zigbee2MQTT\ModulBase::handleColorVariable()
+     * @see \Zigbee2MQTT\ModulBase::convertMillivoltToVolt()
+     * @see \IPSModule::SendDebug()
+     * @see \IPSModule::GetIDForIdent()
+     * @see strtolower()
+     * @see is_array()
+     * @see strpos()
      */
     private function processVariable(string $key, mixed $value, array $knownVariables): void
     {
@@ -1194,7 +1294,7 @@ abstract class ModulBase extends \IPSModule
         // Voltage-Spezialbehandlung hinzufügen
         if ($lowerKey === 'voltage') {
             $this->SendDebug(__FUNCTION__, 'Voltage vor Konvertierung: ' . $value, 0);
-            $value = $this->convertMillivoltToVolt($value);
+            $value = self::convertMillivoltToVolt($value);
             $this->SendDebug(__FUNCTION__, 'Voltage nach Konvertierung: ' . $value, 0);
         }
 
@@ -1212,7 +1312,14 @@ abstract class ModulBase extends \IPSModule
      *
      * @param string $ident Der Identifikator der Standard-Variable.
      * @param mixed $value Der Wert, der mit der Standard-Variablen-Aktionsanforderung verbunden ist.
+     *
      * @return bool Gibt true zurück, wenn die Aktion erfolgreich verarbeitet wurde, andernfalls false.
+     *
+     * @see \Zigbee2MQTT\ModulBase::getOrRegisterVariable()
+     * @see \Zigbee2MQTT\ModulBase::normalizeValueToRange()
+     * @see \Zigbee2MQTT\ModulBase::SendSetCommand()
+     * @see \IPSModule::SendDebug()
+     * @see is_bool()
      */
     private function handleStandardVariable(string $ident, mixed $value): bool
     {
@@ -1257,12 +1364,22 @@ abstract class ModulBase extends \IPSModule
      *
      * @return bool True wenn State erfolgreich verarbeitet wurde, sonst False
      *
-     * @example
+     * Beispiel:
+     * ```php
      * // Einfacher ON/OFF State
-     * handleStateVariable("state", true); // Sendet ON
-     * handleStateVariable("state", false); // Sendet OFF
+     * $this->handleStateVariable("state", true); // Sendet ON
+     * $this->handleStateVariable("state", false); // Sendet OFF
+     * ```
+     *
+     * @see \Zigbee2MQTT\ModulBase::SendSetCommand()
+     * @see \Zigbee2MQTT\ModulBase::SetValueDirect()
+     * @see \IPSModule::SendDebug()
+     * @see json_encode()
+     * @see preg_match()
+     * @see is_bool()
+     * @see strtoupper()
      */
-    private function handleStateVariable(string $ident, $value): bool
+    private function handleStateVariable(string $ident, mixed $value): bool
     {
         $this->SendDebug(__FUNCTION__, 'State-Handler für: ' . $ident . ' mit Wert: ' . json_encode($value), 0);
 
@@ -1316,9 +1433,22 @@ abstract class ModulBase extends \IPSModule
      *
      * @param string $ident Der Identifikator der Farbvariable.
      * @param mixed $value Der Wert, der mit der Farbvariablen-Aktionsanforderung verbunden ist.
+     *
      * @return bool Gibt true zurück, wenn die Aktion erfolgreich verarbeitet wurde, andernfalls false.
+     *
+     * @see \Zigbee2MQTT\ModulBase::IntToXY()
+     * @see \Zigbee2MQTT\ModulBase::xyToInt()
+     * @see \Zigbee2MQTT\ModulBase::SendSetCommand()
+     * @see \Zigbee2MQTT\ModulBase::SetValueDirect()
+     * @see \Zigbee2MQTT\ModulBase::setColor()
+     * @see \Zigbee2MQTT\ModulBase::convertKelvinToMired()
+     * @see \IPSModule::SendDebug()
+     * @see json_encode()
+     * @see is_int()
+     * @see is_array()
+     * @see sprintf()
      */
-    private function handleColorVariable($ident, $value): bool
+    private function handleColorVariable(string $ident, mixed $value): bool
     {
         $handled = match ($ident) {
             'color' => function () use ($value)
@@ -1412,9 +1542,17 @@ abstract class ModulBase extends \IPSModule
      *
      * @param string $ident Der Identifikator der Preset-Variable.
      * @param mixed $value Der Wert, der mit der Preset-Aktionsanforderung verbunden ist.
+     *
      * @return bool Gibt true zurück, wenn die Aktion erfolgreich verarbeitet wurde, andernfalls false.
+     *
+     * @see \Zigbee2MQTT\ModulBase::SetValue()
+     * @see \Zigbee2MQTT\ModulBase::SetValueDirect()
+     * @see \Zigbee2MQTT\ModulBase::SendSetCommand()
+     * @see \Zigbee2MQTT\ModulBase::convertMiredToKelvin()
+     * @see \IPSModule::SendDebug()
+     * @see str_replace()
      */
-    private function handlePresetVariable($ident, $value): bool
+    private function handlePresetVariable(string $ident, mixed $value): bool
     {
         // Extrahiere den Identifikator der Hauptvariable
         $mainIdent = str_replace('_presets', '', $ident);
@@ -1454,7 +1592,12 @@ abstract class ModulBase extends \IPSModule
      *
      * @param string $ident Der Identifikator der String-Variable.
      * @param string $value Der Wert, der mit der String-Variablen-Aktionsanforderung verbunden ist.
+     *
      * @return bool Gibt true zurück wenn der Set-Befehl abgesetzt wurde, sonder false.
+     *
+     * @see \Zigbee2MQTT\ModulBase::SetValue()
+     * @see \Zigbee2MQTT\ModulBase::SendSetCommand()
+     * @see \IPSModule::SendDebug()
      */
     private function handleStringVariableNoResponse(string $ident, string $value): bool
     {
@@ -1476,9 +1619,16 @@ abstract class ModulBase extends \IPSModule
      *
      * @param array $variableObject Ein Array von IPS_GetVariable()
      * @param mixed $value Der Wert, der angepasst werden soll.
+     *
      * @return mixed Der angepasste Wert basierend auf dem Variablentyp.
+     *
+     * @see \IPSModule::SendDebug()
+     * @see json_encode()
+     * @see is_bool()
+     * @see is_string()
+     * @see strtoupper()
      */
-    private function adjustValueByType(array $variableObject, $value)
+    private function adjustValueByType(array $variableObject, mixed $value): mixed
     {
         $varType = $variableObject['VariableType'];
         $varID = $variableObject['VariableID'];
@@ -1546,12 +1696,23 @@ abstract class ModulBase extends \IPSModule
      *
      * @throws \InvalidArgumentException Wenn der Modus ungültig ist.
      *
-     * @example
+     * Beispiel:
+     * ```php
      * // Setze eine Farbe im HSL-Modus.
      * $this->setColor(0xFF5733, 'hsl', 'color');
      *
      * // Setze eine Farbe im HSV-Modus.
      * $this->setColor(0x4287f5, 'hsv', 'color');
+     * ```
+     *
+     * @see \Zigbee2MQTT\ModulBase::IntToRGB()
+     * @see \Zigbee2MQTT\ModulBase::RGBToXy()
+     * @see \Zigbee2MQTT\ModulBase::RGBToHSB()
+     * @see \Zigbee2MQTT\ModulBase::RGBToHSL()
+     * @see \Zigbee2MQTT\ModulBase::RGBToHSV()
+     * @see \Zigbee2MQTT\ModulBase::SendSetCommand()
+     * @see \IPSModule::SendDebug()
+     * @see json_encode()
      */
     private function setColor(int $color, string $mode, string $Z2MMode = 'color'): bool
     {
@@ -1667,15 +1828,27 @@ abstract class ModulBase extends \IPSModule
      * @return bool True wenn Variable verarbeitet wurde,
      *              False wenn keine Spezialvariable
      *
+     * Beispiel:
+     * ```php
+     * // Verarbeitet Farbtemperatur
+     * $this->processSpecialVariable("color_temp", 4000);
+     *
+     * // Verarbeitet RGB-Farbe
+     * $this->processSpecialVariable("color", ["r" => 255, "g" => 0, "b" => 0]);
+     * ```
+     *
      * @see \Zigbee2MQTT\ModulBase::processPayload() Ruft diese Methode auf
      * @see \Zigbee2MQTT\ModulBase::processVariable() Ruft diese Methode auf
      *
-     * @example
-     * // Verarbeitet Farbtemperatur
-     * processSpecialVariable("color_temp", 4000);
-     *
-     * // Verarbeitet RGB-Farbe
-     * processSpecialVariable("color", ["r" => 255, "g" => 0, "b" => 0]);
+     * @see \Zigbee2MQTT\ModulBase::convertLabelToName()
+     * @see \Zigbee2MQTT\ModulBase::getOrRegisterVariable()
+     * @see \Zigbee2MQTT\ModulBase::adjustSpecialValue()
+     * @see \Zigbee2MQTT\ModulBase::SetValueDirect()
+     * @see \IPSModule::SendDebug()
+     * @see is_array()
+     * @see json_encode()
+     * @see sprintf()
+     * @see gettype()
      */
     private function processSpecialVariable($key, $value)
     {
@@ -1733,17 +1906,28 @@ abstract class ModulBase extends \IPSModule
      *               - ColorTempKelvin: String (Mired)
      *               - Default: Originalwert
      *
-     * @example
+     * Beispiel:
+     * ```php
      * // LastSeen konvertieren
-     * adjustSpecialValue("last_seen", 1600000000000); // Returns: 1600000000
+     * $this->adjustSpecialValue("last_seen", 1600000000000); // Returns: 1600000000
      *
      * // ColorMode konvertieren
-     * adjustSpecialValue("color_mode", "hs"); // Returns: "HS"
+     * $this->adjustSpecialValue("color_mode", "hs"); // Returns: "HS"
      *
      * // Kelvin zu Mired
-     * adjustSpecialValue("color_temp_kelvin", 4000); // Returns: "250"
+     * $this->adjustSpecialValue("color_temp_kelvin", 4000); // Returns: "250"
+     * ```
+     *
+     * @see \Zigbee2MQTT\ModulBase::convertKelvinToMired()
+     * @see \Zigbee2MQTT\ModulBase::normalizeValueToRange()
+     * @see \Zigbee2MQTT\ModulBase::convertMillivoltToVolt()
+     * @see \IPSModule::SendDebug()
+     * @see is_array()
+     * @see json_encode()
+     * @see intdiv()
+     * @see strtoupper()
      */
-    private function adjustSpecialValue($ident, $value)
+    private function adjustSpecialValue(string $ident, mixed $value): mixed
     {
         $debugValue = is_array($value) ? json_encode($value) : $value;
         $this->SendDebug(__FUNCTION__, 'Processing special variable: ' . $ident . ' with value: ' . $debugValue, 0);
@@ -1768,7 +1952,7 @@ abstract class ModulBase extends \IPSModule
                 return $adjustedValue;
             case 'voltage':
                 // Konvertiere mV zu V
-                $adjustedValue = $this->convertMillivoltToVolt($value);
+                $adjustedValue = self::convertMillivoltToVolt($value);
                 $this->SendDebug(__FUNCTION__, 'Converted voltage value: ' . $adjustedValue, 0);
                 return $adjustedValue;
             default:
@@ -1784,7 +1968,7 @@ abstract class ModulBase extends \IPSModule
      * @param float $value Der zu konvertierende Wert in Millivolt.
      * @return float Der konvertierte Wert in Volt.
      */
-    private function convertMillivoltToVolt($value)
+    private static function convertMillivoltToVolt(float $value): float
     {
         if ($value > 400) { // Werte über 400 sind in mV
             return $value * 0.001; // Umrechnung von mV in V mit Faktor 0.001
@@ -1800,6 +1984,15 @@ abstract class ModulBase extends \IPSModule
      *
      * @param string $label Das zu formatierende Label
      * @return string Das formatierte Label
+     *
+     * @see \Zigbee2MQTT\ModulBase::isValueInLocaleJson()
+     * @see \Zigbee2MQTT\ModulBase::addValueToTranslationsJson()
+     * @see \IPSModule::SendDebug()
+     * @see str_replace()
+     * @see str_ireplace()
+     * @see strtolower()
+     * @see ucwords()
+     * @see ucfirst()
      */
     private function convertLabelToName(string $label): string
     {
@@ -1848,15 +2041,14 @@ abstract class ModulBase extends \IPSModule
      *                     - 'unit': Optional - Einheit bei numeric (string)
      *                     - 'value_min': Optional - Minimaler Wert bei numeric (float|int)
      *                     - 'value_max': Optional - Maximaler Wert bei numeric (float|int)
-     * @param array|null $stateMapping Optionales Mapping für spezifische Zustände
-     *                                Format: ['state1' => 'value1', 'state2' => 'value2']
      *
      * @return string Name des erstellten/vorhandenen Profils
      *                - '~Switch' für Standard-Schalter
      *                - 'Z2M.[property]' für benutzerdefinierte Profile
      *                - Systemprofil-Name wenn verfügbar
      *
-     * @example
+     * Beispiel:
+     * ```php
      * // Binary Switch
      * $expose = [
      *     'type' => 'binary',
@@ -1866,8 +2058,21 @@ abstract class ModulBase extends \IPSModule
      * ];
      * $profile = $this->registerVariableProfile($expose);
      * // Ergebnis: '~Switch'
+     * ```
+     *
+     *
+     * @see \Zigbee2MQTT\ModulBase::registerStateMappingProfile()
+     * @see \Zigbee2MQTT\ModulBase::registerCustomStringProfile()
+     * @see \Zigbee2MQTT\ModulBase::getStandardProfile()
+     * @see \Zigbee2MQTT\ModulBase::isValidStandardProfile()
+     * @see \Zigbee2MQTT\ModulBase::handleProfileType()
+     * @see strtolower()
+     * @see strtoupper()
+     * @see is_string()
+     * @see str_replace()
+     *
      */
-    private function registerVariableProfile($expose, $stateMapping = null)
+    private function registerVariableProfile(array $expose): string
     {
         $type = $expose['type'] ?? '';
         $property = $expose['property'] ?? $expose['name'];
@@ -1902,7 +2107,7 @@ abstract class ModulBase extends \IPSModule
         }
 
         $standardProfile = $this->getStandardProfile($type, $property);
-        if ($this->isValidStandardProfile($standardProfile)) {
+        if (self::isValidStandardProfile($standardProfile)) {
             return $standardProfile;
         }
 
@@ -1928,7 +2133,8 @@ abstract class ModulBase extends \IPSModule
      *                     - '~Battery' für Batterie-Eigenschaften
      *                     - leer wenn kein passendes Profil gefunden wurde
      *
-     * @example
+     * Beispiel:
+     * ```php
      * // Temperatur-Profil
      * $profile = $this->getStandardProfile('numeric', 'temperature');
      * // Ergebnis: '~Temperature'
@@ -1936,6 +2142,10 @@ abstract class ModulBase extends \IPSModule
      * // Gruppen-spezifisches Profil
      * $profile = $this->getStandardProfile('binary', 'state', 'light');
      * // Ergebnis: '~Switch'
+     * ```
+     *
+     * @see \IPSModule::SendDebug()
+     * @see json_encode()
      */
     private function getStandardProfile(string $type, string $property, ?string $groupType = null): string
     {
@@ -1979,7 +2189,8 @@ abstract class ModulBase extends \IPSModule
      *       - Returns 'int' wenn:
      *         * Keine der float-Bedingungen zutrifft
      *
-     * @example
+     * Beispiel:
+     * ```php
      * // Float Beispiel (Temperatur)
      * $type = $this->getVariableTypeFromProfile('numeric', 'temperature', '°C', 0.5);
      * // Ergebnis: 'float'
@@ -1987,8 +2198,16 @@ abstract class ModulBase extends \IPSModule
      * // Integer Beispiel (Helligkeit)
      * $type = $this->getVariableTypeFromProfile('numeric', 'brightness', '%', 1.0);
      * // Ergebnis: 'int'
+     * ```
+     *
+     * @see \IPSModule::SendDebug()
+     * @see is_string()
+     * @see mb_convert_encoding()
+     * @see str_replace()
+     * @see in_array()
+     * @see fmod()
      */
-    private function getVariableTypeFromProfile($type, string $feature, $unit = '', float $value_step = 1.0, ?string $groupType = null): string
+    private function getVariableTypeFromProfile(string $type, string $feature, $unit = '', float $value_step = 1.0, ?string $groupType = null): string
     {
         // Erst StandardProfile prüfen
         foreach (self::$VariableUseStandardProfile as $profile) {
@@ -2019,7 +2238,7 @@ abstract class ModulBase extends \IPSModule
 
         // Prüfen, ob die Einheit in den Float-Einheiten enthalten ist
         if (!empty($unit) && is_string($unit)) {
-            // Einheit in UTF-8 dekodieren
+            // Einheit in UTF-8 dekodieren.
             $unit = mb_convert_encoding(mb_convert_encoding($unit, 'ISO-8859-1', 'UTF-8'), 'ISO-8859-1', 'UTF-8');
             $unitTrimmed = str_replace(' ', '', $unit);
             if (in_array($unitTrimmed, self::FLOAT_UNITS, true)) {
@@ -2057,24 +2276,24 @@ abstract class ModulBase extends \IPSModule
      *
      * @param string $profile Der Name des Standardprofils.
      * @return bool Gibt true zurück, wenn das Standardprofil gültig ist, andernfalls false.
+     *
+     * @see IPS_VariableProfileExists()
+     * @see strpos()
      */
-    private function isValidStandardProfile(string $profile): bool
+    private static function isValidStandardProfile(string $profile): bool
     {
         // Überprüfen, ob das Profil nicht null und nicht leer ist
         if ($profile === '') {
             return false;
         }
-
         // Überprüfen, ob das Profil existiert
         if (IPS_VariableProfileExists($profile)) {
             return true;
         }
-
         // Überprüfen, ob es sich um ein Systemprofil handelt (beginnt mit '~')
         if (strpos($profile, '~') === 0) {
             return true;
         }
-
         return false;
     }
 
@@ -2091,6 +2310,15 @@ abstract class ModulBase extends \IPSModule
      * @param string $ProfileName Der Name des zu erstellenden Profils.
      *
      * @return string Der Name des erstellten Profils.
+     *
+     * @see \Zigbee2MQTT\ModulBase::registerBinaryProfile()
+     * @see \Zigbee2MQTT\ModulBase::registerEnumProfile()
+     * @see \Zigbee2MQTT\ModulBase::registerNumericProfile()
+     * @see \Zigbee2MQTT\ModulBase::handleProfileType()
+     * @see \Zigbee2MQTT\ModulBase::registerSpecialVariable()
+     * @see \IPSModule::SendDebug()
+     * @see strtolower()
+     * @see json_encode()
      */
     private function handleProfileType(string $type, array $expose, string $ProfileName): string
     {
@@ -2149,11 +2377,16 @@ abstract class ModulBase extends \IPSModule
      *
      * @return string Der Name des erstellten Profils, identisch mit dem Eingabeparameter
      *
-     * @example
+     * Beispiel:
+     * ```php
      * $profile = $this->registerBinaryProfile('Z2M.Switch');
      * // Erstellt ein Profil mit den Werten:
      * // false -> "Aus" (rot)
      * // true  -> "An"  (grün)
+     * ```
+     *
+     * @see \Zigbee2MQTT\ModulBase::RegisterProfileBooleanEx()
+     * @see \IPSModule::SendDebug()
      */
     private function registerBinaryProfile(string $ProfileName): string
     {
@@ -2186,7 +2419,8 @@ abstract class ModulBase extends \IPSModule
      *
      * @return string Name des erstellten Profils (Format: BasisName.HashWert)
      *
-     * @example
+     * Beispiel:
+     * ```php
      * $expose = [
      *     'values' => ['auto', 'manual', 'boost']
      * ];
@@ -2258,7 +2492,8 @@ abstract class ModulBase extends \IPSModule
      *
      * @throws \Exception Wenn ein Standard-Profil ungültig ist
      *
-     * @example
+     * Beispiel:
+     * ```php
      * $expose = [
      *     'type' => 'numeric',
      *     'property' => 'temperature',
@@ -2268,6 +2503,7 @@ abstract class ModulBase extends \IPSModule
      *     'value_step' => 0.5
      * ];
      * $result = $this->registerNumericProfile($expose);
+     * ```
      */
     private function registerNumericProfile($expose)
     {
@@ -2284,7 +2520,7 @@ abstract class ModulBase extends \IPSModule
         // Standardprofil-Prüfung
         $standardProfile = $this->getStandardProfile($type, $feature);
         if ($standardProfile !== '') {
-            if ($this->isValidStandardProfile($standardProfile)) {
+            if (self::isValidStandardProfile($standardProfile)) {
                 return ['mainProfile' => $standardProfile, 'presetProfile' => null];
             }
             return ['mainProfile' => $standardProfile, 'presetProfile' => null];
@@ -2850,13 +3086,15 @@ abstract class ModulBase extends \IPSModule
      *                       - 'value_max': Maximaler Wert (optional)
      * @return void
      *
-     * @example
+     * Beispiel:
+     * ```php
      * $presets = [
      *     ['name' => 'low', 'value' => 20],
      *     ['name' => 'medium', 'value' => 50],
      *     ['name' => 'high', 'value' => 100]
      * ];
      * $this->registerPresetVariables($presets, 'Brightness', 'int', ['property' => 'brightness', 'name' => 'Brightness']);
+     * ```
      */
     private function registerPresetVariables(array $presets, string $label, string $variableType, array $feature): void
     {
@@ -2977,7 +3215,8 @@ abstract class ModulBase extends \IPSModule
      *
      * @return array|null Array mit State-Konfiguration oder null wenn kein State-Feature
      *
-     * @example
+     * Beispiel:
+     * ```php
      * // Standard state
      * $config = $this->getStateConfiguration('state');
      * // Ergebnis: ['type' => 'switch', 'values' => ['ON', 'OFF'], ...]
@@ -2985,6 +3224,8 @@ abstract class ModulBase extends \IPSModule
      * // Vordefinierter state
      * $config = $this->getStateConfiguration('valve_state');
      * // Ergebnis: Konfiguration aus stateDefinitions
+     * ```
+     *
      */
     private function getStateConfiguration(string $featureId, ?array $feature = null): ?array
     {
