@@ -474,27 +474,25 @@ abstract class ModulBase extends \IPSModule
                 continue;
             }
 
-            $oldIdent = $obj['ObjectIdent'];
-            if ($oldIdent == '') {
+            if ($obj['ObjectIdent'] == '') {
                 // Hat keinen Ident, also ignorieren
                 continue;
             }
 
             // Nur solche Idents, die mit 'Z2M_' beginnen:
-            if (substr($oldIdent, 0, 4) !== 'Z2M_') {
+            if (substr($obj['ObjectIdent'], 0, 4) !== 'Z2M_') {
                 // Überspringen
                 continue;
             }
 
             // Neuen Ident bilden
-            $newIdent = self::convertToSnakeCase($oldIdent);
-
+            $newIdent = self::convertToSnakeCase($obj['ObjectIdent']);
             // Versuchen zu setzen
             $result = @IPS_SetIdent($childID, $newIdent);
             if ($result === false) {
                 $this->LogMessage(__FUNCTION__ . ' : Fehler: Ident "' . $newIdent . '" konnte nicht für Variable #{$childID} gesetzt werden!', KL_ERROR);
             } else {
-                $this->LogMessage(__FUNCTION__ . ' : Variable #' . $childID . ': "' . $oldIdent . '" wurde geändert zu "' . $newIdent . '"', KL_NOTIFY);
+                $this->LogMessage(__FUNCTION__ . ' : Variable #' . $childID . ': "' . $obj['ObjectIdent'] . '" wurde geändert zu "' . $newIdent . '"', KL_NOTIFY);
             }
         }
 
@@ -613,6 +611,10 @@ abstract class ModulBase extends \IPSModule
 
         // Profilverarbeitung nur für nicht-boolesche Werte
         if ($varType !== 0) {
+            /**
+             *  @todo VariableCustomProfile dürfen wir nicht nutzen, sondern nur VariableProfile
+             * Somit muss eine Prüfung auch immer auf BEIDE Profile erfolgen, falls der User ein eigenes erstellt
+             */
             $profileName = IPS_GetVariable($id)['VariableCustomProfile'];
             if ($profileName && IPS_VariableProfileExists($profileName)) {
                 $profileAssociations = IPS_GetVariableProfile($profileName)['Associations'];
@@ -1001,7 +1003,7 @@ abstract class ModulBase extends \IPSModule
             return false;
         }
         $this->RegisterVariableBoolean('device_status', $this->Translate('Availability'), 'Z2M.DeviceStatus');
-        $this->SetValue('device_status', $payload['state'] == 'online');
+        parent::SetValue('device_status', $payload['state'] == 'online');
         return true;
     }
 
@@ -1687,9 +1689,8 @@ abstract class ModulBase extends \IPSModule
      * @return bool True wenn Variable verarbeitet wurde,
      *              False wenn keine Spezialvariable
      *
-     * @internal Verwendet von:
-     *          - processPayload()
-     *          - handleSpecialCases()
+     * @see \Zigbee2MQTT\ModulBase::processPayload() Ruft diese Methode auf
+     * @see \Zigbee2MQTT\ModulBase::processVariable() Ruft diese Methode auf
      *
      * @example
      * // Verarbeitet Farbtemperatur
@@ -1725,42 +1726,6 @@ abstract class ModulBase extends \IPSModule
 
         $this->SendDebug(__FUNCTION__, sprintf('SetValueDirect aufgerufen für %s mit Wert: %s (Typ: %s)', $ident, is_array($adjustedValue) ? json_encode($adjustedValue) : $adjustedValue, gettype($adjustedValue)), 0);
         return true;
-    }
-
-    /**
-     * handleSpecialVariable
-     *
-     * Verarbeitet spezielle Variablen und setzt deren Wert direkt.
-     *
-     * Diese Methode wird aufgerufen, um spezielle Variablen zu verarbeiten und deren Wert direkt zu setzen.
-     * Sie registriert die Variable, falls sie noch nicht existiert, und führt spezifische Konvertierungen
-     * und Anpassungen basierend auf dem Identifikator der Variable durch.
-     *
-     * @param string $key Der Schlüssel der speziellen Variable.
-     * @param mixed $value Der Wert, der mit der speziellen Variablen verbunden ist.
-     * @return void
-     */
-    private function handleSpecialVariable($key, $value)
-    {
-        $variableProps = ['property' => $key];
-        $ident = $key;
-        $formattedLabel = $this->convertLabelToName($key);
-        $variableID = $this->getOrRegisterVariable($ident, $variableProps, $formattedLabel);
-
-        if (!$variableID) {
-            return;
-        }
-
-        // Spezielle Verarbeitung für die Variable
-        $adjustedValue = $this->processSpecialVariable($ident, $value);
-
-        // Debug-Ausgabe des verarbeiteten Wertes
-        $this->SendDebug(__FUNCTION__, ' :: ' . __LINE__ . ' :: ' . $key . ' verarbeitet: ' . $key . ' => ' . $adjustedValue, 0);
-
-        // Wert setzen
-        $this->SetValueDirect($ident, $adjustedValue);
-
-        $this->SendDebug(__FUNCTION__, 'SetValueDirect aufgerufen für ' . $ident . ' mit Wert: ' . $adjustedValue, 0);
     }
 
     /**
@@ -2569,8 +2534,6 @@ abstract class ModulBase extends \IPSModule
     {
         $jsonFile = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY . DIRECTORY_SEPARATOR . $this->InstanceID . '.json';
 
-
-
         $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, 'Verarbeite Datei: ' . $jsonFile, 0);
         if (!file_exists($jsonFile)) {
             $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, 'JSON-Datei nicht gefunden: ' . $jsonFile, 0);
@@ -2714,7 +2677,7 @@ abstract class ModulBase extends \IPSModule
 
         // Weitere Verarbeitung für Standard-Features
         if (is_array($feature)) {
-            $name = $feature['name'] ?? $featureId;
+            $name = $feature['name'] ?? $featureId; /** @todo $name wrird nicht genutzt? */
             $unit = $feature['unit'] ?? ''; // Falls 'unit' nicht gesetzt ist, verwenden wir einen leeren String
         }
 
@@ -2792,6 +2755,12 @@ abstract class ModulBase extends \IPSModule
         }
 
         // Profil nach der Variablenerstellung zuordnen
+        /**
+         * @todo
+         *
+         * NEIN, das machen wir so nicht!
+         * Das Profil muss IMMER bei RegisterVariableXYZ zugeordnet werden.
+         */
         if (!empty($profileName)) {
             if (IPS_VariableProfileExists($profileName)) {
                 $variableID = $this->GetIDForIdent($ident);
@@ -2800,6 +2769,7 @@ abstract class ModulBase extends \IPSModule
                 // Sicherstellen, dass der Profiltyp mit dem Variablentyp übereinstimmt
                 $profile = IPS_GetVariableProfile($profileName);
                 if ($profile['ProfileType'] == $variable['VariableType']) {
+                    /** IPS_SetVariableCustomProfile ist Hoheit des Users und darf NIE benutzt werden */
                     IPS_SetVariableCustomProfile($variableID, $profileName);
                     $this->SendDebug(__FUNCTION__, 'Assigned profile ' . $profileName . ' to variable with ident ' . $ident, 0);
                 } else {
