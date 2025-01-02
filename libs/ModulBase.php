@@ -366,9 +366,9 @@ abstract class ModulBase extends \IPSModule
             // Behandelt Standard-Variablen
             default => $this->handleStandardVariable($ident, $value),
         };
-        // Debug-Ausgabe bei nicht behandelten Ident
+        // Debug-Ausgabe bei fehlerhafter oder fehlender Aktion
         if ($handled === false) {
-            $this->SendDebug(__FUNCTION__, 'Keine passende Aktion für Ident: ' . $ident . ' gefunden', 0);
+            $this->SendDebug(__FUNCTION__, 'Fehler beim verarbeiten der Aktion: ' . $ident , 0);
         }
     }
 
@@ -520,7 +520,7 @@ abstract class ModulBase extends \IPSModule
      *
      * @return bool True wenn die Daten versendet werden konnten, sonst false
      *
-     * @throws Exception Bei Fehlern während des Sendens
+     * @throws \Exception Bei Fehlern während des Sendens
      *
      * @see SendData()
      * @see ReadPropertyString()
@@ -576,8 +576,6 @@ abstract class ModulBase extends \IPSModule
      *                    Array: Wird ignoriert
      *
      * @return void
-     *
-     * @throws InvalidArgumentException Bei ungültiger Wertkonvertierung
      *
      * @example
      * // States
@@ -664,7 +662,7 @@ abstract class ModulBase extends \IPSModule
      *
      * @return void
      *
-     * @throws Exception Wenn SetValue fehlschlägt (wird intern behandelt)
+     * @throws \Exception Wenn SetValue fehlschlägt (wird intern behandelt)
      *
      * @internal Diese Methode wird hauptsächlich intern verwendet für:
      *          - Direkte Wertzuweisung ohne Profile
@@ -851,7 +849,7 @@ abstract class ModulBase extends \IPSModule
      * Die JSON-Datei wird im Format "InstanzID.json" im Verzeichnis "Zigbee2MQTTExposes" gespeichert
      * und enthält die Expose-Informationen des Zigbee-Geräts.
      *
-     * @throws Exception Error on create Expose Directory
+     * @throws \Exception Error on create Expose Directory
      *
      * @param  array $Result
      * @return bool
@@ -991,7 +989,7 @@ abstract class ModulBase extends \IPSModule
      *
      * @return bool True wenn Verfügbarkeit verarbeitet wurde, sonst False
      *
-     * @throws Exception Bei Fehlern während der Profil- oder Variablenerstellung
+     * @throws \Exception Bei Fehlern während der Profil- oder Variablenerstellung
      *
      * @see \Zigbee2MQTT\ModulBase::RegisterProfileBoolean()
      * @see \Zigbee2MQTT\ModulBase::RegisterVariableBoolean()
@@ -1566,7 +1564,7 @@ abstract class ModulBase extends \IPSModule
      *
      * @return bool
      *
-     * @throws InvalidArgumentException Wenn der Modus ungültig ist.
+     * @throws \InvalidArgumentException Wenn der Modus ungültig ist.
      *
      * @example
      * // Setze eine Farbe im HSL-Modus.
@@ -2571,12 +2569,14 @@ abstract class ModulBase extends \IPSModule
     {
         $jsonFile = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY . DIRECTORY_SEPARATOR . $this->InstanceID . '.json';
 
-        $knownVariables = [];
+
 
         $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, 'Verarbeite Datei: ' . $jsonFile, 0);
         if (!file_exists($jsonFile)) {
             $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, 'JSON-Datei nicht gefunden: ' . $jsonFile, 0);
-            continue;
+        if (!isset($data['exposes'])){
+            return [];
+        }            
         }
 
         $jsonData = file_get_contents($jsonFile);
@@ -2584,15 +2584,16 @@ abstract class ModulBase extends \IPSModule
 
         if (json_last_error() !== JSON_ERROR_NONE || !isset($data['exposes'])) {
             $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, 'Fehler beim Dekodieren der JSON-Datei oder fehlende "exposes" in Datei: ' . $jsonFile . '. Fehler: ' . json_last_error_msg(), 0);
-            continue;
         }
 
-        $exposes = $data['exposes'];
+        if (!isset($data['exposes'])){
+            return [];
+        }
 
         $features = array_map(function ($expose)
         {
             return isset($expose['features']) ? $expose['features'] : [$expose];
-        }, $exposes);
+        }, $data['exposes']);
 
         $features = array_merge(...$features);
 
@@ -2601,15 +2602,13 @@ abstract class ModulBase extends \IPSModule
             return isset($feature['property']);
         });
 
+        $knownVariables = [];
         foreach ($filteredFeatures as $feature) {
             $variableName = trim(strtolower($feature['property']));
             $knownVariables[$variableName] = $feature;
         }
 
-        $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, 'Known Variables Array:', 0);
-        foreach ($knownVariables as $varName => $varProps) {
-            // $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, "'" . $varName . "'", 0);
-        }
+        $this->SendDebug(__FUNCTION__ . ' Known Variables Array:',json_encode($knownVariables), 0);
 
         return $knownVariables;
     }

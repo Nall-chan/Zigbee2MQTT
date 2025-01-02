@@ -27,6 +27,8 @@ trait Constants
     protected const SYMCON_EXTENSION_LIST_RESPONSE = '/SymconExtension/lists/response/';
     /** @var string GUID des MQTT Servers */
     protected const GUID_MQTT_SERVER = '{C6D2AEB3-6E1F-4B2E-8E69-3A1A00246850}';
+    /** @var string GUID des Datenfluss zu einen MQTT Splitter */
+    protected const GUID_MQTT_SEND = '{043EA491-0325-4ADD-8FC2-A30C8EEB4D3F}';
     /** @var string Name des Attribut welches die Modul-Version enthält */
     protected const ATTRIBUTE_MODUL_VERSION = 'Version';
 }
@@ -41,7 +43,7 @@ trait SendData
      *  Vorlage Daten Array zum versenden an einen MQTT-Splitter
      */
     private static $MQTTDataArray = [
-        'DataID'           => '{043EA491-0325-4ADD-8FC2-A30C8EEB4D3F}',
+        'DataID'           => self::GUID_MQTT_SEND,
         'PacketType'       => 3,
         'QualityOfService' => 0,
         'Retain'           => false,
