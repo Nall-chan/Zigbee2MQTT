@@ -228,6 +228,7 @@ abstract class ModulBase extends \IPSModule
                 [true,  'Online',   '', 0x00FF00]
             ]
         );
+        $this->RegisterMessage($this->InstanceID, IM_CHANGESTATUS);
     }
 
     /**
@@ -317,11 +318,34 @@ abstract class ModulBase extends \IPSModule
 
         // Nur ein UpdateDeviceInfo wenn Parent aktiv und System bereit
         if (($this->HasActiveParent()) && (IPS_GetKernelRunlevel() == KR_READY) && ($this->GetStatus() != IS_CREATING)) {
-            /** @todo Muss die Datei nicht neu geladen werden, wenn sich die IEEE Adresse ändert? */
             $this->checkAndCreateJsonFile();
         }
 
         $this->SetStatus(IS_ACTIVE);
+    }
+
+    /**
+     * MessageSink
+     *
+     * @param  mixed $Time
+     * @param  mixed $SenderID
+     * @param  mixed $Message
+     * @param  mixed $Data
+     * @return void
+     */
+    public function MessageSink($Time, $SenderID, $Message, $Data)
+    {
+        parent::MessageSink($Time, $SenderID, $Message, $Data);
+        if ($SenderID != $this->InstanceID) {
+            return;
+        }
+        switch ($Message) {
+            case IM_CHANGESTATUS:
+                if ($Data[0] == IS_ACTIVE) {
+                    $this->checkAndCreateJsonFile();
+                }
+                return;
+        }
     }
 
     /**
