@@ -426,7 +426,12 @@ abstract class ModulBase extends \IPSModule
         if ($this->handleAvailability($topics, $payload)) {
             return '';
         }
-        // Behandelt Symcon Extension Antworten
+        // Leere Payloads brauchte nur handleAvailability
+        if (is_null($payload)) {
+            return '';
+        }
+
+        // Behandelt Symcon Extension Antworten, auch wenn Instanz noch in IS_CREATING ist.
         if ($this->handleSymconExtensionResponses($topics, $payload)) {
             return '';
         }
@@ -862,7 +867,7 @@ abstract class ModulBase extends \IPSModule
             $this->LogMessage($this->Translate('MQTTTopic not configured.'), KL_WARNING);
             return false;
         }
-        $Result = $this->SendData(self::SYMCON_EXTENSION_REQUEST . static::$ExtensionTopic . $mqttTopic);
+        $Result = $this->SendData(self::SYMCON_EXTENSION_REQUEST . static::$ExtensionTopic . $mqttTopic, [], 2500);
         return $Result;
     }
 
@@ -1052,13 +1057,17 @@ abstract class ModulBase extends \IPSModule
      * @see \IPSModule::SetValue()
      * @see end()
      */
-    private function handleAvailability(array $topics, array $payload): bool
+    private function handleAvailability(array $topics, ?array $payload): bool
     {
         if (end($topics) !== self::AVAILABILITY_TOPIC) {
             return false;
         }
         $this->RegisterVariableBoolean('device_status', $this->Translate('Availability'), 'Z2M.DeviceStatus');
+        if (isset($payload['state'])) {
         parent::SetValue('device_status', $payload['state'] == 'online');
+        } else { // leeren Payload, wenn z.B. Gerät gelöscht oder umbenannt wurde
+            parent::SetValue('device_status', false);
+        }
         return true;
     }
 
