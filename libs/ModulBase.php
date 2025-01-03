@@ -3123,17 +3123,17 @@ abstract class ModulBase extends \IPSModule
 
         switch ($feature['name']) {
             case 'color_xy':
-                $this->RegisterVariableInteger('color', $this->Translate($this->convertLabelToName('color')), 'HexColor');
+                $this->RegisterVariableInteger('color', $this->Translate($this->convertLabelToName('color')), '~HexColor');
                 $this->EnableAction('color');
                 $this->SendDebug(__FUNCTION__ . ' :: Line ' . __LINE__ . ' :: Creating composite color_xy', 'color', 0);
                 break;
             case 'color_hs':
-                $this->RegisterVariableInteger('color_hs', $this->Translate($this->convertLabelToName('color_hs')), 'HexColor');
+                $this->RegisterVariableInteger('color_hs', $this->Translate($this->convertLabelToName('color_hs')), '~HexColor');
                 $this->EnableAction('color_hs');
                 $this->SendDebug(__FUNCTION__ . ' :: Line ' . __LINE__ . ' :: Creating composite color_hs', 'color_hs', 0);
                 break;
             case 'color_rgb':
-                $this->RegisterVariableInteger('color_rgb', $this->Translate($this->convertLabelToName('color_rgb')), 'HexColor');
+                $this->RegisterVariableInteger('color_rgb', $this->Translate($this->convertLabelToName('color_rgb')), '~HexColor');
                 $this->EnableAction('color_rgb');
                 $this->SendDebug(__FUNCTION__ . ' :: Line ' . __LINE__ . ' :: Creating composite color_rgb', 'color_rgb', 0);
                 break;
