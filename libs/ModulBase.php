@@ -1264,6 +1264,7 @@ abstract class ModulBase extends \IPSModule
         $ident = $key;
 
         // Prüfe zuerst, ob eine Variable mit diesem Ident in Symcon existiert
+        /** @Burki Das hier ist wohl falsch */
         $variableID = @$this->GetIDForIdent($ident);
         if ($variableID) {
             $this->SendDebug(__FUNCTION__, 'Existierende Variable gefunden: ' . $ident, 0);
@@ -1488,7 +1489,7 @@ abstract class ModulBase extends \IPSModule
             'color' => function () use ($value)
             {
                 $this->SendDebug(__FUNCTION__, 'Color Value: ' . json_encode($value), 0);
-                if (is_int($value)) {
+                if (is_int($value)) { //Schaltaktion aus Symcon
                     // Umrechnung des Integer-Werts in x und y
                     $xy = $this->IntToXY($value);
                     $payload = [
@@ -1498,8 +1499,10 @@ abstract class ModulBase extends \IPSModule
                         ],
                         'brightness' => 254 // Beispielwert für Helligkeit
                     ];
-                    return $this->SendSetCommand($payload);
-                } elseif (is_array($value)) {
+                    if ($this->SendSetCommand($payload)) {
+                        $this->SetValueDirect('color', $value);
+                    }
+                } elseif (is_array($value)) { //Datenempfang???
                     // Prüfen auf x/y Werte im color Array
                     if (isset($value['color']) && isset($value['color']['x']) && isset($value['color']['y'])) {
                         $brightness = $value['brightness'] ?? 254;
