@@ -431,7 +431,8 @@ abstract class ModulBase extends \IPSModule
             return '';
         }
         // Verarbeitet Payload
-        return $this->processPayload($payload);
+        $this->processPayload($payload);
+        return '';
     }
 
     /**
@@ -1125,7 +1126,7 @@ abstract class ModulBase extends \IPSModule
      * @see is_array()
      * @see json_encode()
      */
-    private function processPayload(array $payload): string
+    private function processPayload(array $payload): void
     {
         // Exposes verarbeiten wenn vorhanden
         if (isset($payload['exposes'])) {
@@ -1152,7 +1153,6 @@ abstract class ModulBase extends \IPSModule
             // Allgemeine Variablen verarbeiten
             $this->processVariable($key, $value);
         }
-        return '';
     }
 
     /**
