@@ -2630,14 +2630,10 @@ abstract class ModulBase extends \IPSModule
      *
      * @return string Der Name des erstellten Profils.
      *
-     * @todo Assoziationen überarbeiten
-     *
      * @see \Zigbee2MQTT\ModulBase::RegisterProfileFloatEx()
      * @see \Zigbee2MQTT\ModulBase::RegisterProfileIntegerEx()
      * @see \IPSModule::LogMessage()
      * @see \IPSModule::Translate()
-     * @see IPS_SetVariableProfileAssociation()
-     * @see IPS_VariableProfileExists()
      * @see str_replace()
      * @see sprintf()
      * @see ucwords()
@@ -2655,32 +2651,32 @@ abstract class ModulBase extends \IPSModule
 
         $profileName .= '_Presets';
 
-        /**
-         * @todo Hier stimmt noch was nicht. RegisterProfileFloatEx und IntegerEx können gleich alle Assoziationen verarbeiten und übersetzen schon.
-         * Somit ist hier unnötiger Code zu entfernen
-         */
-        if (!IPS_VariableProfileExists($profileName)) {
-            // Neues Profil anlegen
-            if ($variableType === 'float') {
-                if (!$this->RegisterProfileFloatEx($profileName, '', '', '', [])) {
-                    $this->LogMessage(sprintf('%s: Could not create float profile %s', __FUNCTION__, $profileName), KL_DEBUG);
-                }
-            } else {
-                if (!$this->RegisterProfileIntegerEx($profileName, '', '', '', [])) {
-                    $this->LogMessage(sprintf('%s: Could not create integer profile %s', __FUNCTION__, $profileName), KL_DEBUG);
-                }
-            }
-        }
-
         // Füge die Presets zum Profil hinzu
+        $associations = [];
         foreach ($presets as $preset) {
             // Preset-Wert an den Variablentyp anpassen
             $presetValue = ($variableType === 'float') ? (float) $preset['value'] : (int) $preset['value'];
             $presetName = $this->Translate(ucwords(str_replace('_', ' ', $preset['name'])));
-
             $this->SendDebug(__FUNCTION__, sprintf('Adding preset: %s with value %s', $presetName, $presetValue), 0);
-            IPS_SetVariableProfileAssociation($profileName, $presetValue, $presetName, '', -1);
+            $associations[] = [
+                $presetValue,
+                $presetName,
+                '',
+                -1
+            ];
+
         }
+
+            // Neues Profil anlegen
+            if ($variableType === 'float') {
+            if (!$this->RegisterProfileFloatEx($profileName, '', '', '', $associations)) {
+                    $this->LogMessage(sprintf('%s: Could not create float profile %s', __FUNCTION__, $profileName), KL_DEBUG);
+                }
+            } else {
+            if (!$this->RegisterProfileIntegerEx($profileName, '', '', '', $associations)) {
+                    $this->LogMessage(sprintf('%s: Could not create integer profile %s', __FUNCTION__, $profileName), KL_DEBUG);
+                }
+            }
 
         return $profileName;
     }
@@ -3007,25 +3003,24 @@ abstract class ModulBase extends \IPSModule
 
         // Registrierung der Variable basierend auf dem Variablentyp
         $formattedLabel = $this->convertLabelToName($label);
-        $isSwitchable = isset($feature['access']) && ($feature['access'] & 0b010) != 0;
 
         switch ($variableType) {
             case 'bool':
                 $this->SendDebug(__FUNCTION__, 'Registering Boolean Variable: ' . $ident, 0);
-                $this->RegisterVariableBoolean($ident, $this->Translate($formattedLabel));
+                $this->RegisterVariableBoolean($ident, $this->Translate($formattedLabel), $profileName);
                 break;
             case 'int':
                 $this->SendDebug(__FUNCTION__, 'Registering Integer Variable: ' . $ident, 0);
-                $this->RegisterVariableInteger($ident, $this->Translate($formattedLabel));
+                $this->RegisterVariableInteger($ident, $this->Translate($formattedLabel), $profileName);
                 break;
             case 'float':
                 $this->SendDebug(__FUNCTION__, 'Registering Float Variable: ' . $ident, 0);
-                $this->RegisterVariableFloat($ident, $this->Translate($formattedLabel));
+                $this->RegisterVariableFloat($ident, $this->Translate($formattedLabel), $profileName);
                 break;
             case 'string':
             case 'text':
                 $this->SendDebug(__FUNCTION__, 'Registering String Variable: ' . $ident, 0);
-                $this->RegisterVariableString($ident, $this->Translate($formattedLabel));
+                $this->RegisterVariableString($ident, $this->Translate($formattedLabel), $profileName);
                 break;
                 // Zusätzliche Registrierung für 'composite' Farb-Variablen
             case 'composite':
@@ -3037,33 +3032,7 @@ abstract class ModulBase extends \IPSModule
                 return;
         }
 
-        // Profil nach der Variablenerstellung zuordnen
-        /**
-         * @todo
-         *
-         * NEIN, das machen wir so nicht!
-         * Das Profil muss IMMER bei RegisterVariableXYZ zugeordnet werden.
-         */
-        if (!empty($profileName)) {
-            if (IPS_VariableProfileExists($profileName)) {
-                $variableID = $this->GetIDForIdent($ident);
-                $variable = IPS_GetVariable($variableID);
-
-                // Sicherstellen, dass der Profiltyp mit dem Variablentyp übereinstimmt
-                $profile = IPS_GetVariableProfile($profileName);
-                if ($profile['ProfileType'] == $variable['VariableType']) {
-                    /** IPS_SetVariableCustomProfile ist Hoheit des Users und darf NIE benutzt werden */
-                    IPS_SetVariableCustomProfile($variableID, $profileName);
-                    $this->SendDebug(__FUNCTION__, 'Assigned profile ' . $profileName . ' to variable with ident ' . $ident, 0);
-                } else {
-                    $this->SendDebug(__FUNCTION__, 'Profiltyp und Variablentyp stimmen nicht überein für Ident: ' . $ident, 0);
-                }
-            } else {
-                $this->SendDebug(__FUNCTION__, 'Profile ' . $profileName . ' does not exist for ident: ' . $ident, 0);
-            }
-        }
-
-        if ($isSwitchable) {
+        if (isset($feature['access']) && ($feature['access'] & 0b010) != 0) {
             $this->EnableAction($ident);
             $this->SendDebug(__FUNCTION__, 'Set EnableAction for ident: ' . $ident . ' to: true', 0);
         }
@@ -3341,17 +3310,13 @@ abstract class ModulBase extends \IPSModule
         $statePattern = '/^state(?:_[a-z0-9]+)?$/i';
 
         if (preg_match($statePattern, $featureId)) {
-            // Prüfe Schreibzugriff im Feature
-            $isSwitchable = isset($feature['access']) && ($feature['access'] & 0b010) != 0;
-
             $this->SendDebug(__FUNCTION__, 'State-Konfiguration für: ' . $featureId, 0);
-
             return [
                 'type'         => 'switch',
                 'dataType'     => VARIABLETYPE_BOOLEAN,
                 'values'       => ['ON', 'OFF'],
                 'profile'      => '~Switch',
-                'enableAction' => $isSwitchable,
+                'enableAction' => (isset($feature['access']) && ($feature['access'] & 0b010) != 0),
                 'ident'        => $featureId
             ];
         }
