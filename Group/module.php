@@ -19,6 +19,8 @@ class Zigbee2MQTTGroup extends \Zigbee2MQTT\ModulBase
         // Never delete this line!
         parent::Create();
         $this->RegisterPropertyInteger('GroupId', 0);
+        $this->RegisterAttributeInteger('GroupId', 0);
+        $this->RegisterMessage($this->InstanceID, IM_CHANGEATTRIBUTE);
     }
 
     /**
@@ -29,11 +31,40 @@ class Zigbee2MQTTGroup extends \Zigbee2MQTT\ModulBase
     public function ApplyChanges()
     {
         $GroupId = $this->ReadPropertyInteger('GroupId');
-        $GroupId = $GroupId ? 'Group Id: ' . $GroupId : '';
-        $this->SetSummary($GroupId);
-
+        $this->SetSummary($GroupId ? 'Group Id: ' . $GroupId : '');
+        if ($GroupId == 0) {
+            $this->LogMessage('Keine Gruppen ID konfiguriert', KL_WARNING);
+        } else {
+            if ($this->ReadAttributeInteger('GroupId') != $GroupId) {
+                $this->WriteAttributeInteger('GroupId', $GroupId);
+            }
+        }
         // Führe parent::ApplyChanges zuerst aus
         parent::ApplyChanges();
+    }
+
+    /**
+     * MessageSink
+     *
+     * @param  mixed $Time
+     * @param  mixed $SenderID
+     * @param  mixed $Message
+     * @param  mixed $Data
+     * @return void
+     */
+    public function MessageSink($Time, $SenderID, $Message, $Data)
+    {
+        parent::MessageSink($Time, $SenderID, $Message, $Data);
+        if ($SenderID != $this->InstanceID) {
+            return;
+        }
+        switch ($Message) {
+            case IM_CHANGEATTRIBUTE:
+                if ($Data[0] == 'GroupId') {
+                    $this->UpdateDeviceInfo();
+                }
+                return;
+        }
     }
 
     /**

@@ -20,8 +20,10 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
         parent::Create();
 
         $this->RegisterPropertyString('IEEE', '');
+        $this->RegisterAttributeString('IEEE', '');
         $this->RegisterAttributeString('Model', '');
         $this->RegisterAttributeString('Icon', '');
+        $this->RegisterMessage($this->InstanceID, IM_CHANGEATTRIBUTE);
     }
 
     /**
@@ -31,16 +33,42 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
      */
     public function ApplyChanges()
     {
-        $ieee = $this->ReadPropertyString('IEEE');
-        $this->SetSummary($ieee);
-
-        if (empty($ieee)) {
-            $this->LogMessage('Keine IEEE-Adresse konfiguriert', KL_WARNING);
-        }
-
         // Führe parent::ApplyChanges zuerst aus
         parent::ApplyChanges();
 
+        $ieee = $this->ReadPropertyString('IEEE');
+        $this->SetSummary($ieee);
+        if (empty($ieee)) {
+            $this->LogMessage('Keine IEEE-Adresse konfiguriert', KL_WARNING);
+        } else {
+            if ($this->ReadAttributeString('IEEE') != $ieee) {
+                $this->WriteAttributeString('IEEE', $ieee);
+            }
+        }
+    }
+
+    /**
+     * MessageSink
+     *
+     * @param  mixed $Time
+     * @param  mixed $SenderID
+     * @param  mixed $Message
+     * @param  mixed $Data
+     * @return void
+     */
+    public function MessageSink($Time, $SenderID, $Message, $Data)
+    {
+        parent::MessageSink($Time, $SenderID, $Message, $Data);
+        if ($SenderID != $this->InstanceID) {
+            return;
+        }
+        switch ($Message) {
+            case IM_CHANGEATTRIBUTE:
+                if ($Data[0] == 'IEEE') {
+                    $this->UpdateDeviceInfo();
+                }
+                return;
+        }
     }
 
     /**
