@@ -138,7 +138,7 @@ abstract class ModulBase extends \IPSModule
     protected static $specialVariables = [
         'last_seen'          => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Last Seen', 'profile' => '~UnixTimestamp', 'scale' => 0.001, 'enableAction' => false],
         'color_mode'         => ['type' => VARIABLETYPE_STRING, 'name' => 'Color Mode', 'profile' => '', 'enableAction' => false],
-        'update'             => ['type' => VARIABLETYPE_BOOLEAN, 'name' => 'Update Available', 'profile' => '~Alert', 'enableAction' => false],
+        'update'             => ['type' => VARIABLETYPE_STRING, 'name' => 'Firmware Update Status', 'profile' => '', 'enableAction' => false],
         'device_temperature' => ['type' => VARIABLETYPE_FLOAT, 'name' => 'Device Temperature', 'profile' => '~Temperature', 'enableAction' => false],
         'brightness'         => ['type' => VARIABLETYPE_INTEGER, 'ident' => 'brightness', 'profile' => '~Intensity.100', 'scale' => 1, 'enableAction' => true],
         'voltage'            => ['type' => VARIABLETYPE_FLOAT, 'ident' => 'voltage', 'profile' => '~Volt', 'enableAction' => false],
@@ -657,6 +657,14 @@ abstract class ModulBase extends \IPSModule
 
         $this->SendDebug(__FUNCTION__, 'Verarbeite Variable: ' . $ident . ' mit Wert: ' . json_encode($value), 0);
 
+        
+        // Spezialbehandlung für update Arrays
+        if (is_array($value) && strtolower($ident) === 'update') {
+            $this->SendDebug(__FUNCTION__, 'Update Array empfangen', 0);
+            $jsonValue = json_encode($value, JSON_PRETTY_PRINT);
+            parent::SetValue($ident, $jsonValue);
+            return;
+        }
         // Spezialbehandlung für Color-Arrays
         if (is_array($value) && strtolower($ident) === 'color') {
             $this->handleColorVariable($ident, $value);
