@@ -1069,7 +1069,7 @@ abstract class ModulBase extends \IPSModule
         $topic = substr($messageData['Topic'], strlen($baseTopic) + 1);
         return [
             explode('/', $topic),
-            json_decode(utf8_decode($messageData['Payload']), true) // wir nutzen bitte utf8_decode bei IPSModule, und hex2bin ab IPSModuleStrict
+            json_decode(mb_convert_encoding($messageData['Payload'], 'ISO-8859-1', 'UTF-8'), true) // wir nutzen bitte utf8_decode bei IPSModule, und hex2bin ab IPSModuleStrict
         ];
     }
 
