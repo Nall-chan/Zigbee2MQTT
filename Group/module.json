@@ -1,11 +1,9 @@
 {
     "id": "{11BF3773-E940-469B-9DD7-FB9ACD7199A2}",
-    "name": "Zigbee2MQTTGroup",
+    "name": "Zigbee2MQTT Group",
     "type": 3,
     "vendor": "",
-    "aliases": [
-        "Zigbee2MQTT Group"
-    ],
+    "aliases": [],
     "parentRequirements": [
         "{043EA491-0325-4ADD-8FC2-A30C8EEB4D3F}"
     ],

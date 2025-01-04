@@ -33,18 +33,20 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
      */
     public function ApplyChanges()
     {
-        // Führe parent::ApplyChanges zuerst aus
-        parent::ApplyChanges();
-
         $ieee = $this->ReadPropertyString('IEEE');
         $this->SetSummary($ieee);
         if (empty($ieee)) {
-            $this->LogMessage('Keine IEEE-Adresse konfiguriert', KL_WARNING);
+            if ($this->GetStatus() == IS_ACTIVE) {
+                $this->LogMessage('Keine IEEE-Adresse konfiguriert', KL_WARNING);
+            }
         } else {
             if ($this->ReadAttributeString('IEEE') != $ieee) {
                 $this->WriteAttributeString('IEEE', $ieee);
             }
         }
+
+        // Führe parent::ApplyChanges zuerst aus
+        parent::ApplyChanges();
     }
 
     /**
@@ -64,7 +66,7 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
         }
         switch ($Message) {
             case IM_CHANGEATTRIBUTE:
-                if ($Data[0] == 'IEEE') {
+                if (($Data[0] == 'IEEE') && (!empty($Data[1])) && ($this->GetStatus() == IS_CREATING)) {
                     $this->UpdateDeviceInfo();
                 }
                 return;

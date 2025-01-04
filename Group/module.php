@@ -33,7 +33,9 @@ class Zigbee2MQTTGroup extends \Zigbee2MQTT\ModulBase
         $GroupId = $this->ReadPropertyInteger('GroupId');
         $this->SetSummary($GroupId ? 'Group Id: ' . $GroupId : '');
         if ($GroupId == 0) {
-            $this->LogMessage('Keine Gruppen ID konfiguriert', KL_WARNING);
+            if ($this->GetStatus() == IS_ACTIVE) {
+                $this->LogMessage('Keine Gruppen ID konfiguriert', KL_WARNING);
+            }
         } else {
             if ($this->ReadAttributeInteger('GroupId') != $GroupId) {
                 $this->WriteAttributeInteger('GroupId', $GroupId);
@@ -60,7 +62,7 @@ class Zigbee2MQTTGroup extends \Zigbee2MQTT\ModulBase
         }
         switch ($Message) {
             case IM_CHANGEATTRIBUTE:
-                if ($Data[0] == 'GroupId') {
+                if (($Data[0] == 'GroupId') && ($Data[1] != 0) && ($this->GetStatus() == IS_CREATING)) {
                     $this->UpdateDeviceInfo();
                 }
                 return;

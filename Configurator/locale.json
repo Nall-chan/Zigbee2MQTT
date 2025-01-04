@@ -1,6 +1,7 @@
 {
     "translations": {
         "de": {
+            "Zigbee2MQTT Configurator": "Zigbee2MQTT Konfigurator",
             "Unknown": "Unbekannt",
             "Devices": "Geräte",
             "IEEE Address": "IEEE Adresse",

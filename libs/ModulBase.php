@@ -587,6 +587,36 @@ abstract class ModulBase extends \IPSModule
         return $this->setColor($color, 'cie', 'color', $TransitionTime);
     }
 
+    /**
+     * Translate
+     *
+     * Überschreibt Translate um die Übersetzung aus der globalen json zu nutzen.
+     *
+     * @param  string $Text
+     * @return string
+     */
+    public function Translate($Text)
+    {
+        $translation = array_merge_recursive(
+            json_decode(file_get_contents(__DIR__ . '/locale.json'), true),
+            json_decode(file_get_contents(__DIR__ . '/locale_z2m.json'), true)
+        );
+        $language = IPS_GetSystemLanguage();
+        $code = explode('_', $language)[0];
+        if (isset($translation['translations'])) {
+            if (isset($translation['translations'][$language])) {
+                if (isset($translation['translations'][$language][$Text])) {
+                    return $translation['translations'][$language][$Text];
+                }
+            } elseif (isset($translation['translations'][$code])) {
+                if (isset($translation['translations'][$code][$Text])) {
+                    return $translation['translations'][$code][$Text];
+                }
+            }
+        }
+        return $Text;
+    }
+
     // Variablenmanagement
 
     /**
@@ -901,9 +931,8 @@ abstract class ModulBase extends \IPSModule
             } else {
                 $this->registerVariable($expose);
                 if (isset($expose['presets'])) {
-                    $formattedLabel = $this->convertLabelToName($expose['property']);
                     $variableType = $this->getVariableTypeFromProfile($expose['type'], $expose['property'], $expose['unit'] ?? '', $expose['step'] ?? null, null);
-                    $this->registerPresetVariables($expose['presets'], $formattedLabel, $variableType, $expose);
+                    $this->registerPresetVariables($expose['presets'], $expose['property'], $variableType, $expose);
                 }
             }
         }
@@ -1207,6 +1236,15 @@ abstract class ModulBase extends \IPSModule
 
         // Payload-Daten verarbeiten
         foreach ($payloadWithTypes as $key => $value) {
+
+            /**
+             * Fatal error: Uncaught TypeError: strpos(): Argument #1 ($haystack) must be of type string, int given in ModulBase.php:1247
+             * Stack trace:
+             * #0 C:\ProgramData\Symcon\modules\Zigbee2MQTT\libs\ModulBase.php(1247): strpos(0, '_type')
+             */
+            if ($key === 0) { // Beim Update kommen manchmal 0 als Key, aus welchem Payload auch immer. Muss ja ein [] Payload und kein {} Payload sein.
+                continue;
+            }
             // Typ-Informationen überspringen
             if (strpos($key, '_type') !== false) {
                 continue;
@@ -1928,7 +1966,7 @@ abstract class ModulBase extends \IPSModule
      * @see sprintf()
      * @see gettype()
      */
-    private function processSpecialVariable($key, $value)
+    private function processSpecialVariable(string $key, mixed $value): bool
     {
         if (!isset(self::$specialVariables[$key])) {
             return false;
@@ -2137,7 +2175,7 @@ abstract class ModulBase extends \IPSModule
      *
      *
      * @see \Zigbee2MQTT\ModulBase::registerStateMappingProfile()
-     * @see \Zigbee2MQTT\ModulBase::registerCustomStringProfile()
+     * @see \Zigbee2MQTT\ModulBase::registerStringProfile()
      * @see \Zigbee2MQTT\ModulBase::getStandardProfile()
      * @see \Zigbee2MQTT\ModulBase::isValidStandardProfile()
      * @see \Zigbee2MQTT\ModulBase::handleProfileType()
@@ -2175,7 +2213,7 @@ abstract class ModulBase extends \IPSModule
                      strtoupper($valueOn) === 'ON' && strtoupper($valueOff) === 'OFF')) {
                     return '~Switch';
                 } else {
-                    return $this->registerCustomStringProfile($ProfileName, (string) $valueOn, (string) $valueOff);
+                    return $this->registerStringProfile($ProfileName, (string) $valueOn, (string) $valueOff);
                 }
             }
             return '~Switch';
@@ -2644,7 +2682,7 @@ abstract class ModulBase extends \IPSModule
     }
 
     /**
-     * registerCustomStringProfile
+     * registerStringProfile
      *
      * Erstellt ein benutzerdefiniertes Stringprofil für Variablen.
      *
@@ -2660,7 +2698,7 @@ abstract class ModulBase extends \IPSModule
      * @see \IPSModule::SendDebug()
      * @see json_encode()
      */
-    private function registerCustomStringProfile(string $ProfileName, string $valueOn, string $valueOff): string
+    private function registerStringProfile(string $ProfileName, string $valueOn, string $valueOff): string
     {
         // Erstelle Profilwerte
         $profileValues = [
@@ -2924,22 +2962,23 @@ abstract class ModulBase extends \IPSModule
      *@see substr()
      *@see json_decode()
      */
-    private static function isValueInLocaleJson(string $value): bool
+    private static function isValueInLocaleJson(string $Text): bool
     {
-        $globalJsonFilePath =
-            ((strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') ? 'C:\\ProgramData\\Symcon\\modules\\IPS-Zigbee2MQTT-Burki\\Device' : '/var/lib/symcon/modules/IPS-Zigbee2MQTT-Burki/Device') .
-            '/locale.json';
-
-        if (file_exists($globalJsonFilePath)) {
-            $globalTranslations = json_decode(file_get_contents($globalJsonFilePath), true);
-            if (isset($globalTranslations['translations']['de'])) {
-                if (isset($globalTranslations['translations']['de'][$value])) {
+        $translation = json_decode(file_get_contents(__DIR__ . '/locale_z2m.json'), true);
+        $language = IPS_GetSystemLanguage();
+        $code = explode('_', $language)[0];
+        if (isset($translation['translations'])) {
+            if (isset($translation['translations'][$language])) {
+                if (isset($translation['translations'][$language][$Text])) {
                     return true;
                 }
-                self::addValueToTranslationsJson($value);
-                return false;
+            } elseif (isset($translation['translations'][$code])) {
+                if (isset($translation['translations'][$code][$Text])) {
+                    return true;
+                }
             }
         }
+        self::addValueToTranslationsJson($Text);
         return false;
     }
 
@@ -3022,8 +3061,8 @@ abstract class ModulBase extends \IPSModule
 
         // Übergebe das komplette Feature-Array für Access-Check
         $stateConfig = $this->getStateConfiguration($featureId, is_array($feature) ? $feature : null);
-        $formattedLabel = $this->convertLabelToName($featureId);
         if ($stateConfig !== null) {
+            $formattedLabel = $this->convertLabelToName($featureId);
             $this->RegisterVariableBoolean(
                 $stateConfig['ident'],
                 $this->Translate($formattedLabel),
@@ -3053,14 +3092,14 @@ abstract class ModulBase extends \IPSModule
         $this->SendDebug(__FUNCTION__ . ' :: Registering Feature', json_encode($feature), 0);
 
         $type = $feature['type'];
-        $property = $feature['property'] ?? '';
+        $property = $feature['property'] ?? ''; /** @todo 1) wenn $feature['property'] nicht gesetzt ist, dann ...*/
         $unit = $feature['unit'] ?? '';
-        $ident = $property;
+        $ident = $property; /** @todo 2) ist ein $ident mit leer auch ungültig */
         $label = ucfirst(str_replace('_', ' ', $property));
         $step = isset($feature['step']) ? (float) $feature['step'] : 1.0;
 
         // Überprüfen, ob die Variable bereits existiert
-        /** @todo hier unten? Kann das nicht schon viel früher erfolgen? */
+        /** @todo hier unten? Sollte das nicht schon viel früher erfolgen? */
         $objectID = @$this->GetIDForIdent($ident);
         if ($objectID) {
             $this->SendDebug(__FUNCTION__ . ' :: Variable already exists: ', $ident, 0);
@@ -3071,7 +3110,7 @@ abstract class ModulBase extends \IPSModule
         $variableType = $this->getVariableTypeFromProfile($type, $property, $unit, $step, $groupType);
 
         // Überprüfen, ob ein Standardprofil verwendet werden soll
-        $profileName = $this->getStandardProfile($type, $property, $groupType);
+        $profileName = $this->getStandardProfile($type, $property, $groupType); /** @todo getStandardProfile wird aber unten in registerVariableProfile auch aufgerufen */
 
         // Profil vor der Variablenerstellung erstellen, falls kein Standardprofil verwendet wird
         if ($profileName === '') {
@@ -3079,28 +3118,28 @@ abstract class ModulBase extends \IPSModule
         }
 
         // Registrierung der Variable basierend auf dem Variablentyp
-        $formattedLabel = $this->convertLabelToName($label);
 
         switch ($variableType) {
             case 'bool':
                 $this->SendDebug(__FUNCTION__, 'Registering Boolean Variable: ' . $ident, 0);
-                $this->RegisterVariableBoolean($ident, $this->Translate($formattedLabel), $profileName);
+                $this->RegisterVariableBoolean($ident, $this->Translate($this->convertLabelToName($label)), $profileName);
                 break;
             case 'int':
                 $this->SendDebug(__FUNCTION__, 'Registering Integer Variable: ' . $ident, 0);
-                $this->RegisterVariableInteger($ident, $this->Translate($formattedLabel), $profileName);
+                $this->RegisterVariableInteger($ident, $this->Translate($this->convertLabelToName($label)), $profileName);
                 break;
             case 'float':
                 $this->SendDebug(__FUNCTION__, 'Registering Float Variable: ' . $ident, 0);
-                $this->RegisterVariableFloat($ident, $this->Translate($formattedLabel), $profileName);
+                $this->RegisterVariableFloat($ident, $this->Translate($this->convertLabelToName($label)), $profileName);
                 break;
             case 'string':
             case 'text':
                 $this->SendDebug(__FUNCTION__, 'Registering String Variable: ' . $ident, 0);
-                $this->RegisterVariableString($ident, $this->Translate($formattedLabel), $profileName);
+                $this->RegisterVariableString($ident, $this->Translate($this->convertLabelToName($label)), $profileName);
                 break;
                 // Zusätzliche Registrierung für 'composite' Farb-Variablen
             case 'composite':
+                /** @todo level_config und color_options fehlen */
                 $this->SendDebug(__FUNCTION__, 'Registering Composite Variable: ' . $ident, 0);
                 $this->registerColorVariable($feature);
                 return;
@@ -3127,10 +3166,9 @@ abstract class ModulBase extends \IPSModule
         }
         // Preset-Verarbeitung nach der normalen Variablenregistrierung
         if (isset($feature['presets']) && !empty($feature['presets'])) {
-            $formattedLabel = $this->convertLabelToName($feature['property']);
             $variableType = $this->getVariableTypeFromProfile($type, $property, $unit, $step, $groupType);
-            $this->registerPresetVariables($feature['presets'], $formattedLabel, $variableType, $feature);
-            $this->SendDebug(__FUNCTION__, 'Registered presets for: ' . $formattedLabel, 0);
+            $this->registerPresetVariables($feature['presets'], $feature['property'], $variableType, $feature);
+            $this->SendDebug(__FUNCTION__, 'Registered presets for: ' . $feature['property'], 0);
         }
         return;
     }
@@ -3241,11 +3279,7 @@ abstract class ModulBase extends \IPSModule
         // Variable registrieren
         $ident = ($feature['property']) . '_presets';
         $this->SendDebug(__FUNCTION__, 'Preset ident: ' . $ident, 0);
-        $label = $this->Translate($feature['name']) . ' Presets';
-        /**
-         *  @todo $label ist schon halb übersetzt und unten bei RegisterVariable
-         * wird dann noch mal alles aus formattedLabel übersetzt?
-         */
+        $label = $feature['name'] . ' Presets';
         $formattedLabel = $this->convertLabelToName($label);
 
         // Überprüfen, ob die Variable bereits existiert

@@ -1,11 +1,9 @@
 {
     "id": "{E5BB36C6-A70B-EB23-3716-9151A09AC8A2}",
-    "name": "Zigbee2MQTTDevice",
+    "name": "Zigbee2MQTT Device",
     "type": 3,
     "vendor": "",
-    "aliases": [
-        "Zigbee2MQTT Device"
-    ],
+    "aliases": [],
     "parentRequirements": [
         "{043EA491-0325-4ADD-8FC2-A30C8EEB4D3F}"
     ],
