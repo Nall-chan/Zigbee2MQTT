@@ -584,7 +584,7 @@ abstract class ModulBase extends \IPSModule
      * 1. Prüft Existenz der Variable, Abbruch wenn Variable nicht vorhanden
      * 2. Konvertiert Wert entsprechend Variablentyp (adjustValueByType)
      * 3. Wendet Profilzuordnungen an
-     * 4. Behandelt Spezialfälle (z.B. ColorTemp)
+     * 4. Behandelt Spezialfälle (z.B. ColorTemp, Color)
      *
      * Unterstützte Variablentypen:
      * 1. State-Variablen:
@@ -594,7 +594,9 @@ abstract class ModulBase extends \IPSModule
      *    - stateLeftL1: Kombinierte States
      *
      * 2. Spezielle Variablen:
-     *    - color: RGB-Farbwerte
+     *    - color: RGB-Farbwerte oder XY-Farbwerte mit Brightness
+     *      Format RGB: Integer (0xRRGGBB)
+     *      Format XY: Array ['x' => float, 'y' => float, 'brightness' => int]
      *    - color_temp: Farbtemperatur mit Kelvin-Konvertierung
      *    - preset: Vordefinierte Werte
      *
@@ -603,12 +605,13 @@ abstract class ModulBase extends \IPSModule
      *    - Integer/Float: Typkonvertierung mit Einheitenbehandlung
      *    - String: Direkte Wertzuweisung
      *
-     * @param string $ident Identifier der Variable (z.B. "state", "color_temp")
+     * @param string $ident Identifier der Variable (z.B. "state", "color_temp", "color")
      * @param mixed $value Zu setzender Wert
      *                    Bool: true/false oder "ON"/"OFF"
      *                    Int/Float: Numerischer Wert
      *                    String: Textwert
-     *                    Array: Wird ignoriert (Todo: Warum? Was ist mit UpdateStatus?)
+     *                    Array: Spezielle Behandlung für Farben und Presets
+     *                    Array: Rest Wird ignoriert (Todo: Warum? Was ist mit UpdateStatus?)
      *
      * @return void
      *
@@ -619,8 +622,13 @@ abstract class ModulBase extends \IPSModule
      * $this->SetValue("stateL1", false);      // Setzt "OFF"
      *
      * // Farben & Temperatur
-     * $this->SetValue("color_temp", 4000);     // Setzt Farbtemp + Kelvin
-     * $this->SetValue("color", 0xFF0000);     // Setzt Rot
+     * $this->SetValue("color_temp", 4000);    // Setzt Farbtemp + Kelvin
+     * $this->SetValue("color", 0xFF0000);     // Setzt Rot als RGB
+     * $this->SetValue("color", [              // Setzt Farbe im XY Format
+     *     'x' => 0.7006,
+     *     'y' => 0.2993,
+     *     'brightness' => 254
+     * ]);
      *
      * // Profile
      * $this->SetValue("mode", "auto");        // Nutzt Profilzuordnung
@@ -628,6 +636,7 @@ abstract class ModulBase extends \IPSModule
      *
      * @see \Zigbee2MQTT\ModulBase::adjustValueByType()
      * @see \Zigbee2MQTT\ModulBase::convertMiredToKelvin()
+     * @see \Zigbee2MQTT\ModulBase::handleColorVariable()
      * @see \Zigbee2MQTT\ModulBase::SetValueDirect()
      * @see \IPSModule::SetValue()
      * @see \IPSModule::GetIDForIdent()
