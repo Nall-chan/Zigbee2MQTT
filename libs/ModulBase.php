@@ -1545,7 +1545,6 @@ abstract class ModulBase extends \IPSModule
      *
      * @return bool Gibt true zurück, wenn die Aktion erfolgreich verarbeitet wurde, andernfalls false.
      *
-     * @see \Zigbee2MQTT\ModulBase::IntToXY()
      * @see \Zigbee2MQTT\ModulBase::xyToInt()
      * @see \Zigbee2MQTT\ModulBase::SendSetCommand()
      * @see \Zigbee2MQTT\ModulBase::SetValueDirect()
@@ -1563,22 +1562,12 @@ abstract class ModulBase extends \IPSModule
             'color' => function () use ($value)
             {
                 $this->SendDebug(__FUNCTION__, 'Color Value: ' . json_encode($value), 0);
-                // In diesem IF/ELSE wird nur false behandelt, also Fehler.
-                // TRUE ist nach dem IF/ELSE, also kein Fehler
                 if (is_int($value)) { //Schaltaktion aus Symcon
-                    // Umrechnung des Integer-Werts in x und y
-                    $xy = $this->IntToXY($value);
-                    $payload = [
-                        'color' => [
-                            'x' => $xy['x'],
-                            'y' => $xy['y']
-                        ],
-                        'brightness' => 254 // Beispielwert für Helligkeit
-                    ];
-                    if (!$this->SendSetCommand($payload)) {
-                        return false;
+                    if ($this->GetValue('color') !== $value) {
+                        return $this->setColor($value, 'cie');
                     }
-                } elseif (is_array($value)) { //Datenempfang???
+                    return false;
+                } elseif (is_array($value)) { //Datenempfang
                     // Prüfen auf x/y Werte im color Array
                     if (isset($value['color']) && isset($value['color']['x']) && isset($value['color']['y'])) {
                         $brightness = $value['brightness'] ?? 254;
@@ -1593,11 +1582,10 @@ abstract class ModulBase extends \IPSModule
                         $hexValue = $this->xyToInt($value['x'], $value['y'], $brightness);
                         $this->SetValueDirect('color', $hexValue);
                     }
-                } else {
-                    $this->SendDebug(__FUNCTION__, 'Ungültiger Wert für color: ' . json_encode($value), 0);
-                    return false;
+                    return true;
                 }
-                return true;
+                $this->SendDebug(__FUNCTION__, 'Ungültiger Wert für color: ' . json_encode($value), 0);
+                return false;
             },
             'color_hs' => function () use ($value)
             {
@@ -1910,11 +1898,16 @@ abstract class ModulBase extends \IPSModule
             default => throw new \InvalidArgumentException('Invalid color mode: ' . $mode),
         };
 
-        if ($Payload !== null) {
-            if ($TransitionTime !== null) {
-                $Payload['transition'] = $TransitionTime;
+        $result = $Payload();
+        if ($result !== null) {
+
+            if ($result === false) {
+                return true; // Wert hat sich nicht geändert
             }
-            return $this->SendSetCommand($Payload());
+            if ($TransitionTime !== null) {
+                $result['transition'] = $TransitionTime;
+            }
+            return $this->SendSetCommand($result);
         }
         return false;
     }
