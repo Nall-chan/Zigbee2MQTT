@@ -573,6 +573,20 @@ abstract class ModulBase extends \IPSModule
         return $this->SendData($Topic, $Payload, 0);
     }
 
+    /**
+     * SetColorEx
+     *
+     * Ermöglicht es eine Farbe (INT) mit Transition zu setzen.
+     *
+     * @param  int $color
+     * @param  int $Transition
+     * @return bool
+     */
+    public function SetColorEx(int $color, int $TransitionTime): bool
+    {
+        return $this->setColor($color, 'cie', 'color', $TransitionTime);
+    }
+
     // Variablenmanagement
 
     /**
@@ -657,19 +671,20 @@ abstract class ModulBase extends \IPSModule
 
         $this->SendDebug(__FUNCTION__, 'Verarbeite Variable: ' . $ident . ' mit Wert: ' . json_encode($value), 0);
 
-        
-        // Spezialbehandlung für update Arrays
-        if (is_array($value) && strtolower($ident) === 'update') {
-            $this->SendDebug(__FUNCTION__, 'Update Array empfangen', 0);
-            $jsonValue = json_encode($value, JSON_PRETTY_PRINT);
-            parent::SetValue($ident, $jsonValue);
-            return;
-        }
-        // Spezialbehandlung für Color-Arrays
-        if (is_array($value) && strtolower($ident) === 'color') {
-            $this->handleColorVariable($ident, $value);
-            return;
-        } else if (is_array($value)) {
+        // Array Spezialbehandlung für
+        if (is_array($value)) {
+            // update Arrays
+            if (strtolower($ident) === 'update') {
+                $this->SendDebug(__FUNCTION__, 'Update Array empfangen', 0);
+                $jsonValue = json_encode($value, JSON_PRETTY_PRINT);
+                parent::SetValue($ident, $jsonValue);
+                return;
+            }
+            // Color-Arrays
+            if (strtolower($ident) === 'color') {
+                $this->handleColorVariable($ident, $value);
+                return;
+            }
             $this->SendDebug(__FUNCTION__, 'Wert ist ein Array, übersprungen: ' . $ident, 0);
             return;
         }
@@ -1109,7 +1124,7 @@ abstract class ModulBase extends \IPSModule
         }
         $this->RegisterVariableBoolean('device_status', $this->Translate('Availability'), 'Z2M.DeviceStatus');
         if (isset($payload['state'])) {
-        parent::SetValue('device_status', $payload['state'] == 'online');
+            parent::SetValue('device_status', $payload['state'] == 'online');
         } else { // leeren Payload, wenn z.B. Gerät gelöscht oder umbenannt wurde
             parent::SetValue('device_status', false);
         }
@@ -1510,6 +1525,8 @@ abstract class ModulBase extends \IPSModule
             'color' => function () use ($value)
             {
                 $this->SendDebug(__FUNCTION__, 'Color Value: ' . json_encode($value), 0);
+                // In diesem IF/ELSE wird nur false behandelt, also Fehler.
+                // TRUE ist nach dem IF/ELSE, also kein Fehler
                 if (is_int($value)) { //Schaltaktion aus Symcon
                     // Umrechnung des Integer-Werts in x und y
                     $xy = $this->IntToXY($value);
@@ -1520,7 +1537,9 @@ abstract class ModulBase extends \IPSModule
                         ],
                         'brightness' => 254 // Beispielwert für Helligkeit
                     ];
-                    $this->SendSetCommand($payload);
+                    if (!$this->SendSetCommand($payload)) {
+                        return false;
+                    }
                 } elseif (is_array($value)) { //Datenempfang???
                     // Prüfen auf x/y Werte im color Array
                     if (isset($value['color']) && isset($value['color']['x']) && isset($value['color']['y'])) {
@@ -1770,7 +1789,7 @@ abstract class ModulBase extends \IPSModule
      * @see \IPSModule::SendDebug()
      * @see json_encode()
      */
-    private function setColor(int $color, string $mode, string $Z2MMode = 'color'): bool
+    private function setColor(int $color, string $mode, string $Z2MMode = 'color', ?int $TransitionTime = null): bool
     {
         $Payload = match ($mode) {
             'cie' => function () use ($color, $Z2MMode)
@@ -1854,6 +1873,9 @@ abstract class ModulBase extends \IPSModule
         };
 
         if ($Payload !== null) {
+            if ($TransitionTime !== null) {
+                $Payload['transition'] = $TransitionTime;
+            }
             return $this->SendSetCommand($Payload());
         }
         return false;
@@ -2722,16 +2744,16 @@ abstract class ModulBase extends \IPSModule
 
         }
 
-            // Neues Profil anlegen
-            if ($variableType === 'float') {
+        // Neues Profil anlegen
+        if ($variableType === 'float') {
             if (!$this->RegisterProfileFloatEx($profileName, '', '', '', $associations)) {
-                    $this->LogMessage(sprintf('%s: Could not create float profile %s', __FUNCTION__, $profileName), KL_DEBUG);
-                }
-            } else {
-            if (!$this->RegisterProfileIntegerEx($profileName, '', '', '', $associations)) {
-                    $this->LogMessage(sprintf('%s: Could not create integer profile %s', __FUNCTION__, $profileName), KL_DEBUG);
-                }
+                $this->LogMessage(sprintf('%s: Could not create float profile %s', __FUNCTION__, $profileName), KL_DEBUG);
             }
+        } else {
+            if (!$this->RegisterProfileIntegerEx($profileName, '', '', '', $associations)) {
+                $this->LogMessage(sprintf('%s: Could not create integer profile %s', __FUNCTION__, $profileName), KL_DEBUG);
+            }
+        }
 
         return $profileName;
     }

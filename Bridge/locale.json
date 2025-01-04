@@ -23,7 +23,6 @@
             "Danger! In the Zigbee2MQTT configuration permit_join is activated.\r\nThis leads to a possible security risk!": "Achtung! In der Zigbee2MQTT Konfiguration ist permit_join aktiviert.\r\nDies führt zu einem eventuellen Sicherheitsrisiko!",
             "Danger! Several extensions for Symcon have been found.\r\nPlease delete outdated versions manually to avoid malfunctions.": "Achtung! Es wurden mehrere Erweiterungen für Symcon gefunden.\r\nBitte veraltete Versionen manuell löschen um Fehlfunktionen zu vermeiden.",
             "Extension Loaded": "Erweiterung geladen",
-            "Permit Join Timeout": "Restzeit Netzwerk geöffnet",
             "Zigbee2MQTT did not response on Topic %s": "Zigbee2MQTT antwortet nicht auf Topic %s"
         }
     }
