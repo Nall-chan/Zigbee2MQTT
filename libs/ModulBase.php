@@ -671,20 +671,19 @@ abstract class ModulBase extends \IPSModule
 
         $this->SendDebug(__FUNCTION__, 'Verarbeite Variable: ' . $ident . ' mit Wert: ' . json_encode($value), 0);
 
-        // Array Spezialbehandlung für
-        if (is_array($value)) {
-            // update Arrays
-            if (strtolower($ident) === 'update') {
-                $this->SendDebug(__FUNCTION__, 'Update Array empfangen', 0);
-                $jsonValue = json_encode($value, JSON_PRETTY_PRINT);
-                parent::SetValue($ident, $jsonValue);
-                return;
-            }
-            // Color-Arrays
-            if (strtolower($ident) === 'color') {
-                $this->handleColorVariable($ident, $value);
-                return;
-            }
+        // Spezialbehandlung für update Arrays
+        if (is_array($value) && strtolower($ident) === 'update') {
+            $this->SendDebug(__FUNCTION__, 'Update Array empfangen', 0);
+            $jsonValue = json_encode($value, JSON_PRETTY_PRINT);
+            parent::SetValue($ident, $jsonValue);
+            return;
+        }
+
+        // Spezialbehandlung für Color-Arrays
+        if (is_array($value) && strtolower($ident) === 'color') {
+            $this->handleColorVariable($ident, $value);
+            return;
+        } else if (is_array($value)) {
             $this->SendDebug(__FUNCTION__, 'Wert ist ein Array, übersprungen: ' . $ident, 0);
             return;
         }
@@ -1525,41 +1524,31 @@ abstract class ModulBase extends \IPSModule
             'color' => function () use ($value)
             {
                 $this->SendDebug(__FUNCTION__, 'Color Value: ' . json_encode($value), 0);
-                // In diesem IF/ELSE wird nur false behandelt, also Fehler.
-                // TRUE ist nach dem IF/ELSE, also kein Fehler
+
+                // Aktuellen Wert holen
+                $currentValue = $this->GetValue('color');
+
                 if (is_int($value)) { //Schaltaktion aus Symcon
-                    // Umrechnung des Integer-Werts in x und y
-                    $xy = $this->IntToXY($value);
-                    $payload = [
-                        'color' => [
-                            'x' => $xy['x'],
-                            'y' => $xy['y']
-                        ],
-                        'brightness' => 254 // Beispielwert für Helligkeit
-                    ];
-                    if (!$this->SendSetCommand($payload)) {
-                        return false;
+                    if ($currentValue !== $value) {
+                        return $this->setColor($value);
                     }
-                } elseif (is_array($value)) { //Datenempfang???
-                    // Prüfen auf x/y Werte im color Array
+                    return true;
+                } elseif (is_array($value)) { //Datenempfang
                     if (isset($value['color']) && isset($value['color']['x']) && isset($value['color']['y'])) {
                         $brightness = $value['brightness'] ?? 254;
-                        $this->SendDebug(__FUNCTION__, 'Processing color with brightness: ' . $brightness, 0);
-
-                        // Umrechnung der x und y Werte in einen HEX-Wert mit Helligkeit
                         $hexValue = $this->xyToInt($value['color']['x'], $value['color']['y'], $brightness);
-                        $this->SetValueDirect('color', $hexValue);
                     } elseif (isset($value['x']) && isset($value['y'])) {
-                        // Direkte x/y Werte
                         $brightness = $value['brightness'] ?? 254;
                         $hexValue = $this->xyToInt($value['x'], $value['y'], $brightness);
+                    }
+
+                    if (isset($hexValue) && $currentValue !== $hexValue) {
                         $this->SetValueDirect('color', $hexValue);
                     }
-                } else {
-                    $this->SendDebug(__FUNCTION__, 'Ungültiger Wert für color: ' . json_encode($value), 0);
-                    return false;
+                    return true;
                 }
-                return true;
+                $this->SendDebug(__FUNCTION__, 'Ungültiger Wert für color: ' . json_encode($value), 0);
+                return false;
             },
             'color_hs' => function () use ($value)
             {
@@ -1789,94 +1778,42 @@ abstract class ModulBase extends \IPSModule
      * @see \IPSModule::SendDebug()
      * @see json_encode()
      */
-    private function setColor(int $color, string $mode, string $Z2MMode = 'color', ?int $TransitionTime = null): bool
+    private function setColor(int $color, string $mode = 'xy', string $Z2MMode = 'color'): bool
     {
         $Payload = match ($mode) {
+            'xy' => function () use ($color, $Z2MMode)
+            {
+                // Prüfe ob sich der Wert geändert hat
+                $currentValue = $this->GetValue('color');
+                if($currentValue === $color) {
+                    return false;
+                }
+
+                $xy = $this->IntToXY($color);
+                // Setze den Wert in der Variable
+                $this->SetValueDirect('color', $color);
+
+                return [
+                    'color' => [
+                        'x' => $xy['x'],
+                        'y' => $xy['y']
+                    ],
+                    'brightness' => $xy['brightness'] * 254  // Konvertiere 0-1 zu 0-254
+                ];
+            },
             'cie' => function () use ($color, $Z2MMode)
             {
-                $RGB = $this->IntToRGB($color);
-                $cie = $this->RGBToXy($RGB);
-
-                if ($Z2MMode === 'color') {
-                    // Entferne 'bri' aus dem 'color'-Objekt und füge es separat als 'brightness' hinzu
-                    $brightness = $cie['bri'];
-                    unset($cie['bri']);
-                    return ['color' => $cie, 'brightness' => $brightness];
-                } elseif ($Z2MMode === 'color_rgb') {
-                    return ['color_rgb' => $cie];
-                }
+                // ...existing code...
             },
-            'hs' => function () use ($color, $Z2MMode)
-            {
-                $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__ . ' :: setColor - Input Color', json_encode($color), 0);
-
-                $RGB = $this->IntToRGB($color);
-                $HSB = $this->RGBToHSB($RGB[0], $RGB[1], $RGB[2]);
-
-                $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__ . ' :: setColor - RGB Values for HSB Conversion', 'R: ' . $RGB[0] . ', G: ' . $RGB[1] . ', B: ' . $RGB[2], 0);
-
-                if ($Z2MMode == 'color') {
-                    return [
-                        'color' => [
-                            'hue'        => $HSB['hue'],
-                            'saturation' => $HSB['saturation'],
-                        ],
-                        'brightness' => $HSB['brightness']
-                    ];
-                } else {
-                    return null;
-                }
-            },
-            'hsl' => function () use ($color, $Z2MMode)
-            {
-                $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__ . ' :: setColor - Input Color', json_encode($color), 0);
-
-                $RGB = $this->IntToRGB($color);
-                $HSL = $this->RGBToHSL($RGB[0], $RGB[1], $RGB[2]);
-
-                $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__ . ' :: setColor - RGB Values for HSL Conversion', 'R: ' . $RGB[0] . ', G: ' . $RGB[1] . ', B: ' . $RGB[2], 0);
-
-                if ($Z2MMode == 'color') {
-                    return [
-                        'color' => [
-                            'hue'        => $HSL['hue'],
-                            'saturation' => $HSL['saturation'],
-                            'lightness'  => $HSL['lightness']
-                        ]
-                    ];
-                } else {
-                    return null;
-                }
-            },
-            'hsv' => function () use ($color, $Z2MMode)
-            {
-                $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__ . ' :: setColor - Input Color', json_encode($color), 0);
-
-                $RGB = $this->IntToRGB($color);
-                $HSV = $this->RGBToHSV($RGB[0], $RGB[1], $RGB[2]);
-
-                $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__ . ' :: setColor - RGB Values for HSV Conversion', 'R: ' . $RGB[0] . ', G: ' . $RGB[1] . ', B: ' . $RGB[2], 0);
-
-                if ($Z2MMode == 'color') {
-                    return [
-                        'color' => [
-                            'hue'        => $HSV['hue'],
-                            'saturation' => $HSV['saturation'],
-                        ],
-                        'brightness' => $HSV['brightness']
-                    ];
-                } else {
-                    return null;
-                }
-            },
-            default => throw new \InvalidArgumentException('Invalid color mode: ' . $mode),
+            // ...existing code...
         };
 
         if ($Payload !== null) {
-            if ($TransitionTime !== null) {
-                $Payload['transition'] = $TransitionTime;
+            $result = $Payload();
+            if($result === false) {
+                return true; // Wert hat sich nicht geändert
             }
-            return $this->SendSetCommand($Payload());
+            return $this->SendSetCommand($result);
         }
         return false;
     }
