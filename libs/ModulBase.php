@@ -648,7 +648,11 @@ abstract class ModulBase extends \IPSModule
 
         $this->SendDebug(__FUNCTION__, 'Verarbeite Variable: ' . $ident . ' mit Wert: ' . json_encode($value), 0);
 
-        if (is_array($value)) {
+        // Spezialbehandlung für Color-Arrays
+        if (is_array($value) && strtolower($ident) === 'color') {
+            $this->handleColorVariable($ident, $value);
+            return;
+        } else if (is_array($value)) {
             $this->SendDebug(__FUNCTION__, 'Wert ist ein Array, übersprungen: ' . $ident, 0);
             return;
         }
@@ -1499,9 +1503,7 @@ abstract class ModulBase extends \IPSModule
                         ],
                         'brightness' => 254 // Beispielwert für Helligkeit
                     ];
-                    if ($this->SendSetCommand($payload)) {
-                        $this->SetValueDirect('color', $value);
-                    }
+                    $this->SendSetCommand($payload);
                 } elseif (is_array($value)) { //Datenempfang???
                     // Prüfen auf x/y Werte im color Array
                     if (isset($value['color']) && isset($value['color']['x']) && isset($value['color']['y'])) {
