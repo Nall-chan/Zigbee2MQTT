@@ -151,7 +151,7 @@ trait ColorHelper
      * @param  int $bri brightness
      * @return int Integer-Wert der Farbe
      */
-    protected function xyToInt(float $x, float $y, int $bri = 255): int
+    protected function xyToInt(float $x, float $y, int $bri = 254): int
     {
         // Normalisierung der Brightness (0-1)
         $Y = $bri / 255;
@@ -236,12 +236,13 @@ trait ColorHelper
     /**
      * IntToXY
      *
-     * Konvertiert einen Integer-Farbwert in XY-Farbkoordinaten.
+     * Konvertiert einen Integer-Farbwert in XY-Farbkoordinaten mit Helligkeit.
      *
-     * @param int $value 32Bit Farbwert 0xRRGGBB,
-     * @return array Ein Array mit den Schlüsseln 'x' und 'y'.
+     * @param int $value 32Bit Farbwert 0xRRGGBB
+     * @param int $brightness Optional: Helligkeit 0-100%
+     * @return array Ein Array mit den Schlüsseln 'x', 'y' und 'brightness'
      */
-    protected function IntToXY(int $value): array
+    protected function IntToXY(int $value, int $brightness = 100): array
     {
         // HEX in RGB umwandeln
         $r = (($value >> 16) & 0xFF) / 255.0;
@@ -262,8 +263,15 @@ trait ColorHelper
         $x = $X / ($X + $Y + $Z);
         $y = $Y / ($X + $Y + $Z);
 
-        // Rückgabe der xy-Koordinaten
-        return ['x' => $x, 'y' => $y];
+        // Helligkeit normalisieren (0-100% -> 0-1)
+        $brightness = max(0, min(100, $brightness)) / 100;
+
+        // Rückgabe der xy-Koordinaten und Helligkeit
+        return [
+            'x' => $x,
+            'y' => $y,
+            'brightness' => $brightness
+        ];
     }
 
     /**
