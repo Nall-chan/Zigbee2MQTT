@@ -237,9 +237,9 @@ trait ColorHelper
      * IntToXY
      *
      * Konvertiert einen Integer-Farbwert in XY-Farbkoordinaten mit Helligkeit.
-     * 
+     *
      * @todo Diese Funktion wird nicht mehr genutzt, da es über IntToRGB und RGBToXy läuft
-     * 
+     *
      * @param int $value 32Bit Farbwert 0xRRGGBB
      * @param int $brightness Optional: Helligkeit 0-100%
      * @return array Ein Array mit den Schlüsseln 'x', 'y' und 'brightness'
