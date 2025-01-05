@@ -846,6 +846,9 @@ trait Zigbee2MQTTHelper
 
     public function ReceiveData($JSONString)
     {
+        if ($this->GetStatus()!== IS_ACTIVE){
+            return '';
+        }
         if (!empty($this->ReadPropertyString('MQTTTopic'))) {
             $Buffer = json_decode($JSONString, true);
 
