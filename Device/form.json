@@ -38,6 +38,10 @@
                     "type": "Image",
                     "image": "",
                     "width": "200px"
+                },
+                {
+                    "type": "Label",
+                    "caption": "Link zur Geräteinformation: https://www.zigbee2mqtt.io/devices/%MODEL%.html"
                 }
             ]
         }
