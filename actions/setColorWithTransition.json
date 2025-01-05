@@ -16,7 +16,7 @@
     ],
     "priority": 1,
     "action": [
-        "Z2M_SetColorEx($_IPS['TARGET'], $_IPS['Color'], $_IPS['TransitionTime']);"
+        "Z2M_SetColorExt($_IPS['TARGET'], $_IPS['Color'], $_IPS['TransitionTime']);"
     ],
     "restrictions": {
         "objectType": [

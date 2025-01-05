@@ -1,13 +1,3 @@
-ToDo zur 5.0? (inklusive Darstellungsmanager?)
-oder noch zur 4.5? um beide Änderungen nicht Zeitgleich zu haben?
-
-🟨 Command und CommandExt sind public und somit für Device, Group und Configurator verfügbar.
     Doku hierzu ist aber nur in der Readme vom Configurator enthalten und dort noch falsch erklärt (Topics und Signatur)
-🟨 Fehler beim laden des submodul test/stubs
-🟨 CS-Fixer defekt?!
-🟨 setColorExt 
-    $Z2MMode optional, was bei public nicht funktioniert.
-    Besser wäre das aufteilen auf vier Funktionen?
-    SetStringColor & Ex und SetIntegerColor & Ex
-    setColorExt als deprecated deklarieren.
+
 

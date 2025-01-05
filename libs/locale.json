@@ -1,6 +1,7 @@
 {
     "translations": {
         "de": {
+            "Device not found. Check topic": "Gerät nicht gefunden. Topic prüfen.",
             "Change IEEE Address": "IEEE Adresse ändern",
             "Warning!": "Warnung!",
             "I understand": "Habe ich verstanden",

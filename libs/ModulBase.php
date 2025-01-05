@@ -573,7 +573,7 @@ abstract class ModulBase extends \IPSModule
     }
 
     /**
-     * SetColorEx
+     * SetColorExt
      *
      * Ermöglicht es eine Farbe (INT) mit Transition zu setzen.
      *
@@ -581,7 +581,7 @@ abstract class ModulBase extends \IPSModule
      * @param  int $Transition
      * @return bool
      */
-    public function SetColorEx(int $color, int $TransitionTime): bool
+    public function SetColorExt(int $color, int $TransitionTime): bool
     {
         return $this->setColor($color, 'cie', 'color', $TransitionTime);
     }
@@ -2995,18 +2995,17 @@ abstract class ModulBase extends \IPSModule
      */
     private static function addValueToTranslationsJson(string $value): void
     {
-        $jsonFilePath = __DIR__ . '/translations.json';
-
+        $jsonFile = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY . DIRECTORY_SEPARATOR . 'translations.json';
         // Lade bestehende Übersetzungen
         $translations = [];
-        if (file_exists($jsonFilePath)) {
-            $translations = json_decode(file_get_contents($jsonFilePath), true);
+        if (file_exists($jsonFile)) {
+            $translations = json_decode(file_get_contents($jsonFile), true);
         }
 
         // Füge den neuen Begriff hinzu, wenn er noch nicht existiert
         if (!in_array($value, $translations)) {
             $translations[] = $value;
-            file_put_contents($jsonFilePath, json_encode($translations, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+            file_put_contents($jsonFile, json_encode($translations, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
         }
     }
 
@@ -3171,7 +3170,8 @@ abstract class ModulBase extends \IPSModule
                             // Bilde Sub-Properties
                             $subFeature['property'] = $property . '_' . $subFeature['property'];
                             // Rekursiver Aufruf mit einzelnem Feature
-                            $this->registerVariable($subFeature, $exposeType);
+                            /** @todo  aktuell deaktiviert */
+                            //$this->registerVariable($subFeature, $exposeType);
                         }
                     }
                     return;
