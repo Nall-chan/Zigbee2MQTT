@@ -61,7 +61,7 @@ Weitere Schritte zur Einrichtung sind im [Zigbee2MQTT-Konfigurator](Configurator
 
 #### Extension <!-- omit in toc -->
 
-- Bevor das Update über den Modul-Store durchgeführt werden kann, ist sicherzustellen das zuvor das mindestens die Version 4.5 vom Modul installiert wurde und eine [Bridge-Instanz](Bridge/README.md) eingerichtet ist. Diese installiert automatisch die benötigte [Extension in Zigbee2MQTT](#33-installation-der-ip-symcon-extension-in-zigbee2mqtt) der Version 4.6  
+- Bevor das Update über den Modul-Store durchgeführt werden kann, ist sicherzustellen das zuvor mindestens die Version 4.5 vom Modul installiert wurde und eine [Bridge-Instanz](Bridge/README.md) eingerichtet ist. Diese installiert automatisch die benötigte [Extension in Zigbee2MQTT](#33-installation-der-ip-symcon-extension-in-zigbee2mqtt) der Version 4.6  
 
 - Alternativ muss die benötigte [Extension in Zigbee2MQTT](#33-installation-der-ip-symcon-extension-in-zigbee2mqtt) manuell ein Update auf Version 4.6 erhalten.
 
@@ -129,15 +129,21 @@ Bitte den einzelnen Modulen entnehmen:
 - Geräte erkennen automatisch die Features und Exposes und erstellen die benötigten Variablen mit den entsprechenden Profilen eigenständig  
   -  Somit keine missing exposes Debugs mehr nötig!  
 - Nutzung von Standard-Symcon Profilen, soweit möglich  
-- Presets als Variablen verfügbar  
-- Geräte speichern die IEEE um umbenannte Geräte (=Topics) zu erkennen
+- Presets und Effekte als Variablen verfügbar  
+- Geräte speichern die IEEE um umbenannte Geräte (= geändertes Topic) zu erkennen
 - Z2M Prefix bei VariablenIdents entfernt    
-- Konfigurator übernimmt die Topic-Struktur beim Anlegen von Geräten als Kategorien  
+- Konfigurator übernimmt die MQTT Topic-Struktur beim Anlegen von Geräten als Kategorien  
 - Konfigurator erkennt fehlende Bridge-Instanz  
 - Konfigurator erkennt falsche Topics (anhand der IEEE Adresse der Geräte)  
 - Bridge installiert die Extension nicht mehrfach  
 - Bridge installiert automatisch die benötigte Extension  
-- Komplettes Code-Rework für Geräte von Gruppen von Bruki24
+- Komplettes Code-Rework für Geräte und Gruppen von Bruki24
+- Diverse Aktionen für die Instanzen der Geräte und Gruppen:  
+  - Relatives Dimmen der Helligkeit  
+  - Schrittweises Dimmen der Helligkeit  
+  - Relatives Dimmen der Farbtemperatur  
+  - Schrittweises Dimmen der Farbtemperatur  
+  - Ein-/Ausschaltverzögerung  
   
 ## 6. Spenden
 
