@@ -2951,8 +2951,6 @@ abstract class ModulBase extends \IPSModule
      *
      * Prüft, ob ein Wert in der locale.json vorhanden ist.
      *
-     * @todo globalJsonFilePath ????
-     *
      * @param string $value Der zu prüfende Wert.
      * @return bool Gibt true zurück, wenn der Wert in der locale.json vorhanden ist, andernfalls false.
      *
@@ -2986,9 +2984,6 @@ abstract class ModulBase extends \IPSModule
      *
      * Fügt einen Wert zur translations.json hinzu, wenn er noch nicht vorhanden ist.
      * Gibt eine Liste an Begriffen, die noch in der locale.json ergänzt werden müssen.
-     *
-     * @todo translations.json auflösen, das müssen wir anders umsetzen. Damit sind Modul-Updates nicht möglich, da die Datei im Modul Ordner erstellt wird.
-     *       Besser wäre es die Daten an einer Instanz als Attribut zu sammeln.
      *
      * @param string $value Der hinzuzufügende Wert.
      * @return void

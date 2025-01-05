@@ -1,3 +1,32 @@
-    Doku hierzu ist aber nur in der Readme vom Configurator enthalten und dort noch falsch erklärt (Topics und Signatur)
-
-
+Dokumentation:
+    🟥 Migrationsanleitung von 4.5 auf 5.0
+        - Auf geänderte Idents hinweisen
+    🟥 Hinweise zum Update von Z2M auf 2.0
+    🟥 Neue Features in Changelog aufnehmen
+        - Neue Aktionen
+        - Keine missing exposes Debugs mehr nötig
+    🟥 Installationsanleitung überarbeiten
+    🟨 Command und CommandExt sind public und somit für Device, Group und Configurator verfügbar.
+        Doku hierzu ist aber nur in der Readme vom Configurator enthalten und dort noch falsch erklärt (Topics und Signatur)
+    
+Features 5.x:
+    🟨 Composite Variablen ergänzen.
+    🟨 OTA Update Variablen zerlegen (optional?).
+    🟨 OTA Updates über Bridge Instanz prüfen, darstellen, anbieten?
+    🟨 Oder eigene OTA Instanz?
+    🟨 Discovery Modul erstellen
+        - Zuerst von allen vorhandenen MQTT Server Instanzen die Retain Topics laden und nach dem Keywords zigbee2mqtt und z2m durchsuchen.
+          - Prüfen ob das Retain Topic auf *Suchmuster*/bridge/state endet.
+          - Gefundene Bridges an MQTT Server merken und
+          - Konfigurator mit dem *Suchmuster* als basetopic anbieten, bzw. vorher mit vorhandenen abgleichen. Die Kette anpassen auf den dazugehörigen MQTT Server.
+        - Alle MQTT Client Instanzen auslesen und Protocol+IP+Port kombinieren.
+          - Mit einer PHP-MQTT Library (da Symcon das aktuell nicht kann) sich mit jedem Server verbinden und auf +/bridge/state subscriben und Antwort prüfen.
+          - Gefundene Bridges an MQT Client (anhand des Protocol+IP+Port) merken und 
+          - Konfigurator mit dem gefundenen basetopic anbieten, bzw. vorher mit vorhandenen abgleichen. Die Kette anpassen auf den dazugehörigen MQTT Client.
+    🟨 Geräte und Gruppen Instanzen erhalten einen Support ExpansionPanel:
+        - Fehlende Übersetzungen anzeigen (Buffer).
+        - Mit der Möglichkeit die JSON zu löschen oder anzeigen.
+        - Download eines ZIP Archives mit dem letzten Payload, der expose JSON und der vorhandenen Variablen inkl. Profile der Instanz.
+    🟨 Testfunktionen ergänzen das expose JSON und Payloads mit phpunit getestet werden können.
+    🟩 Diverse Code Optimierungen laut @Burki24
+    
