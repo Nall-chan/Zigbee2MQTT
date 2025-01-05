@@ -45,7 +45,7 @@ class Zigbee2MQTTConfigurator extends IPSModule
         //Never delete this line!
         parent::Create();
         $this->ConnectParent(self::GUID_MQTT_SERVER);
-        $this->RegisterPropertyString(self::MQTT_BASE_TOPIC, '');
+        $this->RegisterPropertyString(self::MQTT_BASE_TOPIC, 'zigbee2mqtt');
         $this->TransactionData = [];
     }
 

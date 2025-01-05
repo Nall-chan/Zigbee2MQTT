@@ -209,7 +209,6 @@ abstract class ModulBase extends \IPSModule
         //Never delete this line!
         parent::Create();
 
-        $this->ConnectParent(self::GUID_MQTT_SERVER);
         $this->RegisterPropertyString(self::MQTT_BASE_TOPIC, '');
         $this->RegisterPropertyString(self::MQTT_TOPIC, '');
         $this->RegisterAttributeFloat(self::ATTRIBUTE_MODUL_VERSION, 5.0);
