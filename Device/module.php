@@ -81,10 +81,20 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
     public function GetConfigurationForm()
     {
         $Form = json_decode(file_get_contents(__DIR__ . '/form.json'), true);
+        $Model = $this->ReadAttributeString('Model');
+
+        // Setze das Gerätebild
         $Form['elements'][0]['items'][1]['image'] = $this->ReadAttributeString('Icon');
+
+        // Ersetze den Model-Platzhalter im Link
+        foreach ($Form['elements'] as &$element) {
+            if ($element['type'] === 'Label' && strpos($element['caption'], '%MODEL%') !== false) {
+                $element['caption'] = str_replace('%MODEL%', rawurlencode($Model), $element['caption']);
+            }
+        }
+
         return json_encode($Form);
     }
-
     /**
      * RequestAction
      *
