@@ -334,9 +334,9 @@ class Zigbee2MQTTConfigurator extends IPSModule
         }
 
         $Form['actions'][0]['items'][0]['values'] = $valuesDevices;
-        $Form['actions'][0]['items'][0]['rowCount'] = (count($valuesDevices) < 20 ? count($valuesDevices) : 20);
+        $Form['actions'][0]['items'][0]['rowCount'] = (count($valuesDevices) < 15 ? count($valuesDevices) : 15);
         $Form['actions'][1]['items'][0]['values'] = $valuesGroups;
-        $Form['actions'][1]['items'][0]['rowCount'] = (count($valuesGroups) < 20 ? count($valuesGroups) : 20);
+        $Form['actions'][1]['items'][0]['rowCount'] = (count($valuesGroups) < 15 ? count($valuesGroups) : 15);
         $this->SendDebug('Form', json_encode($Form), 0);
         return json_encode($Form);
     }

@@ -105,7 +105,7 @@ class Zigbee2MQTTBridge extends IPSModule
             }
         }
         $this->SendDebug('Online', $online ? 'true' : 'false', 0);
-        $installedExtVersion = (float) $this->GetValue('extension_version');
+        $installedExtVersion = (empty($this->GetValue('extension_version')) ? -1 : (float) $this->GetValue('extension_version'));
         $this->SetValue('extension_is_current', $this->actualExtensionVersion <= $installedExtVersion);
         if ($this->actualExtensionVersion <= $installedExtVersion) {
             $this->UpdateFormField('InstallExtension', 'label', $this->Translate('Symcon-Extension is up-to-date'));

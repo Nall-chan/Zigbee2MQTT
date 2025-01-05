@@ -1,13 +1,16 @@
 Dokumentation:
-    🟥 Migrationsanleitung von 4.5 auf 5.0
+    ✅ Migrationsanleitung von 4.5 auf 5.0
         - Auf geänderte Idents hinweisen
     🟥 Hinweise zum Update von Z2M auf 2.0
-    🟥 Neue Features in Changelog aufnehmen
+    ✅ Neue Features in Changelog aufnehmen
         - Neue Aktionen
         - Keine missing exposes Debugs mehr nötig
-    🟥 Installationsanleitung überarbeiten
+    ✅ Installationsanleitung überarbeiten
+    🟥 Anleitung Konfigurator und Bridge fehlen noch
     🟨 Command und CommandExt sind public und somit für Device, Group und Configurator verfügbar.
         Doku hierzu ist aber nur in der Readme vom Configurator enthalten und dort noch falsch erklärt (Topics und Signatur)
+    🟨 Konfigurator muss beim öffnen eine Bitte warten Meldung ausgeben, bis die Suche abgeschlossen ist.
+    🟨 Bridge Instanz sollte beim Klicken auf dem Button der Erweiterung-Installation eine Rückmeldung geben.
     
 Features 5.x:
     🟨 Composite Variablen ergänzen.
