@@ -1333,81 +1333,88 @@ abstract class ModulBase extends \IPSModule
      */
     private function processVariable(string $key, mixed $value): void
     {
+        // Wenn Value ein Array ist und einen 'composite' Key enthält
+        if (is_array($value) && isset($value['composite'])) {
+            foreach ($value['composite'] as $compositeKey => $compositeValue) {
+                $this->processVariable($compositeKey, $compositeValue);
+            }
+            return;
+        }
+
         $lowerKey = strtolower($key);
         $ident = $key;
-
-        // Prüfe zuerst, ob eine Variable mit diesem Ident in Symcon existiert
-        /** @Burki Das hier ist wohl falsch */
+        
+        // Prüfe existierende Variable
         $variableID = @$this->GetIDForIdent($ident);
-        if ($variableID) {
+        if ($variableID !== false) {
             $this->SendDebug(__FUNCTION__, 'Existierende Variable gefunden: ' . $ident, 0);
             $this->SetValue($ident, $value);
             return;
         }
 
-        // Bekannte Variablen laden
+        // Bekannte Variablen laden und prüfen
         $knownVariables = $this->getKnownVariables();
-
-        // Wenn keine existierende Variable gefunden wurde, prüfe auf bekannte Variablen aus JSON
         if (!isset($knownVariables[$lowerKey])) {
-            $this->SendDebug(__FUNCTION__, 'Variable weder in Symcon noch in JSON bekannt, übersprungen: ' . $key, 0);
+            $this->SendDebug(__FUNCTION__, 'Variable nicht bekannt: ' . $key, 0);
             return;
         }
 
-        // Restliche Logik für neue Variablen aus JSON...
         $variableProps = $knownVariables[$lowerKey];
 
-        // Spezielle Behandlung für Brightness in Lichtgruppen
+        // Array-Werte verarbeiten
+        if (is_array($value)) {
+            $this->processArrayValue($ident, $value);
+            return;
+        }
+
+        // Spezialbehandlungen durchführen
+        if ($this->processSpecialCases($key, $value, $lowerKey, $variableProps)) {
+            return;
+        }
+
+        // Variable registrieren und Wert setzen
+        $variableID = $this->getOrRegisterVariable($ident, $variableProps);
+        if ($variableID) {
+            $this->SetValue($ident, $value);
+        }
+    }
+
+    private function processArrayValue(string $ident, array $value): void 
+    {
+        if (strpos($ident, 'color') === 0) {
+            $this->handleColorVariable($ident, $value);
+            return;
+        }
+        
+        $this->SendDebug(__FUNCTION__, 'Array-Wert für: ' . $ident, 0);
+        $this->SendDebug(__FUNCTION__, 'Inhalt: ' . json_encode($value), 0);
+    }
+
+    private function processSpecialCases(string $key, mixed &$value, string $lowerKey, array $variableProps): bool 
+    {
+        // Brightness in Lichtgruppen
         foreach (self::$VariableUseStandardProfile as $profile) {
             if ($profile['feature'] === $lowerKey &&
-                isset($profile['group_type']) &&
+                isset($profile['group_type'], $variableProps['group_type']) &&
                 $profile['group_type'] === 'light' &&
-                isset($variableProps['group_type']) &&
                 $variableProps['group_type'] === 'light') {
-
-                $this->SendDebug(__FUNCTION__, 'Brightness in Lichtgruppe gefunden - StandardProfile', 0);
-                if ($this->processSpecialVariable($key, $value)) {
-                    return;
-                }
+                
+                $this->SendDebug(__FUNCTION__, 'Brightness in Lichtgruppe - StandardProfile', 0);
+                return $this->processSpecialVariable($key, $value);
             }
         }
 
-        // Voltage-Spezialbehandlung
+        // Voltage Behandlung
         if ($lowerKey === 'voltage') {
             $this->SendDebug(__FUNCTION__, 'Voltage vor Konvertierung: ' . $value, 0);
             if ($this->processSpecialVariable($key, $value)) {
-                return;
+                return true;
             }
-        }
-
-        // Variable registrieren und ID abrufen
-        $variableID = $this->getOrRegisterVariable($ident, $variableProps);
-        if (!$variableID) {
-            return;
-        }
-
-        // Überprüfen, ob der Wert ein Array ist und entsprechend behandeln
-        if (is_array($value)) {
-            $this->SendDebug(__FUNCTION__, 'Wert ist ein Array, spezielle Behandlung für: ' . $key, 0);
-            $this->SendDebug(__FUNCTION__, 'Array-Inhalt: ' . json_encode($value), 0);
-
-            // Spezielle Behandlung für Farbwerte
-            if (strpos($ident, 'color') === 0) {
-                $this->handleColorVariable($ident, $value);
-            }
-
-            return;
-        }
-
-        // Voltage-Spezialbehandlung hinzufügen
-        if ($lowerKey === 'voltage') {
-            $this->SendDebug(__FUNCTION__, 'Voltage vor Konvertierung: ' . $value, 0);
             $value = self::convertMillivoltToVolt($value);
             $this->SendDebug(__FUNCTION__, 'Voltage nach Konvertierung: ' . $value, 0);
         }
 
-        // Wert setzen
-        $this->SetValue($ident, $value);
+        return false;
     }
 
     /**
