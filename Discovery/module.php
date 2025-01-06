@@ -102,7 +102,7 @@ class Zigbee2MQTTDiscovery extends IPSModule
         }
 
 
-        $mqtt->subscribe([['+/bridge/state' => 0]]);
+        $mqtt->subscribe(['+/bridge/state' => 0]);
 
         $i = 0;
         $Topics = [];
