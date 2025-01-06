@@ -35,7 +35,7 @@ class Zigbee2MQTTConfigurator extends IPSModule
         'topic'              => '',
         'DevicesCount'       => ''
     ];
-    
+
     /**
      * Create
      *
@@ -139,7 +139,7 @@ class Zigbee2MQTTConfigurator extends IPSModule
                 $Form['actions'][2]['popup']['items'][3]['onClick'] = [
                     '$BaseTopic= \'' . $BaseTopic . '\';',
                     '$SplitterId = ' . IPS_GetInstance($this->InstanceID)['ConnectionID'] . ';',
-                    '$id = IPS_CreateInstance(\''.self::GUID_MODULE_BRIDGE.'\');',
+                    '$id = IPS_CreateInstance(\'' . self::GUID_MODULE_BRIDGE . '\');',
                     'IPS_SetName($id, \'Zigbee2MQTT Bridge (\'.$BaseTopic.\')\');',
                     'if (IPS_GetInstance($id)[\'ConnectionID\'] != $SplitterId){',
                     '@IPS_DisconnectInstance($id);',

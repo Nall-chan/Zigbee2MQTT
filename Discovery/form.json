@@ -15,6 +15,11 @@
                 {
                     "caption": "Topic",
                     "name": "topic",
+                    "width": "300px"
+                },
+                {
+                    "caption": "Name",
+                    "name": "name",
                     "width": "auto"
                 }
             ],

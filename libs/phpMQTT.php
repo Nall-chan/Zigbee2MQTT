@@ -1,12 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Zigbee2MQTT;
 
 /*
     phpMQTT
     A simple php class to connect/publish/subscribe to an MQTT broker
 
-*/
+ */
 
 /*
     Licence
@@ -32,14 +34,12 @@ namespace Zigbee2MQTT;
     OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
     THE SOFTWARE.
 
-*/
+ */
 
 /* phpMQTT */
 
 class phpMQTT
 {
-    protected $socket;            /* holds the socket	*/
-    protected $msgid = 1;            /* counter for message id */
     public $keepalive = 10;        /* default keepalive timmer */
     public $timesinceping;        /* host unix time, used to detect disconects */
     public $topics = [];    /* used to store currently subscribed topics */
@@ -48,21 +48,23 @@ class phpMQTT
     public $port;                /* broker port */
     public $clientid;            /* client id sent to brocker */
     public $will;                /* stores the will of the client */
-    protected $username;            /* stores username */
-    protected $password;            /* stores password */
 
     public $sslContextOptions;      /* null or an associative array */
     public $cafile;
+    protected $socket;            /* holds the socket	*/
+    protected $msgid = 1;            /* counter for message id */
+    protected $username;            /* stores username */
+    protected $password;            /* stores password */
     protected static $known_commands = [
-        1 => 'CONNECT',
-        2 => 'CONNACK',
-        3 => 'PUBLISH',
-        4 => 'PUBACK',
-        5 => 'PUBREC',
-        6 => 'PUBREL',
-        7 => 'PUBCOMP',
-        8 => 'SUBSCRIBE',
-        9 => 'SUBACK',
+        1  => 'CONNECT',
+        2  => 'CONNACK',
+        3  => 'PUBLISH',
+        4  => 'PUBACK',
+        5  => 'PUBREC',
+        6  => 'PUBREL',
+        7  => 'PUBCOMP',
+        8  => 'SUBSCRIBE',
+        9  => 'SUBACK',
         10 => 'UNSUBSCRIBE',
         11 => 'UNSUBACK',
         12 => 'PINGREQ',
@@ -156,7 +158,7 @@ class phpMQTT
                 [
                     'ssl' => [
                         'verify_peer_name' => true,
-                        'cafile' => $this->cafile
+                        'cafile'           => $this->cafile
                     ]
                 ]
             );
@@ -171,7 +173,7 @@ class phpMQTT
         }
 
         stream_set_timeout($this->socket, 5);
-        stream_set_blocking($this->socket, 0);
+        stream_set_blocking($this->socket, false);
 
         $i = 0;
         $buffer = '';
@@ -242,7 +244,7 @@ class phpMQTT
         while ($i > 0) {
             $encodedByte = $i % 128;
             $i /= 128;
-            $i = (int)$i;
+            $i = (int) $i;
             if ($i > 0) {
                 $encodedByte |= 128;
             }
@@ -310,7 +312,7 @@ class phpMQTT
     {
         $this->subscribe(
             [
-                $topic =>  $qos
+                $topic => $qos
             ]
         );
 
@@ -434,25 +436,6 @@ class phpMQTT
     }
 
     /**
-     * Writes a string to the socket
-     *
-     * @param $buffer
-     *
-     * @return bool|int
-     */
-    protected function _fwrite($buffer)
-    {
-        $buffer_length = strlen($buffer);
-        for ($written = 0; $written < $buffer_length; $written += $fwrite) {
-            $fwrite = fwrite($this->socket, substr($buffer, $written));
-            if ($fwrite === false) {
-                return false;
-            }
-        }
-        return $buffer_length;
-    }
-
-    /**
      * Processes a received topic
      *
      * @param $msg
@@ -520,12 +503,12 @@ class phpMQTT
 
         $byte = $this->read(1, true);
 
-        if ((string)$byte === '') {
+        if ((string) $byte === '') {
             if ($loop === true) {
                 usleep(100000);
             }
         } else {
-            $cmd = (int)(ord($byte) / 16);
+            $cmd = (int) (ord($byte) / 16);
             $this->_debugMessage(
                 sprintf(
                     'Received CMD: %d (%s)',
@@ -573,6 +556,44 @@ class phpMQTT
         }
 
         return true;
+    }
+
+    /**
+     * Prints a sting out character by character
+     *
+     * @param $string
+     */
+    public function printstr($string): void
+    {
+        $strlen = strlen($string);
+        for ($j = 0; $j < $strlen; $j++) {
+            $num = ord($string[$j]);
+            if ($num > 31) {
+                $chr = $string[$j];
+            } else {
+                $chr = ' ';
+            }
+            printf("%4d: %08b : 0x%02x : %s \n", $j, $num, $num, $chr);
+        }
+    }
+
+    /**
+     * Writes a string to the socket
+     *
+     * @param $buffer
+     *
+     * @return bool|int
+     */
+    protected function _fwrite($buffer)
+    {
+        $buffer_length = strlen($buffer);
+        for ($written = 0; $written < $buffer_length; $written += $fwrite) {
+            $fwrite = fwrite($this->socket, substr($buffer, $written));
+            if ($fwrite === false) {
+                return false;
+            }
+        }
+        return $buffer_length;
     }
 
     /**
@@ -633,25 +654,6 @@ class phpMQTT
         $ret .= $str;
         $i += ($len + 2);
         return $ret;
-    }
-
-    /**
-     * Prints a sting out character by character
-     *
-     * @param $string
-     */
-    public function printstr($string): void
-    {
-        $strlen = strlen($string);
-        for ($j = 0; $j < $strlen; $j++) {
-            $num = ord($string[$j]);
-            if ($num > 31) {
-                $chr = $string[$j];
-            } else {
-                $chr = ' ';
-            }
-            printf("%4d: %08b : 0x%02x : %s \n", $j, $num, $num, $chr);
-        }
     }
 
     /**
