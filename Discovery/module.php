@@ -127,15 +127,15 @@ class Zigbee2MQTTDiscovery extends IPSModule
     {
         $MqttSplitter = [];
         foreach(IPS_GetInstanceListByModuleID(self::GUID_MQTT_SERVER) as $mqttInstanceId) {
-            $MqttSplitter[$mqttInstanceId] = array_intersect_key(['UserName','Password'], json_decode(IPS_GetConfiguration($mqttInstanceId), true));
+            $MqttSplitter[$mqttInstanceId] = array_intersect_key(json_decode(IPS_GetConfiguration($mqttInstanceId), true), ['UserName','Password']);
         }
         foreach(IPS_GetInstanceListByModuleID(self::GUID_MQTT_CLIENT) as $mqttInstanceId) {
             $ioInstance = IPS_GetInstance($mqttInstanceId)['ConnectionID'];
             if ($ioInstance) {
                 $MqttSplitter[$mqttInstanceId] =
                     array_merge(
-                        array_intersect_key(['UserName','Password'], json_decode(IPS_GetConfiguration($mqttInstanceId), true)),
-                        array_intersect_key(['Host','Port','UseSSL'], json_decode(IPS_GetConfiguration($ioInstance), true))
+                        array_intersect_key(json_decode(IPS_GetConfiguration($mqttInstanceId), true), ['UserName','Password']),
+                        array_intersect_key(json_decode(IPS_GetConfiguration($ioInstance), true), ['Host','Port','UseSSL'])
                     );
             }
         }
