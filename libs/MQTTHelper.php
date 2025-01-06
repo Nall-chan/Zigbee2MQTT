@@ -3,7 +3,7 @@
 declare(strict_types=1);
 namespace Zigbee2MQTT;
 
-require_once dirname(__DIR__) . '/ModuleConstants.php';
+require_once __DIR__ . '/ModuleConstants.php';
 
 /**
  * @property array $TransactionData Array welches in einem Instanz-Buffer abgelegt wird und aktuelle Anfragen und Antworten von/zur Z2M Bridge enthält
