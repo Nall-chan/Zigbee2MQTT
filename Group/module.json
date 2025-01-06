@@ -2,7 +2,7 @@
     "id": "{11BF3773-E940-469B-9DD7-FB9ACD7199A2}",
     "name": "Zigbee2MQTT Group",
     "type": 3,
-    "vendor": "",
+    "vendor": "Zigbee2MQTT",
     "aliases": [],
     "parentRequirements": [
         "{043EA491-0325-4ADD-8FC2-A30C8EEB4D3F}"

@@ -2,7 +2,7 @@
     "id": "{D30BADA8-F261-4D9F-89A9-2E9961AF021F}",
     "name": "Zigbee2MQTT Configurator",
     "type": 4,
-    "vendor": "",
+    "vendor": "Zigbee2MQTT",
     "aliases": [],
     "parentRequirements": [
         "{043EA491-0325-4ADD-8FC2-A30C8EEB4D3F}"
