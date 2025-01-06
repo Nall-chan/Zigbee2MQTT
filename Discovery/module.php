@@ -64,20 +64,6 @@ class Zigbee2MQTTDiscovery extends IPSModule
         return json_encode($Form);
     }
 
-    public function checkAllMqttServers()
-    {
-        $Topics = [];
-        foreach ($this->getAllMqTTSplitterInstances() as $SplitterId => $Config) {
-            if (isset($Config['Host'])) { // client
-                $Topics[$SplitterId] = $this->SearchBridges($Config);
-            } else {  //server
-                $Topics[$SplitterId] = MQTT_GetRetainedMessageTopicList($SplitterId);
-            }
-        }
-        $this->SendDebug('Found Topics', json_encode($Topics), 0);
-        return $Topics;
-    }
-
     /**
      * SearchBridges
      *
@@ -117,7 +103,36 @@ class Zigbee2MQTTDiscovery extends IPSModule
         $mqtt->close();
         return count($Topics) ? $Topics : null;
     }
-
+        
+    /**
+     * checkAllMqttServers
+     *
+     * @return array
+     */
+    private function checkAllMqttServers():array
+    {
+        $Topics = [];
+        foreach ($this->getAllMqTTSplitterInstances() as $SplitterId => $Config) {
+            if (isset($Config['Host'])) { // client
+                $Topics[$SplitterId] = array_filter($this->SearchBridges($Config), [$this,'FilterTopics']);
+            } else {  //server
+                $Topics[$SplitterId] = array_filter(MQTT_GetRetainedMessageTopicList($SplitterId), [$this,'FilterTopics']);
+            }
+        }
+        $this->SendDebug('Found Topics', json_encode($Topics), 0);
+        return $Topics;
+    }
+        
+    /**
+     * FilterTopics
+     *
+     * @param  mixed $Topic
+     * @return bool
+     */
+    private function FilterTopics(string $Topic):bool
+    {
+return true;
+    }
     /**
      * getAllMqTTSplitterInstances
      *
