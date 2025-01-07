@@ -5,11 +5,13 @@ Dokumentation:
     ✅ Neue Features in Changelog aufnehmen
         - Neue Aktionen
         - Keine missing exposes Debugs mehr nötig
-    ✅ Installationsanleitung überarbeiten
-    🟥 Anleitung Konfigurator und Bridge fehlen noch
+    🟥 Installationsanleitung überarbeiten
+    ✅ Discovery Modul erstellen
+    🟥 Anleitung Discovery, Konfigurator und Bridge fehlen noch.
     🟨 Command und CommandExt sind public und somit für Device, Group und Configurator verfügbar.
         Doku hierzu ist aber nur in der Readme vom Configurator enthalten und dort noch falsch erklärt (Topics und Signatur)
     🟨 Konfigurator muss beim öffnen eine Bitte warten Meldung ausgeben, bis die Suche abgeschlossen ist.
+    🟨 Konfigurator soll mehr Meldungen an den User ausgeben -> Parent fehlt/inaktiv, Bridge Instanz bzw Erweiterung fehlt.
     🟨 Bridge Instanz sollte beim Klicken auf dem Button der Erweiterung-Installation eine Rückmeldung geben.
     
 Features 5.x:
@@ -17,15 +19,6 @@ Features 5.x:
     🟨 OTA Update Variablen zerlegen (optional?).
     🟨 OTA Updates über Bridge Instanz prüfen, darstellen, anbieten?
     🟨 Oder eigene OTA Instanz?
-    🟨 Discovery Modul erstellen
-        - Zuerst von allen vorhandenen MQTT Server Instanzen die Retain Topics laden und nach dem Keywords zigbee2mqtt und z2m durchsuchen.
-          - Prüfen ob das Retain Topic auf *Suchmuster*/bridge/state endet.
-          - Gefundene Bridges an MQTT Server merken und
-          - Konfigurator mit dem *Suchmuster* als basetopic anbieten, bzw. vorher mit vorhandenen abgleichen. Die Kette anpassen auf den dazugehörigen MQTT Server.
-        - Alle MQTT Client Instanzen auslesen und Protocol+IP+Port kombinieren.
-          - Mit einer PHP-MQTT Library (da Symcon das aktuell nicht kann) sich mit jedem Server verbinden und auf +/bridge/state subscriben und Antwort prüfen.
-          - Gefundene Bridges an MQT Client (anhand des Protocol+IP+Port) merken und 
-          - Konfigurator mit dem gefundenen basetopic anbieten, bzw. vorher mit vorhandenen abgleichen. Die Kette anpassen auf den dazugehörigen MQTT Client.
     🟨 Geräte und Gruppen Instanzen erhalten einen Support ExpansionPanel:
         - Fehlende Übersetzungen anzeigen (Buffer).
         - Mit der Möglichkeit die JSON zu löschen oder anzeigen.

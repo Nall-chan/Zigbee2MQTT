@@ -4,11 +4,9 @@
     "type": 5,
     "vendor": "Zigbee2MQTT",
     "aliases": [],
-    "parentRequirements": [
-    ],
+    "parentRequirements": [],
     "childRequirements": [],
-    "implemented": [
-    ],
+    "implemented": [],
     "prefix": "Z2M",
     "url": "https://github.com/Schnittcher/IPS-Zigbee2MQTT/blob/main/Discovery/README.md"
 }

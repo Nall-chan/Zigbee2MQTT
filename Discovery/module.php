@@ -6,9 +6,16 @@ require_once dirname(__DIR__) . '/libs/ModuleConstants.php';
 require_once dirname(__DIR__) . '/libs/BufferHelper.php';
 require_once dirname(__DIR__) . '/libs/phpMQTT.php';
 
+/**
+ * Zigbee2MQTTDiscovery
+ *
+ * @property array $ManuelTopics
+ * @property array $ManuelBrokerConfig
+ */
 class Zigbee2MQTTDiscovery extends IPSModule
 {
     use Zigbee2MQTT\Constants;
+    use Zigbee2MQTT\BufferHelper;
 
     /**
      * Create
@@ -19,7 +26,8 @@ class Zigbee2MQTTDiscovery extends IPSModule
     {
         //Never delete this line!
         parent::Create();
-        //$this->TransactionData = [];
+        $this->ManuelBrokerConfig = [];
+        $this->ManuelTopics = [];
     }
 
     /**
@@ -31,6 +39,8 @@ class Zigbee2MQTTDiscovery extends IPSModule
     {
         //Never delete this line!
         parent::ApplyChanges();
+        $this->ManuelTopics = [];
+        $this->ManuelBrokerConfig = [];
     }
 
     /**
@@ -43,7 +53,49 @@ class Zigbee2MQTTDiscovery extends IPSModule
     public function RequestAction($ident, $value)
     {
         switch ($ident) {
-            case 'ReloadForm':
+            case 'CheckMQTTBroker':
+                $Config = json_decode($value, true);
+                $this->SendDebug('Manuel CheckMQTTBroker', $value, 0);
+                $Url = parse_url($Config['Url']);
+                if (empty($Url['host'])) {
+                    $this->ManuelTopics = [];
+                    $this->ManuelBrokerConfig = [];
+                    $this->ReloadForm();
+                } else {
+                    $this->UpdateFormField('CheckMQTTBroker', 'caption', $this->Translate('Please wait'));
+                    $this->UpdateFormField('CheckMQTTBroker', 'enabled', false);
+
+                    $Config['Host'] = $Url['host'];
+                    if ($Url['scheme'] === 'mqtts') {
+                        $Config['Port'] = isset($Url['port']) ? $Url['port'] : 8883;
+                        $Config['UseSSL'] = true;
+                    } else {
+                        $Config['Port'] = isset($Url['port']) ? $Url['port'] : 1883;
+                        $Config['UseSSL'] = false;
+                    }
+                    $Topics = $this->SearchBridges($Config);
+                    if ($Topics == null) {
+                        $this->UpdateFormField('CheckMQTTBroker', 'caption', $this->Translate('Save'));
+                        $this->UpdateFormField('CheckMQTTBroker', 'enabled', true);
+                        $this->UpdateFormField('ErrorPopup', 'visible', true);
+                    } else {
+                        $this->SendDebug('Found Zigbee2MQTT', json_encode($Topics), 0);
+                        $this->ManuelTopics = $Topics;
+                        $this->ManuelBrokerConfig = $Config;
+                        $this->ReloadForm();
+                    }
+                }
+
+                break;
+            case 'EditMQTTBroker':
+                $this->UpdateFormField('BrokerTitle', 'caption', $this->Translate('Edit configuration'));
+                $Config = $this->ManuelBrokerConfig;
+                if (count($Config)) {
+                    $this->UpdateFormField('Url', 'value', $Config['Url']);
+                    $this->UpdateFormField('UserName', 'value', $Config['UserName']);
+                    $this->UpdateFormField('Password', 'value', $Config['Password']);
+                }
+                $this->UpdateFormField('BrokerPopup', 'visible', true);
                 break;
         }
     }
@@ -51,54 +103,114 @@ class Zigbee2MQTTDiscovery extends IPSModule
     /**
      * GetConfigurationForm
      *
-     * @todo versuchen die bridge zu erreichen um zu testen ob das BaseTopic passt
      * @return string
      */
     public function GetConfigurationForm()
     {
         $Form = json_decode(file_get_contents(__DIR__ . '/form.json'), true);
+
+        if (!count($this->ManuelBrokerConfig)) {
+            $Form['actions'][0]['label'] = 'Add external broker';
+        }
+
         $FoundZ2mBySplitterId = $this->checkAllMqttServers();
-        $this->SendDebug('Found Zigbee2MQTT', json_encode($FoundZ2mBySplitterId), 0);
         $IPSConfigurators = $this->GetConfigurators();
         $this->SendDebug('Known Configurators', json_encode($IPSConfigurators), 0);
         $Values = [];
 
-        foreach ($FoundZ2mBySplitterId as $SplitterId => $Topics) {
-            foreach ($Topics as $key => $Topic) {
-                $instanceID = array_search($Topic, $IPSConfigurators);
-                if ($instanceID) {
-                    unset($IPSConfigurators[$instanceID]);
-                }
-                // Konfigeintrag mit Kette zu SplitterId
-                $value = []; //Array leeren
-                if ($instanceID) {
-                    $value['name'] = IPS_GetName($instanceID);
-                    $value['instanceID'] = $instanceID;
-
-                } else {
-                    $value['name'] = $Topic;
-                    $value['instanceID'] = 0;
-                }
-                $value['topic'] = $Topic;
-                $value['create'] = [
-                    [
-                        'moduleID'      => self::GUID_MODULE_CONFIGURATOR,
-                        'configuration' => [
-                            self::MQTT_BASE_TOPIC    => $Topic
-                        ]
-                    ],
-                    [
-                        'moduleID'      => IPS_GetInstance($SplitterId)['ModuleInfo']['ModuleID'],
-                        'configuration' => json_decode(IPS_GetConfiguration($SplitterId), true)
-                    ]
-                ];
-                $Values[] = $value;
+        if ($FoundZ2mBySplitterId === null) {
+            if (!count($this->ManuelTopics)) {
+                //Meldung das kein Splitter gefunden wurde.
+                // manuelles Eingabefeld für MQTT url, username, passwort anzeigen
             }
+        } else {
+            foreach ($FoundZ2mBySplitterId as $SplitterId => $Topics) {
+                foreach ($Topics as $key => $Topic) {
+                    $instanceID = array_search($Topic, $IPSConfigurators);
+                    if ($instanceID) {
+                        unset($IPSConfigurators[$instanceID]);
+                    }
+                    // Konfigeintrag mit Kette zu SplitterId
+                    $value = []; //Array leeren
+                    if ($instanceID) {
+                        $value['name'] = IPS_GetName($instanceID);
+                        $value['instanceID'] = $instanceID;
+
+                    } else {
+                        $value['name'] = $Topic;
+                        $value['instanceID'] = 0;
+                    }
+                    $value['topic'] = $Topic;
+                    $value['create'] = [
+                        [
+                            'moduleID'      => self::GUID_MODULE_CONFIGURATOR,
+                            'configuration' => [
+                                self::MQTT_BASE_TOPIC    => $Topic
+                            ]
+                        ],
+                        [
+                            'moduleID'      => IPS_GetInstance($SplitterId)['ModuleInfo']['ModuleID'],
+                            'configuration' => json_decode(IPS_GetConfiguration($SplitterId), true)
+                        ]
+                    ];
+                    $Values[] = $value;
+                }
+            }
+        }
+        $KnownTopics = array_column($Values, 'topic');
+        foreach ($this->ManuelTopics as $Topic) {
+            if (in_array($Topic, $KnownTopics)) {
+                //skip found topics
+                continue;
+            }
+            $instanceID = array_search($Topic, $IPSConfigurators);
+            if ($instanceID) {
+                unset($IPSConfigurators[$instanceID]);
+            }
+            // Konfigeintrag mit Kette zu SplitterId
+            $value = []; //Array leeren
+            if ($instanceID) {
+                $value['name'] = IPS_GetName($instanceID);
+                $value['instanceID'] = $instanceID;
+
+            } else {
+                $value['name'] = $Topic;
+                $value['instanceID'] = 0;
+            }
+            $value['topic'] = $Topic;
+            $value['create'] = [
+                [
+                    'moduleID'      => self::GUID_MODULE_CONFIGURATOR,
+                    'configuration' => [
+                        self::MQTT_BASE_TOPIC    => $Topic
+                    ]
+                ],
+                [
+                    'moduleID'      => self::GUID_MQTT_CLIENT,
+                    'configuration' => array_intersect_key($this->ManuelBrokerConfig, array_flip(['UserName', 'Password']))
+                ],
+                [
+                    'moduleID'      => self::GUID_CLIENT_SOCKET,
+                    'configuration' => array_merge(
+                        array_intersect_key($this->ManuelBrokerConfig, array_flip(['Host', 'Port', 'UseSSL'])),
+                        ['Open' => true, 'VerifyHost'=>false, 'VerifyPeer'=>false]
+                    )
+
+                ]
+            ];
+            $Values[] = $value;
+
         }
         foreach ($IPSConfigurators as $instanceID => $Topic) {
             // nicht gefundene Bridges hier in rot auflisten
+            $value = []; //Array leeren
+            $value['name'] = IPS_GetName($instanceID);
+            $value['instanceID'] = $instanceID;
+            $value['topic'] = IPS_GetProperty($instanceID, self::MQTT_BASE_TOPIC);
+            $Values[] = $value;
         }
-        $Form['actions'][0]['values'] = $Values;
+
+        $Form['actions'][1]['values'] = $Values;
         $this->SendDebug('Form', json_encode($Form), 0);
         return json_encode($Form);
     }
@@ -163,12 +275,17 @@ class Zigbee2MQTTDiscovery extends IPSModule
     /**
      * checkAllMqttServers
      *
-     * @return array
+     * @return null|array
      */
-    private function checkAllMqttServers(): array
+    private function checkAllMqttServers(): ?array
     {
         $Topics = [];
-        foreach ($this->getAllMqTTSplitterInstances() as $SplitterId => $Config) {
+        $MqttSplitters = $this->getAllMqTTSplitterInstances();
+        if (!count($MqttSplitters)) {
+            $this->SendDebug('No MQTT Splitters found', '', 0);
+            return null;
+        }
+        foreach ($MqttSplitters as $SplitterId => $Config) {
             if (isset($Config['Host'])) { // client
                 $Topics[$SplitterId] = $this->SearchBridges($Config);
             } else {  //server
@@ -181,6 +298,7 @@ class Zigbee2MQTTDiscovery extends IPSModule
                 }
             }
         }
+        $this->SendDebug('Found Zigbee2MQTT', json_encode($Topics), 0);
         return $Topics;
     }
 

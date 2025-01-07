@@ -29,6 +29,8 @@ trait Constants
     protected const GUID_MQTT_SERVER = '{C6D2AEB3-6E1F-4B2E-8E69-3A1A00246850}';
     /** @var string GUID des MQTT Client */
     protected const GUID_MQTT_CLIENT = '{F7A0DD2E-7684-95C0-64C2-D2A9DC47577B}';
+    /** @var string GUID des Client Socket */
+    protected const GUID_CLIENT_SOCKET = '{3CFF0FD9-E306-41DB-9B5A-9D06D38576C3}';
     /** @var string GUID des Datenfluss zu einen MQTT Splitter */
     protected const GUID_MQTT_SEND = '{043EA491-0325-4ADD-8FC2-A30C8EEB4D3F}';
     /** @var string Name des Attribut welches die Modul-Version enthält */

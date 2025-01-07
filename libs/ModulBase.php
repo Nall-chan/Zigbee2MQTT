@@ -198,6 +198,7 @@ abstract class ModulBase extends \IPSModule
         ['group_type' => '', 'feature' => 'window_open', 'profile' => '~Window', 'variableType' => VARIABLETYPE_BOOLEAN],
         ['group_type' => '', 'feature' => 'valve', 'profile' => '~Valve', 'variableType' => VARIABLETYPE_INTEGER],
         ['group_type' => '', 'feature' => 'window_detection', 'profile' => '~Window', 'variableType' => VARIABLETYPE_BOOLEAN],
+        ['group_type' => 'light', 'feature' => 'color', 'profile' => '~HexColor', 'variableType' => VARIABLETYPE_INTEGER]
     ];
 
     /**
@@ -1034,6 +1035,9 @@ abstract class ModulBase extends \IPSModule
      */
     protected function LoadDeviceInfo()
     {
+        if (!$this->HasActiveParent()) {
+            return false;
+        }
         $mqttTopic = $this->ReadPropertyString(self::MQTT_TOPIC);
         if (empty($mqttTopic)) {
             $this->LogMessage($this->Translate('MQTTTopic not configured.'), KL_WARNING);

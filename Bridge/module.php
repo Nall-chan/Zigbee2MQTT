@@ -137,7 +137,6 @@ class Zigbee2MQTTBridge extends IPSModule
             return '';
         }
         $this->SendDebug('ReceiveData', $JSONString, 0);
-
         $Buffer = json_decode($JSONString, true);
         if (!isset($Buffer['Topic'])) {
             return '';

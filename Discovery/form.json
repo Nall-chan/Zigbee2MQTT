@@ -2,6 +2,12 @@
     "elements": [],
     "actions": [
         {
+            "type": "Button",
+            "name": "Config",
+            "label": "Configuration for external broker",
+            "onClick": "IPS_RequestAction($id, 'EditMQTTBroker', true);"
+        },
+        {
             "type": "Configurator",
             "name": "DeviceConfigurator",
             "caption": "Zigbee2MQTT Installations",
@@ -26,6 +32,58 @@
             "values": []
         },
         {
+            "name": "BrokerPopup",
+            "type": "PopupAlert",
+            "visible": false,
+            "popup": {
+                "closeCaption": "Close",
+                "items": [
+                    {
+                        "name": "BrokerTitle",
+                        "type": "Label",
+                        "bold": true,
+                        "caption": "No MQTT Server or Client in Symcon found!"
+                    },
+                    {
+                        "name": "BrokerText",
+                        "type": "Label",
+                        "caption": "If an external MQTT broker is used, it can be specified here for verification:"
+                    },
+                    {
+                        "type": "ValidationTextBox",
+                        "name": "Url",
+                        "caption": "Url (mqtt:// or mqtts://)",
+                        "validate": "((mqtt:\\/\\/)|(mqtts:\\/\\/)).*",
+                        "value": "mqtt://"
+                    },
+                    {
+                        "type": "ValidationTextBox",
+                        "name": "UserName",
+                        "caption": "Username"
+                    },
+                    {
+                        "type": "PasswordTextBox",
+                        "name": "Password",
+                        "caption": "Password"
+                    },
+                    {
+                        "type": "Button",
+                        "caption": "Save",
+                        "name": "CheckMQTTBroker",
+                        "onClick": [
+                            "IPS_RequestAction($id, 'CheckMQTTBroker',",
+                            "   json_encode([",
+                            "       'Url' => $Url,",
+                            "       'UserName' => $UserName,",
+                            "       'Password' => $Password",
+                            "   ])",
+                            ");"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
             "name": "ErrorPopup",
             "type": "PopupAlert",
             "visible": false,
@@ -35,25 +93,9 @@
                     {
                         "name": "ErrorTitle",
                         "type": "Label",
+                        "color": 16711680,
                         "bold": true,
-                        "caption": "No devices found!"
-                    },
-                    {
-                        "name": "ErrorText",
-                        "type": "Label",
-                        "caption": "The Symcon extension in Zigbee2MQTT is not installed or not up to date.\r\nPlease install or update the extension within the Bridge instance configuration."
-                    },
-                    {
-                        "type": "OpenObjectButton",
-                        "caption": "Open bridge instance",
-                        "objectID": 0,
-                        "visible": false
-                    },
-                    {
-                        "type": "Button",
-                        "caption": "Create bridge instance",
-                        "visible": false,
-                        "onClick": []
+                        "caption": "Could not connect to broker!"
                     }
                 ]
             }
