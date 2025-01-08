@@ -82,14 +82,15 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
     {
         $Form = json_decode(file_get_contents(__DIR__ . '/form.json'), true);
         $Model = $this->ReadAttributeString('Model');
+        $ModelUrl = str_replace(' ', '_', $Model);
 
         // Setze das Gerätebild
         $Form['elements'][0]['items'][1]['image'] = $this->ReadAttributeString('Icon');
 
-        // Ersetze den Model-Platzhalter im Link
+        // Ersetze den Model-Platzhalter im Link mit URL-kodiertem ModelUrl
         foreach ($Form['elements'] as &$element) {
             if ($element['type'] === 'Label' && strpos($element['caption'], '%MODEL%') !== false) {
-                $element['caption'] = str_replace('%MODEL%', rawurlencode($Model), $element['caption']);
+                $element['caption'] = str_replace('%MODEL%', rawurlencode($ModelUrl), $element['caption']);
             }
         }
 
@@ -174,7 +175,10 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
 
     private function UpdateDeviceIcon(string $Model): void
     {
-        $Url = 'https://raw.githubusercontent.com/Koenkk/zigbee2mqtt.io/master/public/images/devices/' . $Model . '.png';
+        // Leerzeichen durch Bindestriche für URL ersetzen
+        $ModelUrl = str_replace(' ', '-', $Model);
+
+        $Url = 'https://raw.githubusercontent.com/Koenkk/zigbee2mqtt.io/master/public/images/devices/' . $ModelUrl . '.png';
         $this->SendDebug('loadImage', $Url, 0);
         $ImageRaw = @file_get_contents($Url);
         if ($ImageRaw !== false) {
