@@ -175,7 +175,7 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
 
     private function UpdateDeviceIcon(string $Model): void
     {
-        // Leerzeichen durch Unterstriche für URL ersetzen
+        // Leerzeichen durch Bindestriche für URL ersetzen
         $ModelUrl = str_replace(' ', '-', $Model);
 
         $Url = 'https://raw.githubusercontent.com/Koenkk/zigbee2mqtt.io/master/public/images/devices/' . $ModelUrl . '.png';
