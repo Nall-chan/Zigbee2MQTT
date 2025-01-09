@@ -656,7 +656,7 @@ class Zigbee2MQTTConfigurator extends IPSModule
     private function GetIPSInstancesByIEEE(): array
     {
         $Devices = [];
-        $InstanceIDList = IPS_GetInstanceListByModuleID(self::GUID_MODULE_DEVICE);
+        $InstanceIDList = array_filter(IPS_GetInstanceListByModuleID(self::GUID_MODULE_DEVICE), [$this, 'FilterInstances']);
         foreach ($InstanceIDList as $InstanceID) {
             $Devices[$InstanceID] = @IPS_GetProperty($InstanceID, 'IEEE');
         }
