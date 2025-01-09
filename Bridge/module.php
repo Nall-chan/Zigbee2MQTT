@@ -105,7 +105,7 @@ class Zigbee2MQTTBridge extends IPSModule
             ['info', $this->Translate('Information'), '', 0x00FF00],
             ['debug', $this->Translate('Debug'), '', 0x00FF00],
         ]);
-        $this->RegisterVariableBoolean('state', $this->Translate('State'));
+        $this->RegisterVariableBoolean('state', $this->Translate('State'),'~Alert.Reversed');
         $this->RegisterVariableBoolean('extension_loaded', $this->Translate('Extension Loaded'));
         $this->RegisterVariableString('extension_version', $this->Translate('Extension Version'));
         $this->RegisterVariableBoolean('extension_is_current', $this->Translate('Extension is up to date'));

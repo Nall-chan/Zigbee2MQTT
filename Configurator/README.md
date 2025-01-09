@@ -4,18 +4,37 @@
 [![Check Style](https://github.com/Schnittcher/IPS-Zigbee2MQTT/workflows/Check%20Style/badge.svg)](https://github.com/Schnittcher/IPS-Zigbee2MQTT/actions)
 [![Run Tests](https://github.com/Schnittcher/IPS-Zigbee2MQTT/workflows/Run%20Tests/badge.svg)](https://github.com/Schnittcher/IPS-Zigbee2MQTT/actions)  
 
-# Konfigurator
+# Zigbee2MQTT-Konfigurator <!-- omit in toc -->
 Mit dieser Instanz werden die Geräte und Gruppen aus Zigbee2MQTT ausgelesen und können in Symcon als Instanz angelegt werden.
 
-## Inhaltsverzeichnis
-1. [Konfiguration](#1-konfiguration)
-2. [Funktionen](#2-funktionen)
+## Inhaltsverzeichnis <!-- omit in toc -->
+- [1. Voraussetzungen](#1-voraussetzungen)
+- [2. Software-Installation](#2-software-installation)
+- [3. Verwendung der Instanzen](#3-verwendung-der-instanzen)
+- [4. Statusvariablen](#4-statusvariablen)
+- [5. PHP-Funktionsreferenz](#5-php-funktionsreferenz)
+- [6. Aktionen](#6-aktionen)
+- [7. Anhang](#7-anhang)
+  - [1. Changelog](#1-changelog)
+  - [2. Spenden](#2-spenden)
+  - [3. Lizenz](#3-lizenz)
 
-## 1. Konfiguration
+
+## 1. Voraussetzungen
+
+* mindestens IPS Version 7.0
+* MQTT-Broker (interner MQTT-Server von Symcon oder externer z.B. Mosquitto)
+* installiertes und lauffähiges [zigbee2mqtt](https://www.zigbee2mqtt.io) 
+  
+## 2. Software-Installation
+
+* Dieses Modul ist Bestandteil der [Zigbee2MQTT-Library](../README.md#3-installation).  
+
+## 3. Verwendung der Instanzen
+
+TODO
 
 ![Übersicht Konfigurator](/docs/pictures/konfigurator_ansicht.jpg)
-
-
 
 Nummer | Name | Beschreibung
 ------------ | ------------- | -------------
@@ -34,28 +53,31 @@ Nummer | Name | Beschreibung
 **13** | **Filter** | Hier lässt sich die Device-Liste nach bestimmten Schlagworten filtern. Es wird dabei auf alle Spalten Rücksicht genommen. Wenn ich Also "Osram" eingebe wird in allen Spalten das Wort "Osram" gesucht und bei Vorhandensein werden die betreffenden Devices in der Liste angezeigt: ![Osram](/docs/pictures/konfigurator_osram.jpg)<br>Gibt man z.B. "01Mini" ein werden alle Devices mit der ModelID gezeigt:<br> ![01Mini](/docs/pictures/konfigurator_miniZB.jpg)
 **14** | **Mülleimer** | Hier können angelegte Objekte wieder gelöscht werden
 **15** | **MQTT Base Topic** | Das Topic, welches Ihr in der configuration.yaml hinterlegt habt. <br> **WICHTIG: Bei Anlage des Konfigurators wird automatisch "zigbee2mqtt" eingetragen. Solltet Ihr ein anderes Topic gewählt haben, müsst Ihr dies hier anpassen.**
-## 2. Funktionen
 
-### Z2M_Command(string $topic, string $value)
-Mit dies Funktion kann ein Befehl über MQTT abgesetzt werden.
-Innerhalb dieser Funktion wird das Topic aus der Konfiguration (MQTT Topic) vorangestellt:
+## 4. Statusvariablen
 
-```php
-$Payload['from'] = 'Lampe1';
-$Payload['to'] = 'Lampe1Neu';
-$Payload['homeassistant_rename'] = false;
-$this->Command('request/device/rename', json_encode($Payload));
-```
-Dieses Beispiel bennennt die Lampe von Lampe1 in Lampe1Neu um.
-Hier wird an das Topic "zigbee2mqtt/bridge/request/device/rename" gesendet.
+Dieses Modul erzeugt keine Statusvariablen.  
 
-### Z2M_CommandExt(string $topic, string $value)
-Mit dies Funktion kann ein Befehl über MQTT abgesetzt werden.
-Innerhalb dieser Funktion wird das Topic aus der Konfiguration (MQTT Topic) nicht vorgestellt:
+## 5. PHP-Funktionsreferenz
 
-```php
-$Payload['state'] = '';
-$this->Command('Lampe1/get', json_encode($Payload));
-```
-Dieses Beispiel ruft "State" von Lampe1 ab.
-Hier wird an das Topic "zigbee2mqtt/Lampe1/get" gesendet.
+Keine Funktionen verfügbar.  
+
+## 6. Aktionen
+
+Keine Aktionen verfügbar.
+
+## 7. Anhang
+
+### 1. Changelog
+
+[Changelog der Library](../README.md#5-changelog)
+
+### 2. Spenden
+
+Dieses Modul ist für die nicht kommerzielle Nutzung kostenlos, Schenkungen als Unterstützung für den Autor werden hier akzeptiert:
+
+<a href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=EK4JRP87XLSHW" target="_blank"><img src="https://www.paypalobjects.com/de_DE/DE/i/btn/btn_donate_LG.gif" border="0" /></a> <a href="https://www.amazon.de/hz/wishlist/ls/3JVWED9SZMDPK?ref_=wl_share" target="_blank">Amazon Wunschzettel</a>
+
+### 3. Lizenz
+
+[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)
