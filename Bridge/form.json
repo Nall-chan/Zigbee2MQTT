@@ -10,19 +10,23 @@
         {
             "type": "Button",
             "name": "InstallExtension",
-            "label": "Install or upgrade Symcon-Extension",
-            "onClick": "Z2M_InstallSymconExtension($id);"
+            "caption": "Install or upgrade Symcon-Extension",
+            "onClick": [
+                "if (!Z2M_InstallSymconExtension($id)){",
+                "   echo 'ERROR';",
+                "}"
+            ]
         },
         {
             "type": "Button",
             "name": "SetLastSeen",
-            "label": "Set last_seen setting to epoch",
+            "caption": "Set last_seen setting to epoch",
             "onClick": "Z2M_SetLastSeen($id);"
         },
         {
             "type": "Button",
             "name": "PermitJoinOption",
-            "label": "Disable permit_join option in Z2M configuration.yaml",
+            "caption": "Disable permit_join option in Z2M configuration.yaml",
             "onClick": "Z2M_SetPermitJoinOption($id, false);",
             "visible": false
         },

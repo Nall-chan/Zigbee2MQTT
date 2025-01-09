@@ -21,11 +21,14 @@ class Zigbee2MQTTDiscovery extends IPSModule
      * Create
      *
      * @return void
+     *
+     * @uses IPSModule::Create()
      */
     public function Create()
     {
         //Never delete this line!
         parent::Create();
+        // Init Buffers
         $this->ManuelBrokerConfig = [];
         $this->ManuelTopics = [];
     }
@@ -34,11 +37,14 @@ class Zigbee2MQTTDiscovery extends IPSModule
      * ApplyChanges
      *
      * @return void
+     *
+     * @uses IPSModule::ApplyChanges()
      */
     public function ApplyChanges()
     {
         //Never delete this line!
         parent::ApplyChanges();
+        // Buffer leeren
         $this->ManuelTopics = [];
         $this->ManuelBrokerConfig = [];
     }
@@ -48,7 +54,20 @@ class Zigbee2MQTTDiscovery extends IPSModule
      *
      * @param  string $ident
      * @param  mixed $value
+     *
      * @return void
+     *
+     * @uses Zigbee2MQTTDiscovery::SearchBridges()
+     * @uses IPSModule::SendDebug()
+     * @uses IPSModule::ReloadForm()
+     * @uses IPSModule::UpdateFormField()
+     * @uses IPSModule::Translate()
+     * @uses IPSModule::ReloadForm()
+     * @uses json_decode()
+     * @uses json_encode()
+     * @uses parse_url()
+     * @uses empty()
+     * @uses isset()
      */
     public function RequestAction($ident, $value)
     {
@@ -85,7 +104,6 @@ class Zigbee2MQTTDiscovery extends IPSModule
                         $this->ReloadForm();
                     }
                 }
-
                 break;
             case 'EditMQTTBroker':
                 $this->UpdateFormField('BrokerTitle', 'caption', $this->Translate('Edit configuration'));
@@ -104,13 +122,32 @@ class Zigbee2MQTTDiscovery extends IPSModule
      * GetConfigurationForm
      *
      * @return string
+     *
+     * @uses Zigbee2MQTTDiscovery::checkAllMqttServers()
+     * @uses Zigbee2MQTTDiscovery::GetConfigurators()
+     * @uses Zigbee2MQTTDiscovery::SearchBridges()
+     * @uses IPSModule::SendDebug()
+     * @uses IPS_GetInstance()
+     * @uses IPS_GetConfiguration()
+     * @uses IPS_GetProperty()
+     * @uses IPS_GetName()
+     * @uses json_decode()
+     * @uses json_encode()
+     * @uses file_get_contents()
+     * @uses count()
+     * @uses in_array()
+     * @uses array_search()
+     * @uses array_column()
+     * @uses array_intersect_key()
+     * @uses array_merge()
+     * @uses unset()
      */
     public function GetConfigurationForm()
     {
         $Form = json_decode(file_get_contents(__DIR__ . '/form.json'), true);
 
         if (!count($this->ManuelBrokerConfig)) {
-            $Form['actions'][0]['label'] = 'Add external broker';
+            $Form['actions'][0]['caption'] = 'Add external broker';
         }
 
         $FoundZ2mBySplitterId = $this->checkAllMqttServers();
@@ -193,7 +230,7 @@ class Zigbee2MQTTDiscovery extends IPSModule
                     'moduleID'      => self::GUID_CLIENT_SOCKET,
                     'configuration' => array_merge(
                         array_intersect_key($this->ManuelBrokerConfig, array_flip(['Host', 'Port', 'UseSSL'])),
-                        ['Open' => true, 'VerifyHost'=>false, 'VerifyPeer'=>false]
+                        ['Open' => true]
                     )
 
                 ]
@@ -219,6 +256,10 @@ class Zigbee2MQTTDiscovery extends IPSModule
      * GetConfigurators
      *
      * @return array
+     *
+     * @uses IPS_GetInstanceListByModuleID()
+     * @uses IPS_GetProperty()
+     * @uses array_filter()
      */
     private function GetConfigurators(): array
     {
@@ -234,6 +275,17 @@ class Zigbee2MQTTDiscovery extends IPSModule
      * SearchBridges
      * @param array $Config
      * @return ?array
+     *
+     * @uses Zigbee2MQTT\phpMQTT::setSslContextOptions()
+     * @uses Zigbee2MQTT\phpMQTT::connect()
+     * @uses Zigbee2MQTT\phpMQTT::subscribe()
+     * @uses Zigbee2MQTT\phpMQTT::proc()
+     * @uses Zigbee2MQTT\phpMQTT::close()
+     * @uses IPSModule::SendDebug()
+     * @uses IPS_GetName()
+     * @uses IPS_GetLicensee()
+     * @uses array_filter()
+     * @uses strstr()
      */
     private function SearchBridges(array $Config): ?array
     {
@@ -276,6 +328,18 @@ class Zigbee2MQTTDiscovery extends IPSModule
      * checkAllMqttServers
      *
      * @return null|array
+     *
+     * @uses Zigbee2MQTTDiscovery::getAllMqTTSplitterInstances()
+     * @uses Zigbee2MQTTDiscovery::SearchBridges()
+     * @uses IPSModule::SendDebug()
+     * @uses MQTT_GetRetainedMessageTopicList()
+     * @uses MQTT_GetRetainedMessage()
+     * @uses count()
+     * @uses isset()
+     * @uses array_filter()
+     * @uses array_unique()
+     * @uses strstr()
+     * @uses json_encode()
      */
     private function checkAllMqttServers(): ?array
     {
@@ -305,8 +369,13 @@ class Zigbee2MQTTDiscovery extends IPSModule
     /**
      * FilterTopics
      *
-     * @param  mixed $Topic
+     * @param string $Topic
+     *
      * @return bool
+     *
+     * @uses explode()
+     * @uses array_shift()
+     * @uses implode()
      */
     private function FilterTopics(string $Topic): bool
     {
@@ -314,10 +383,20 @@ class Zigbee2MQTTDiscovery extends IPSModule
         array_shift($Topics);
         return implode('/', $Topics) === 'bridge/state';
     }
+
     /**
      * getAllMqTTSplitterInstances
      *
      * @return array
+     *
+     * @uses IPSModule::SendDebug()
+     * @uses IPS_GetInstanceListByModuleID()
+     * @uses IPS_GetInstance()
+     * @uses IPS_GetConfiguration()
+     * @uses array_intersect_key()
+     * @uses json_decode()
+     * @uses array_merge()
+     * @uses array_flip()
      */
     private function getAllMqTTSplitterInstances(): array
     {

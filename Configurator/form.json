@@ -126,6 +126,7 @@
                         "name": "ErrorTitle",
                         "type": "Label",
                         "bold": true,
+                        "color": 16711680,
                         "caption": "No devices found!"
                     },
                     {

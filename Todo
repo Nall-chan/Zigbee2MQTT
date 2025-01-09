@@ -10,9 +10,8 @@ Dokumentation:
     🟥 Anleitung Discovery, Konfigurator und Bridge fehlen noch.
     🟨 Command und CommandExt sind public und somit für Device, Group und Configurator verfügbar.
         Doku hierzu ist aber nur in der Readme vom Configurator enthalten und dort noch falsch erklärt (Topics und Signatur)
-    🟨 Konfigurator muss beim öffnen eine Bitte warten Meldung ausgeben, bis die Suche abgeschlossen ist.
-    🟨 Konfigurator soll mehr Meldungen an den User ausgeben -> Parent fehlt/inaktiv, Bridge Instanz bzw Erweiterung fehlt.
-    🟨 Bridge Instanz sollte beim Klicken auf dem Button der Erweiterung-Installation eine Rückmeldung geben.
+    ✅ Konfigurator soll mehr Meldungen an den User ausgeben -> Parent fehlt/inaktiv, Bridge Instanz bzw Erweiterung fehlt.
+    ✅ Bridge Instanz sollte beim Klicken auf dem Button der Erweiterung-Installation eine Rückmeldung im Fehlerfall geben.
     
 Features 5.x:
     🟨 Composite Variablen ergänzen.

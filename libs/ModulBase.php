@@ -2443,7 +2443,6 @@ abstract class ModulBase extends \IPSModule
         // Prüfen, ob die Einheit in den Float-Einheiten enthalten ist
         if (!empty($unit) && is_string($unit)) {
             // Einheit in UTF-8 dekodieren.
-            /** @todo  Wirklich zweimal? */
             $unit = mb_convert_encoding(mb_convert_encoding($unit, 'ISO-8859-1', 'UTF-8'), 'ISO-8859-1', 'UTF-8');
             $unitTrimmed = str_replace(' ', '', $unit);
             if (in_array($unitTrimmed, self::FLOAT_UNITS, true)) {

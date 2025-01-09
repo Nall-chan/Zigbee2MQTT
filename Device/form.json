@@ -27,7 +27,7 @@
                                 },
                                 {
                                     "type": "Button",
-                                    "label": "Change IEEE Address",
+                                    "caption": "Change IEEE Address",
                                     "onClick": "IPS_RequestAction($id, 'ShowIeeeEditWarning', true);"
                                 }
                             ]
@@ -76,7 +76,7 @@
         },
         {
             "type": "Button",
-            "label": "Get Device Infos",
+            "caption": "Get Device Infos",
             "onClick": "IPS_RequestAction($id, 'UpdateInfo', true);"
         },
         {

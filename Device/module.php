@@ -82,7 +82,7 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
     {
         $Form = json_decode(file_get_contents(__DIR__ . '/form.json'), true);
         $Model = $this->ReadAttributeString('Model');
-        $ModelUrl = str_replace(' ', '_', $Model);
+        $ModelUrl = str_replace([' ', '/'], ['_', '_'], $Model);
 
         // Setze das Gerätebild
         $Form['elements'][0]['items'][1]['image'] = $this->ReadAttributeString('Icon');
@@ -176,7 +176,7 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
     private function UpdateDeviceIcon(string $Model): void
     {
         // Leerzeichen durch Bindestriche für URL ersetzen
-        $ModelUrl = str_replace(' ', '-', $Model);
+        $ModelUrl = str_replace([' ', '/'], ['-', '-'], $Model);
 
         $Url = 'https://raw.githubusercontent.com/Koenkk/zigbee2mqtt.io/master/public/images/devices/' . $ModelUrl . '.png';
         $this->SendDebug('loadImage', $Url, 0);

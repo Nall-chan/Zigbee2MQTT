@@ -36,8 +36,10 @@ namespace Zigbee2MQTT;
 
  */
 
-/* phpMQTT */
-
+/**
+ * phpMQTT
+ *
+ */
 class phpMQTT
 {
     public $keepalive = 10;        /* default keepalive timmer */
@@ -73,12 +75,14 @@ class phpMQTT
     ];
 
     /**
+     * __construct
+     *
      * phpMQTT constructor.
      *
      * @param $address
      * @param $port
      * @param $clientid
-     * @param null $cafile
+     * @param string $cafile
      */
     public function __construct($address, $port, $clientid, $cafile = null)
     {
@@ -87,12 +91,16 @@ class phpMQTT
     }
 
     /**
+     * broker
+     *
      * Sets the broker details
      *
-     * @param $address
-     * @param $port
-     * @param $clientid
-     * @param null $cafile
+     * @param string $address
+     * @param int $port
+     * @param string $clientid
+     * @param string $cafile
+     *
+     * @return void
      */
     public function broker($address, $port, $clientid, $cafile = null): void
     {
@@ -103,9 +111,13 @@ class phpMQTT
     }
 
     /**
+     * setSslContextOptions
+     *
      * Forces the usage of the "tls://..." protocol and sets the context options.
      *
      * @param $options - associative array containing the options according to https://www.php.net/manual/en/context.ssl.php
+     *
+     * @return void
      */
     public function setSslContextOptions($options): void
     {
@@ -113,12 +125,14 @@ class phpMQTT
     }
 
     /**
+     * connect_auto
+     *
      * Will try and connect, if fails it will sleep 10s and try again, this will enable the script to recover from a network outage
      *
      * @param bool $clean - should the client send a clean session flag
-     * @param null $will
-     * @param null $username
-     * @param null $password
+     * @param mixed $will
+     * @param string $username
+     * @param string $password
      *
      * @return bool
      */
@@ -131,10 +145,12 @@ class phpMQTT
     }
 
     /**
+     * connect
+     *
      * @param bool $clean - should the client send a clean session flag
-     * @param null $will
-     * @param null $username
-     * @param null $password
+     * @param mixed $will
+     * @param string $username
+     * @param string $password
      *
      * @return bool
      */
@@ -275,6 +291,8 @@ class phpMQTT
     }
 
     /**
+     * read
+     *
      * Reads in so many bytes
      *
      * @param int $int
@@ -301,10 +319,12 @@ class phpMQTT
     }
 
     /**
+     * subscribeAndWaitForMessage
+     *
      * Subscribes to a topic, wait for message and return it
      *
-     * @param $topic
-     * @param $qos
+     * @param string $topic
+     * @param int $qos
      *
      * @return string
      */
@@ -324,10 +344,14 @@ class phpMQTT
     }
 
     /**
+     * subscribe
+     *
      * subscribes to topics
      *
-     * @param $topics
+     * @param array $topics
      * @param int $qos
+     *
+     * @return void
      */
     public function subscribe($topics, $qos = 0): void
     {
@@ -362,7 +386,11 @@ class phpMQTT
     }
 
     /**
+     * ping
+     *
      * Sends a keep alive ping
+     *
+     * @return void
      */
     public function ping(): void
     {
@@ -374,7 +402,11 @@ class phpMQTT
     }
 
     /**
+     * disconnect
+     *
      *  sends a proper disconnect cmd
+     *
+     * @return void
      */
     public function disconnect(): void
     {
@@ -385,7 +417,11 @@ class phpMQTT
     }
 
     /**
+     * close
+     *
      * Sends a proper disconnect, then closes the socket
+     *
+     * @return void
      */
     public function close(): void
     {
@@ -394,12 +430,16 @@ class phpMQTT
     }
 
     /**
+     * publish
+     *
      * Publishes $content on a $topic
      *
-     * @param $topic
-     * @param $content
+     * @param string $topic
+     * @param string $content
      * @param int $qos
      * @param bool $retain
+     *
+     * @return void
      */
     public function publish($topic, $content, $qos = 0, $retain = false): void
     {
@@ -436,11 +476,13 @@ class phpMQTT
     }
 
     /**
+     * message
+     *
      * Processes a received topic
      *
-     * @param $msg
+     * @param string $msg
      *
-     * @retrun bool|array
+     * @return bool|array
      */
     public function message($msg)
     {
@@ -482,6 +524,8 @@ class phpMQTT
     }
 
     /**
+     * proc
+     *
      * The processing loop for an "always on" client
      * set true when you are doing other stuff in the loop good for
      * watching something else at the same time
@@ -559,9 +603,13 @@ class phpMQTT
     }
 
     /**
+     * printstr
+     *
      * Prints a sting out character by character
      *
-     * @param $string
+     * @param string $string
+     *
+     * @return void
      */
     public function printstr($string): void
     {
@@ -578,9 +626,10 @@ class phpMQTT
     }
 
     /**
+     * _fwrite
      * Writes a string to the socket
      *
-     * @param $buffer
+     * @param string $buffer
      *
      * @return bool|int
      */
@@ -597,10 +646,11 @@ class phpMQTT
     }
 
     /**
+     * getmsglength
      * Gets the length of a msg, (and increments $i)
      *
-     * @param $msg
-     * @param $i
+     * @param string $msg
+     * @param int $i
      *
      * @return float|int
      */
@@ -619,7 +669,8 @@ class phpMQTT
     }
 
     /**
-     * @param $len
+     * setmsglength
+     * @param int $len
      *
      * @return string
      */
@@ -639,8 +690,9 @@ class phpMQTT
     }
 
     /**
-     * @param $str
-     * @param $i
+     * strwritestring
+     * @param string $str
+     * @param int $i
      *
      * @return string
      */
@@ -657,7 +709,10 @@ class phpMQTT
     }
 
     /**
+     * _debugMessage
      * @param string $message
+     *
+     * @return void
      */
     protected function _debugMessage(string $message): void
     {
@@ -667,7 +722,10 @@ class phpMQTT
     }
 
     /**
+     * _errorMessage
      * @param string $message
+     *
+     * @return void
      */
     protected function _errorMessage(string $message): void
     {

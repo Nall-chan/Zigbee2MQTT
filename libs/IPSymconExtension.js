@@ -1,6 +1,6 @@
 /*
  IPSymconExtension
- Version: 4.6
+ Version: 4.61
 */
 
 class IPSymconExtension {
@@ -95,7 +95,7 @@ class IPSymconExtension {
                     transaction: 0,
                 };
                 try {
-                    for (const device of this.zigbee.devicesIterator(this.#deviceNotCoordinator)) {
+                    for (const device of this.zigbee.devicesIterator()) {
                         devices.list = devices.list.concat(this.#createDevicePayload(device, false));
                     }
                 } catch (error) {

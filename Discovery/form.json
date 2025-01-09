@@ -4,7 +4,7 @@
         {
             "type": "Button",
             "name": "Config",
-            "label": "Configuration for external broker",
+            "caption": "Configuration for external broker",
             "onClick": "IPS_RequestAction($id, 'EditMQTTBroker', true);"
         },
         {

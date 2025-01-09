@@ -21,7 +21,7 @@
                 },
                 {
                     "type": "Button",
-                    "label": "Change Group Id",
+                    "caption": "Change Group Id",
                     "onClick": "IPS_RequestAction($id, 'ShowGroupIdEditWarning', true);"
                 }
             ]
@@ -57,7 +57,7 @@
         },
         {
             "type": "Button",
-            "label": "Get Group Infos",
+            "caption": "Get Group Infos",
             "onClick": "IPS_RequestAction($id, 'UpdateInfo', true);"
         },
         {
