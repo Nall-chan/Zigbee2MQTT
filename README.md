@@ -96,9 +96,11 @@ Für den fehlerfreien Betrieb des Moduls wird eine Erweiterung (Extension) in Zi
 
 **Folgende Varianten zum Einreichten der Erweiterung sind möglich:**  
 
-1. Über die [Bridge](Bridge/README.md)-Instanz in Symcon (empfohlen)
-2. Über das Z2M Frontend den Inhalt der passenden Datei unter dem Menüpunkt Erweiterungen hinzufügen.  
-3. Die passende Datei in das der Z2M Version entsprechende Verzeichnis auf dem Rechner, wo Z2M installiert ist ablegen. (Expertenwissen zu Z2M erforderlich)
+**1.** Über die [Bridge](Bridge/README.md)-Instanz in Symcon (empfohlen)  
+
+**2.** Über das Z2M Frontend den Inhalt der passenden Datei unter dem Menüpunkt Erweiterungen hinzufügen.  
+
+**3.** Die passende Datei in das der Z2M Version entsprechende Verzeichnis auf dem Rechner, wo Z2M installiert ist ablegen. (Expertenwissen zu Z2M erforderlich)
 
 Extension-Dateien und Pfade innerhalb Z2M:
 
@@ -109,26 +111,29 @@ Extension-Dateien und Pfade innerhalb Z2M:
   - [IPSymconExtension2.js](libs/IPSymconExtension2.js)
   - Z2M Pfad: **`data/external_extensions`**  
 
-**Anleitungen:**  
+**Anleitungen zum Einreichten der Erweiterung:**  
 
-1. Ist in der Dokumentation der [Bridge](Bridge/README.md)-Instanz beschrieben.  
-2. Das Frontend von Z2M im Browser öffnen und den Punkt "Erweiterungen" wählen.  
-   ![Erweiterungen](/docs/pictures/Erweiterung_Z2M.jpg)  
+**zu 1.** Ist in der Dokumentation der [Bridge](Bridge/README.md)-Instanz beschrieben.  
+
+**zu 2.** Das Frontend von Z2M im Browser öffnen und den Punkt "Erweiterungen" wählen.  
+
+   ![Erweiterungen](imgs/z2m_extension_anzeigen.jpg)  
    Eine neue Extension über den Plus-Button anlegen:  
-   ![Erweiterungen](/docs/pictures/Erweiterung_erstellen_1.jpg)  
+   ![Erweiterungen](imgs/z2m_extension_anlegen.jpg)  
    Der Erweiterung einen Namen geben, z.B. symcon.js:  
-   ![Erweiterung erstellen](/docs/pictures/Erweiterung_erstellen.jpg)  
+   ![Erweiterung erstellen](imgs/z2m_extension_name.jpg)  
    Es öffnet sich ein Fenster für die Code-Eingabe:  
-   ![Code Eingabe](/docs/pictures/Erweiterung_code.jpg)  
-   Den dort bereits enthaltenen Code bitte komplett löschen.  
-   Anschließend der Inhalt (Code) aus  
+   ![Code Eingabe](imgs/z2m_extension_code.jpg)  
+   Den dort bereits enthaltenen Code bitte **komplett** löschen.  
+   Anschließend den Inhalt (Code) aus  
    [IPSymconExtension.js für Z2M bis Version 1.42](libs/IPSymconExtension.js)  
    oder  
    [IPSymconExtension.js für Z2M ab Version 2.0](libs/IPSymconExtension2.js)  
    einfügen und speichern.  
    Danach sollte Z2M neu gestartet werden:  
-   ![Code Eingabe](/docs/pictures/Erweiterung_neustart.jpg)  
-3. Sollte nur von versierten Usern gemacht werden, da es aufgrund der vielzahl an Systemen unter welchen Z2M laufen kann, keine global gültige Anleitung gibt.  
+   ![Code Eingabe](imgs/z2m_extension_restart.jpg)  
+
+**zu 3.** Sollte nur von versierten Usern gemacht werden, da es aufgrund der vielzahl an Systemen unter welchen Z2M laufen kann, keine global gültige Anleitung gibt.  
 
 ## 4. Konfiguration in IP-Symcon
 Bitte den einzelnen Modulen entnehmen:
