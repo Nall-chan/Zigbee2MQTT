@@ -1,13 +1,13 @@
 [![Version](https://img.shields.io/badge/Symcon-PHPModul-red.svg)](https://www.symcon.de/service/dokumentation/entwicklerbereich/sdk-tools/sdk-php/)
 ![Version](https://img.shields.io/badge/Symcon%20Version-7.0%20%3E-blue.svg)
 [![License](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-green.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)  
-[![Check Style](https://github.com/Schnittcher/IPS-Zigbee2MQTT/workflows/Check%20Style/badge.svg)](https://github.com/Schnittcher/IPS-Zigbee2MQTT/actions)
-[![Run Tests](https://github.com/Schnittcher/IPS-Zigbee2MQTT/workflows/Run%20Tests/badge.svg)](https://github.com/Schnittcher/IPS-Zigbee2MQTT/actions)  
+[![Check Style](https://github.com/Nall-chan/Zigbee2MQTT/workflows/Check%20Style/badge.svg)](https://github.com/Nall-chan/Zigbee2MQTT/actions)
+[![Run Tests](https://github.com/Nall-chan/Zigbee2MQTT/workflows/Run%20Tests/badge.svg)](https://github.com/Nall-chan/Zigbee2MQTT/actions)  
 
 # Zigbee2MQTT  <!-- omit in toc -->
 Anbindung von [zigbee2mqtt](https://www.zigbee2mqtt.io) an IP-Symcon.
 
-## Inhaltverzeichnis  <!-- omit in toc -->
+## Inhaltsverzeichnis  <!-- omit in toc -->
 
 - [1. Voraussetzungen](#1-voraussetzungen)
 - [2. Enthaltene Module](#2-enthaltene-module)
@@ -25,15 +25,16 @@ Anbindung von [zigbee2mqtt](https://www.zigbee2mqtt.io) an IP-Symcon.
 * mindestens IPS Version 7.0
 * MQTT-Broker (interner MQTT-Server von Symcon oder externer z.B. Mosquitto)
 * installiertes und lauffähiges [zigbee2mqtt](https://www.zigbee2mqtt.io) 
-* Installierte Symcon Erweiterung in Zigbee2MQTT [siehe hier](#33-installation-der-ip-symcon-extension-in-zigbee2mqtt)
-
 
 ## 2. Enthaltene Module
 
-* [Zigbee2MQTT Bridge](Bridge/README.md)
+* [Zigbee2MQTT Discovery](Discovery/README.md)
 * [Zigbee2MQTT Konfigurator](Configurator/README.md)
+* [Zigbee2MQTT Bridge](Bridge/README.md)
 * [Zigbee2MQTT Gerät](Device/README.md)
 * [Zigbee2MQTT Gruppe](Group/README.md)
+
+ Details zu jedem Typ sind direkt in der Dokumentation der jeweiligen Module beschrieben.
 
 ## 3. Installation
 
@@ -41,15 +42,16 @@ Anbindung von [zigbee2mqtt](https://www.zigbee2mqtt.io) an IP-Symcon.
 
 Zuerst ist eine funktionierende Zigbee2MQTT Umgebung gemäß der [Installationsanleitung von Zigbee2MQTT (Link)](https://www.zigbee2mqtt.io/guide/getting-started/) einzurichten.
 
-Ein hierfür benötigter MQTT-Broker ist in Symcon verfügbar und muss entsprechend vorher [in Symcon als Instanz erstellt werden (Link)](https://www.symcon.de/de/service/dokumentation/modulreferenz/mqtt/mqtt-server/), sofern er nicht schon vorhanden ist.
-Ein MQTT-Konfigurator wird für Zigbee2MQTT nicht benötigt.
+Ein hierfür benötigter MQTT-Broker ist in Symcon verfügbar und muss entsprechend **vorher** [in Symcon als Instanz erstellt werden (Link)](https://www.symcon.de/de/service/dokumentation/modulreferenz/mqtt/mqtt-server/), sofern er nicht schon vorhanden ist.
+Ein MQTT-Konfigurator wird für Zigbee2MQTT nicht benötigt!
 
-Die installation des Zigbee2MQTT Moduls erfolgt anschließend über den über den Module Store in der Symcon Konsole.
-![Modul-Store](imgs/store.png) 
+Die Installation des Zigbee2MQTT Moduls erfolgt anschließend über den über den Module Store in der Symcon Konsole.
+![Modul-Store](imgs/store.png)  
 
-Nach der Installation fragt die Konsole ob ein [Zigbee2MQTT-Konfigurator](Configurator/README.md) erstellt werden soll.
+Nach der Installation fragt die Konsole ob eine [Zigbee2MQTT-Discovery](Discovery/README.md)-Instanz erstellt werden soll.  
+![Module-Store](imgs/install.png)  
 
-Weitere Schritte zur Einrichtung sind im [Zigbee2MQTT-Konfigurator](Configurator/README.md) beschrieben.
+Weitere Schritte zur Ersteinrichtung sind unter dem [Zigbee2MQTT-Discovery](Discovery/README.md)-Modul beschrieben.  
 
 ---
 
@@ -59,20 +61,34 @@ Weitere Schritte zur Einrichtung sind im [Zigbee2MQTT-Konfigurator](Configurator
 
 <span style="color:red">**Bitte diese Migrationsanleitung genau lesen und beachten, ein downgrade auf eine alte Modul Version ist nur mit einem Symcon-Backup möglich!**</span>
 
-#### Extension <!-- omit in toc -->
 
-- Bevor das Update über den Modul-Store durchgeführt werden kann, ist sicherzustellen das zuvor mindestens die Version 4.5 vom Modul installiert wurde und eine [Bridge-Instanz](Bridge/README.md) eingerichtet ist. Diese installiert automatisch die benötigte [Extension in Zigbee2MQTT](#33-installation-der-ip-symcon-extension-in-zigbee2mqtt) der Version 4.6  
+  ### I. Vorbereitung <!-- omit in toc -->
 
+- Bevor das Update über den Modul-Store durchgeführt werden kann, ist sicherzustellen das zuvor mindestens die Version 4.6 der [Extension in Zigbee2MQTT](#33-installation-der-ip-symcon-extension-in-zigbee2mqtt) installiert ist.
+-  Diese wird automatisch ab Version 4.5 durch die [Bridge-Instanz](Bridge/README.md)  installiert, sofern diese Instanz angelegt wurde.
 - Alternativ muss die benötigte [Extension in Zigbee2MQTT](#33-installation-der-ip-symcon-extension-in-zigbee2mqtt) manuell ein Update auf Version 4.6 erhalten.
 
 <span style="color:red">**Ohne aktuelle Extension wird das Modul Update mit Fehlermeldungen durchgeführt, welche zu unerwarteten Fehlverhalten führen kann**</span>
 
+### II. Modul-Update <!-- omit in toc -->
+
+- Während des Updates wird empfohlen das Fenster [Meldungen](https://www.symcon.de/de/service/dokumentation/komponenten/verwaltungskonsole/meldungen/) geöffnet zu lassen um eventuelle Fehlermeldungen nachvollziehen zu können.  
+- Das Update anschließend über den [Modul-Store](https://www.symcon.de/de/service/dokumentation/komponenten/verwaltungskonsole/module-store/) durchführen.
+
 #### geänderte Variablen-Idents <!-- omit in toc -->  
 
-Die Version 5.0 ändert beim Update alle Ident aller Variablen welche zu einer ZigbeeMQTT-Instanz gehören.  Diese Änderung betritt nur User welche mit Scripten auf Variablen per Ident (z.B. Z2M_Brightness) und nicht per ObjektID (z.B. 12345) zugreifen.
+- Die Version 5.0 ändert beim Update alle Ident aller Variablen welche zu einer ZigbeeMQTT-Instanz gehören.
+- Diese Änderung betritt nur User welche mit Scripten auf Variablen per Ident (z.B. Z2M_Brightness) und nicht per ObjektID (z.B. 12345) zugreifen.
+- Die Variablen selbst bleiben dabei erhalten, so das sich hier keine ObjektIDs ändern, und entsprechen auch keine Änderungen an Ereignissen, Links, Automationen etc... ergeben.  
 
-Die Variablen selbst bleiben dabei erhalten, so das sich hier keine ObjektIDs ändern, und entsprechen auch keine Änderungen an Ereignissen, Links, Automationen etc... ergeben.  
 
+### 3. Zigbee2MQTT Version <!-- omit in toc -->
+
+- Ein Update auf Zigbee2MQTT Version 2.0 oder neuer kann nach dem Update des Moduls durchgeführt werden.  
+- Hierzu sind die Anleitungen unter [zigbee2mqtt.io](https://www.zigbee2mqtt.io/guide/installation/) zu beachten.
+- In Symcon sollte eine [Bridge-Instanz](Bridge/README.md) eingerichtet sein, damit beim Update automatisch die korrekte [Extension in Zigbee2MQTT](#33-installation-der-ip-symcon-extension-in-zigbee2mqtt) installiert wird.  
+
+---
 
 ### 3.3 Installation der IP-Symcon Extension in Zigbee2MQTT
 
@@ -80,9 +96,11 @@ Für den fehlerfreien Betrieb des Moduls wird eine Erweiterung (Extension) in Zi
 
 **Folgende Varianten zum Einreichten der Erweiterung sind möglich:**  
 
-1. Über die [Bridge](Bridge/README.md)-Instanz in Symcon (empfohlen)
-2. Über das Z2M Frontend den Inhalt der passenden Datei unter dem Menüpunkt Erweiterungen hinzufügen.  
-3. Die passende Datei in das der Z2M Version entsprechende Verzeichnis auf dem Rechner, wo Z2M installiert ist ablegen. (Expertenwissen zu Z2M erforderlich)
+**1.** Über die [Bridge](Bridge/README.md)-Instanz in Symcon (empfohlen)  
+
+**2.** Über das Z2M Frontend den Inhalt der passenden Datei unter dem Menüpunkt Erweiterungen hinzufügen.  
+
+**3.** Die passende Datei in das der Z2M Version entsprechende Verzeichnis auf dem Rechner, wo Z2M installiert ist ablegen. (Expertenwissen zu Z2M erforderlich)
 
 Extension-Dateien und Pfade innerhalb Z2M:
 
@@ -93,26 +111,29 @@ Extension-Dateien und Pfade innerhalb Z2M:
   - [IPSymconExtension2.js](libs/IPSymconExtension2.js)
   - Z2M Pfad: **`data/external_extensions`**  
 
-**Anleitungen:**  
+**Anleitungen zum Einreichten der Erweiterung:**  
 
-1. Ist in der Dokumentation der [Bridge](Bridge/README.md)-Instanz beschrieben.  
-2. Das Frontend von Z2M im Browser öffnen und den Punkt "Erweiterungen" wählen.  
-   ![Erweiterungen](/docs/pictures/Erweiterung_Z2M.jpg)  
+**zu 1.** Ist in der Dokumentation der [Bridge](Bridge/README.md)-Instanz beschrieben.  
+
+**zu 2.** Das Frontend von Z2M im Browser öffnen und den Punkt "Erweiterungen" wählen.  
+
+   ![Erweiterungen](imgs/z2m_extension_anzeigen.jpg)  
    Eine neue Extension über den Plus-Button anlegen:  
-   ![Erweiterungen](/docs/pictures/Erweiterung_erstellen_1.jpg)  
+   ![Erweiterungen](imgs/z2m_extension_anlegen.jpg)  
    Der Erweiterung einen Namen geben, z.B. symcon.js:  
-   ![Erweiterung erstellen](/docs/pictures/Erweiterung_erstellen.jpg)  
+   ![Erweiterung erstellen](imgs/z2m_extension_name.jpg)  
    Es öffnet sich ein Fenster für die Code-Eingabe:  
-   ![Code Eingabe](/docs/pictures/Erweiterung_code.jpg)  
-   Den dort bereits enthaltenen Code bitte komplett löschen.  
-   Anschließend der Inhalt (Code) aus  
+   ![Code Eingabe](imgs/z2m_extension_code.jpg)  
+   Den dort bereits enthaltenen Code bitte **komplett** löschen.  
+   Anschließend den Inhalt (Code) aus  
    [IPSymconExtension.js für Z2M bis Version 1.42](libs/IPSymconExtension.js)  
    oder  
    [IPSymconExtension.js für Z2M ab Version 2.0](libs/IPSymconExtension2.js)  
    einfügen und speichern.  
    Danach sollte Z2M neu gestartet werden:  
-   ![Code Eingabe](/docs/pictures/Erweiterung_neustart.jpg)  
-3. Sollte nur von versierten Usern gemacht werden, da es aufgrund der vielzahl an Systemen unter welchen Z2M laufen kann, keine global gültige Anleitung gibt.  
+   ![Code Eingabe](imgs/z2m_extension_restart.jpg)  
+
+**zu 3.** Sollte nur von versierten Usern gemacht werden, da es aufgrund der vielzahl an Systemen unter welchen Z2M laufen kann, keine global gültige Anleitung gibt.  
 
 ## 4. Konfiguration in IP-Symcon
 Bitte den einzelnen Modulen entnehmen:

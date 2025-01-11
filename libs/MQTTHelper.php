@@ -4,34 +4,8 @@ declare(strict_types=1);
 
 namespace Zigbee2MQTT;
 
-/**
- * Definition Konstanten
- */
-trait Constants
-{
-    /** @var string Verzeichnisname für die Exposes JSON Dateien */
-    protected const EXPOSES_DIRECTORY = 'Zigbee2MQTTExposes';
-    /** @var string Basispfad für MQTT-Nachrichten */
-    protected const MQTT_BASE_TOPIC = 'MQTTBaseTopic';
-    /** @var string Spezifisches MQTT-Topic für dieses Gerät */
-    protected const MQTT_TOPIC = 'MQTTTopic';
-    /** @var string Topic für Verfügbarkeit */
-    protected const AVAILABILITY_TOPIC = 'availability';
-    /** @var string Topic für die Extension-Anfragen */
-    protected const SYMCON_EXTENSION_REQUEST = '/SymconExtension/request/';
-    /** @var string Topic für die Extension-Antworten */
-    protected const SYMCON_EXTENSION_RESPONSE = '/SymconExtension/response/';
-    /** @var string Topic für Extension Listen-Anfragen */
-    protected const SYMCON_EXTENSION_LIST_REQUEST = '/SymconExtension/lists/request/';
-    /** @var string Topic für Extension Listen-Anfragen */
-    protected const SYMCON_EXTENSION_LIST_RESPONSE = '/SymconExtension/lists/response/';
-    /** @var string GUID des MQTT Servers */
-    protected const GUID_MQTT_SERVER = '{C6D2AEB3-6E1F-4B2E-8E69-3A1A00246850}';
-    /** @var string GUID des Datenfluss zu einen MQTT Splitter */
-    protected const GUID_MQTT_SEND = '{043EA491-0325-4ADD-8FC2-A30C8EEB4D3F}';
-    /** @var string Name des Attribut welches die Modul-Version enthält */
-    protected const ATTRIBUTE_MODUL_VERSION = 'Version';
-}
+require_once __DIR__ . '/ModuleConstants.php';
+
 /**
  * @property array $TransactionData Array welches in einem Instanz-Buffer abgelegt wird und aktuelle Anfragen und Antworten von/zur Z2M Bridge enthält
  */

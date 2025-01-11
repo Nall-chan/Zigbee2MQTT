@@ -1,6 +1,6 @@
 /*
  IPSymconExtension
- Version: 5.0
+ Version: 5.01
 */
 
 class MyLogger {
@@ -96,9 +96,9 @@ class IPSymconExtension {
                 this.logger.info('Symcon: lists/request/getDevices');
                 message.list = [];
                 for (const device of this.zigbee.devicesIterator()) {
-                    if (device.zh.type !== 'Coordinator') {
+                    //if (device.zh.type !== 'Coordinator') {
                         message.list = message.list.concat(this.#createDevicePayload(device, false));
-                    }
+                    //}
                 }
             }
             message.transaction = transaction;

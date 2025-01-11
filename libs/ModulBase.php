@@ -59,12 +59,96 @@ abstract class ModulBase extends \IPSModule
      * Entscheidet über Float oder Integer profile
      */
     private const FLOAT_UNITS = [
-        '°C', '°F', 'K', 'mg/L', 'µg/m³', 'g/m³', 'mV', 'V', 'kV', 'µV', 'A', 'mA', 'µA', 'W', 'kW', 'MW', 'GW',
-        'Wh', 'kWh', 'MWh', 'GWh', 'Hz', 'kHz', 'MHz', 'GHz', 'cd', 'ppm', 'ppb', 'ppt', 'pH', 'm', 'cm',
-        'mm', 'µm', 'nm', 'l', 'ml', 'dl', 'm³', 'cm³', 'mm³', 'g', 'kg', 'mg', 'µg', 'ton', 'lb', 's', 'ms', 'µs',
-        'ns', 'min', 'h', 'd', 'rad', 'sr', 'Bq', 'Gy', 'Sv', 'kat', 'mol', 'mol/l', 'N', 'Pa', 'kPa', 'MPa', 'GPa',
-        'bar', 'mbar', 'atm', 'torr', 'psi', 'ohm', 'kohm', 'mohm', 'S', 'mS', 'µS', 'F', 'mF', 'µF', 'nF', 'pF', 'H',
-        'mH', 'µH', '%', 'dB', 'dBA', 'dBC'
+        '°C',
+        '°F',
+        'K',
+        'mg/L',
+        'µg/m³',
+        'g/m³',
+        'mV',
+        'V',
+        'kV',
+        'µV',
+        'A',
+        'mA',
+        'µA',
+        'W',
+        'kW',
+        'MW',
+        'GW',
+        'Wh',
+        'kWh',
+        'MWh',
+        'GWh',
+        'Hz',
+        'kHz',
+        'MHz',
+        'GHz',
+        'cd',
+        'ppm',
+        'ppb',
+        'ppt',
+        'pH',
+        'm',
+        'cm',
+        'mm',
+        'µm',
+        'nm',
+        'l',
+        'ml',
+        'dl',
+        'm³',
+        'cm³',
+        'mm³',
+        'g',
+        'kg',
+        'mg',
+        'µg',
+        'ton',
+        'lb',
+        's',
+        'ms',
+        'µs',
+        'ns',
+        'min',
+        'h',
+        'd',
+        'rad',
+        'sr',
+        'Bq',
+        'Gy',
+        'Sv',
+        'kat',
+        'mol',
+        'mol/l',
+        'N',
+        'Pa',
+        'kPa',
+        'MPa',
+        'GPa',
+        'bar',
+        'mbar',
+        'atm',
+        'torr',
+        'psi',
+        'ohm',
+        'kohm',
+        'mohm',
+        'S',
+        'mS',
+        'µS',
+        'F',
+        'mF',
+        'µF',
+        'nF',
+        'pF',
+        'H',
+        'mH',
+        'µH',
+        '%',
+        'dB',
+        'dBA',
+        'dBC'
     ];
 
     /**
@@ -110,7 +194,7 @@ abstract class ModulBase extends \IPSModule
         ['group_type' => '', 'feature' => 'pi_heating_demand', 'profile' => '~Valve', 'variableType' => VARIABLETYPE_INTEGER],
         ['group_type' => '', 'feature' => 'presence', 'profile' => '~Presence', 'variableType' => VARIABLETYPE_BOOLEAN],
         ['group_type' => '', 'feature' => 'illuminance_lux', 'profile' => '~Illumination', 'variableType' => VARIABLETYPE_INTEGER],
-        ['group_type' => '', 'feature' => 'child_lock', 'profile' =>'~Lock', 'variableType' => VARIABLETYPE_BOOLEAN],
+        ['group_type' => '', 'feature' => 'child_lock', 'profile' => '~Lock', 'variableType' => VARIABLETYPE_BOOLEAN],
         ['group_type' => '', 'feature' => 'window_open', 'profile' => '~Window', 'variableType' => VARIABLETYPE_BOOLEAN],
         ['group_type' => '', 'feature' => 'valve', 'profile' => '~Valve', 'variableType' => VARIABLETYPE_INTEGER],
         ['group_type' => '', 'feature' => 'window_detection', 'profile' =>'~Window', 'variableType' => VARIABLETYPE_BOOLEAN],
@@ -218,14 +302,14 @@ abstract class ModulBase extends \IPSModule
         self::createExposesDirectory();
 
         // Statische Profile
-        $this->RegisterProfileBoolean(
+        $this->RegisterProfileBooleanEx(
             'Z2M.DeviceStatus',
             'Network',
             '',
             '',
             [
-                [false, 'Offline',  '', 0xFF0000],
-                [true,  'Online',   '', 0x00FF00]
+                [false, 'Offline', '', 0xFF0000],
+                [true, 'Online', '', 0x00FF00]
             ]
         );
         $this->RegisterMessage($this->InstanceID, IM_CHANGESTATUS);
@@ -951,6 +1035,9 @@ abstract class ModulBase extends \IPSModule
      */
     protected function LoadDeviceInfo()
     {
+        if (!$this->HasActiveParent()) {
+            return false;
+        }
         $mqttTopic = $this->ReadPropertyString(self::MQTT_TOPIC);
         if (empty($mqttTopic)) {
             $this->LogMessage($this->Translate('MQTTTopic not configured.'), KL_WARNING);
@@ -1395,10 +1482,12 @@ abstract class ModulBase extends \IPSModule
     {
         // Brightness in Lichtgruppen
         foreach (self::$VariableUseStandardProfile as $profile) {
-            if ($profile['feature'] === $lowerKey &&
+            if (
+                $profile['feature'] === $lowerKey &&
                 isset($profile['group_type'], $variableProps['group_type']) &&
                 $profile['group_type'] === 'light' &&
-                $variableProps['group_type'] === 'light') {
+                $variableProps['group_type'] === 'light'
+            ) {
 
                 $this->SendDebug(__FUNCTION__, 'Brightness in Lichtgruppe - StandardProfile', 0);
                 return $this->processSpecialVariable($key, $value);
@@ -2207,10 +2296,12 @@ abstract class ModulBase extends \IPSModule
                 $valueOff = $expose['value_off'];
 
                 // Prüfen, ob die Werte Strings sind, bevor strtoupper verwendet wird
-                if (($valueOn === true && $valueOff === false) ||
+                if (
+                    ($valueOn === true && $valueOff === false) ||
                     ($valueOn === false && $valueOff === true) ||
                     (is_string($valueOn) && is_string($valueOff) &&
-                     strtoupper($valueOn) === 'ON' && strtoupper($valueOff) === 'OFF')) {
+                        strtoupper($valueOn) === 'ON' && strtoupper($valueOff) === 'OFF')
+                ) {
                     return '~Switch';
                 } else {
                     return $this->registerStringProfile($ProfileName, (string) $valueOn, (string) $valueOff);
@@ -2352,7 +2443,6 @@ abstract class ModulBase extends \IPSModule
         // Prüfen, ob die Einheit in den Float-Einheiten enthalten ist
         if (!empty($unit) && is_string($unit)) {
             // Einheit in UTF-8 dekodieren.
-            /** @todo  Wirklich zweimal? */
             $unit = mb_convert_encoding(mb_convert_encoding($unit, 'ISO-8859-1', 'UTF-8'), 'ISO-8859-1', 'UTF-8');
             $unitTrimmed = str_replace(' ', '', $unit);
             if (in_array($unitTrimmed, self::FLOAT_UNITS, true)) {

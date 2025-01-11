@@ -1,119 +1,87 @@
 {
-    "elements": [
-        {
-            "type": "ValidationTextBox",
-            "name": "MQTTBaseTopic",
-            "caption": "MQTT Base Topic"
-        }
-    ],
+    "elements": [],
     "actions": [
         {
-            "type": "ExpansionPanel",
-            "caption": "Devices",
-            "expanded": true,
-            "items": [
-                {
-                    "type": "Configurator",
-                    "name": "DeviceConfigurator",
-                    "caption": "Devices",
-                    "delete": true,
-                    "rowCount": 5,
-                    "sort": {
-                        "column": "topic",
-                        "direction": "ascending"
-                    },
-                    "columns": [
-                        {
-                            "caption": "IEEE Address",
-                            "name": "ieee_address",
-                            "width": "200px"
-                        },
-                        {
-                            "caption": "Topic",
-                            "name": "topic",
-                            "width": "auto"
-                        },
-                        {
-                            "caption": "Network Address",
-                            "name": "networkAddress",
-                            "visible": false
-                        },
-                        {
-                            "caption": "Name",
-                            "name": "name",
-                            "width": "200px"
-                        },
-                        {
-                            "caption": "Vendor",
-                            "name": "vendor",
-                            "width": "100px"
-                        },
-                        {
-                            "caption": "Model",
-                            "name": "modelID",
-                            "width": "200px"
-                        },
-                        {
-                            "caption": "Description",
-                            "name": "description",
-                            "width": "200px"
-                        },
-                        {
-                            "caption": "Type",
-                            "name": "type",
-                            "width": "100px"
-                        },
-                        {
-                            "caption": "Power Source",
-                            "name": "power_source",
-                            "width": "150px"
-                        }
-                    ],
-                    "values": []
-                }
-            ]
+            "type": "Button",
+            "name": "Config",
+            "caption": "Configuration for external broker",
+            "onClick": "IPS_RequestAction($id, 'EditMQTTBroker', true);"
         },
         {
-            "type": "ExpansionPanel",
-            "caption": "Groups",
-            "expanded": true,
-            "items": [
+            "type": "Configurator",
+            "name": "DeviceConfigurator",
+            "caption": "Zigbee2MQTT Installations",
+            "delete": true,
+            "rowCount": 5,
+            "sort": {
+                "column": "topic",
+                "direction": "ascending"
+            },
+            "columns": [
                 {
-                    "type": "Configurator",
-                    "name": "GroupConfigurator",
-                    "caption": "Groups",
-                    "delete": true,
-                    "rowCount": 5,
-                    "sort": {
-                        "column": "topic",
-                        "direction": "ascending"
-                    },
-                    "columns": [
-                        {
-                            "caption": "ID",
-                            "name": "id",
-                            "width": "auto",
-                            "visible": false
-                        },
-                        {
-                            "caption": "Topic",
-                            "name": "topic",
-                            "width": "auto"
-                        },
-                        {
-                            "caption": "Devices",
-                            "name": "DevicesCount",
-                            "width": "100px"
-                        },
-                        {
-                            "caption": "Name",
-                            "name": "name",
-                            "width": "200px"
-                        }
-                    ],
-                    "values": []
+                    "caption": "Topic",
+                    "name": "topic",
+                    "width": "300px"
+                },
+                {
+                    "caption": "Name",
+                    "name": "name",
+                    "width": "auto"
                 }
-            ]
+            ],
+            "values": []
+        },
+        {
+            "name": "BrokerPopup",
+            "type": "PopupAlert",
+            "visible": false,
+            "popup": {
+                "closeCaption": "Close",
+                "items": [
+                    {
+                        "name": "BrokerTitle",
+                        "type": "Label",
+                        "bold": true,
+                        "caption": "No MQTT Server or Client in Symcon found!"
+                    },
+                    {
+                        "name": "BrokerText",
+                        "type": "Label",
+                        "caption": "If an external MQTT broker is used, it can be specified here for verification:"
+                    },
+                    {
+                        "type": "ValidationTextBox",
+                        "name": "Url",
+                        "caption": "Url (mqtt:// or mqtts://)",
+                        "validate": "((mqtt:\\/\\/)|(mqtts:\\/\\/)).*",
+                        "value": "mqtt://"
+                    },
+                    {
+                        "type": "ValidationTextBox",
+                        "name": "UserName",
+                        "caption": "Username"
+                    },
+                    {
+                        "type": "PasswordTextBox",
+                        "name": "Password",
+                        "caption": "Password"
+                    },
+                    {
+                        "type": "Button",
+                        "caption": "Save",
+                        "name": "CheckMQTTBroker",
+                        "onClick": [
+                            "IPS_RequestAction($id, 'CheckMQTTBroker',",
+                            "   json_encode([",
+                            "       'Url' => $Url,",
+                            "       'UserName' => $UserName,",
+                            "       'Password' => $Password",
+                            "   ])",
+                            ");"
+                        ]
+                    }
+                ]
+            }
         },
         {
             "name": "ErrorPopup",
@@ -125,26 +93,9 @@
                     {
                         "name": "ErrorTitle",
                         "type": "Label",
-                        "bold": true,
                         "color": 16711680,
-                        "caption": "No devices found!"
-                    },
-                    {
-                        "name": "ErrorText",
-                        "type": "Label",
-                        "caption": "The Symcon extension in Zigbee2MQTT is not installed or not up to date.\r\nPlease install or update the extension within the Bridge instance configuration."
-                    },
-                    {
-                        "type": "OpenObjectButton",
-                        "caption": "Open bridge instance",
-                        "objectID": 0,
-                        "visible": false
-                    },
-                    {
-                        "type": "Button",
-                        "caption": "Create bridge instance",
-                        "visible": false,
-                        "onClick": []
+                        "bold": true,
+                        "caption": "Could not connect to broker!"
                     }
                 ]
             }

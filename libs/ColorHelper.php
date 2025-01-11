@@ -234,49 +234,6 @@ trait ColorHelper
     }
 
     /**
-     * IntToXY
-     *
-     * Konvertiert einen Integer-Farbwert in XY-Farbkoordinaten mit Helligkeit.
-     *
-     * @todo Diese Funktion wird nicht mehr genutzt, da es über IntToRGB und RGBToXy läuft
-     *
-     * @param int $value 32Bit Farbwert 0xRRGGBB
-     * @param int $brightness Optional: Helligkeit 0-100%
-     * @return array Ein Array mit den Schlüsseln 'x', 'y' und 'brightness'
-     */
-    protected function IntToXY(int $value, int $brightness = 100): array
-    {
-        // HEX in RGB umwandeln
-        $r = (($value >> 16) & 0xFF) / 255.0;
-        $g = (($value >> 8) & 0xFF) / 255.0;
-        $b = ($value & 0xFF) / 255.0;
-
-        // Gamma-Korrektur
-        $r = ($r > 0.04045) ? pow(($r + 0.055) / (1.0 + 0.055), 2.4) : ($r / 12.92);
-        $g = ($g > 0.04045) ? pow(($g + 0.055) / (1.0 + 0.055), 2.4) : ($g / 12.92);
-        $b = ($b > 0.04045) ? pow(($b + 0.055) / (1.0 + 0.055), 2.4) : ($b / 12.92);
-
-        // RGB in XYZ umwandeln
-        $X = $r * 0.4124 + $g * 0.3576 + $b * 0.1805;
-        $Y = $r * 0.2126 + $g * 0.7152 + $b * 0.0722;
-        $Z = $r * 0.0193 + $g * 0.1192 + $b * 0.9505;
-
-        // XYZ in xy umwandeln
-        $x = $X / ($X + $Y + $Z);
-        $y = $Y / ($X + $Y + $Z);
-
-        // Helligkeit normalisieren (0-100% -> 0-1)
-        $brightness = max(0, min(100, $brightness)) / 100;
-
-        // Rückgabe der xy-Koordinaten und Helligkeit
-        return [
-            'x'          => $x,
-            'y'          => $y,
-            'brightness' => $brightness
-        ];
-    }
-
-    /**
      * Konvertiert Kelvin in Mired
      *
      * @param  int $value Kelvin-Wert
