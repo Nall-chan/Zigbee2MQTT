@@ -1,15 +1,13 @@
 Dokumentation:
     ✅ Migrationsanleitung von 4.5 auf 5.0
         - Auf geänderte Idents hinweisen
-    🟥 Hinweise zum Update von Z2M auf 2.0
+    ✅ Hinweise zum Update von Z2M auf 2.0
     ✅ Neue Features in Changelog aufnehmen
         - Neue Aktionen
         - Keine missing exposes Debugs mehr nötig
-    🟥 Installationsanleitung überarbeiten
+    ✅ Installationsanleitung überarbeiten
     ✅ Discovery Modul erstellen
-    🟥 Anleitung Discovery, Konfigurator und Bridge fehlen noch.
-    🟨 Command und CommandExt sind public und somit für Device, Group und Configurator verfügbar.
-        Doku hierzu ist aber nur in der Readme vom Configurator enthalten und dort noch falsch erklärt (Topics und Signatur)
+    ✅ Anleitung Discovery, Konfigurator und Bridge fehlen noch.
     ✅ Konfigurator soll mehr Meldungen an den User ausgeben -> Parent fehlt/inaktiv, Bridge Instanz bzw Erweiterung fehlt.
     ✅ Bridge Instanz sollte beim Klicken auf dem Button der Erweiterung-Installation eine Rückmeldung im Fehlerfall geben.
     
