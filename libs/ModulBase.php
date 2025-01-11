@@ -2660,7 +2660,13 @@ abstract class ModulBase extends \IPSModule
         $min = $expose['value_min'] ?? 0;
         $max = $expose['value_max'] ?? 0;
         $step = $expose['value_step'] ?? 1.0;
-        $unitWithSpace = $unit !== '' ? ' ' . mb_convert_encoding(mb_convert_encoding($unit, 'ISO-8859-1', 'UTF-8'), 'ISO-8859-1', 'UTF-8') : '';
+
+        // Verbesserte UTF8-Decodierung für unit
+        $unitWithSpace = '';
+        if ($unit !== '') {
+            // Einfache UTF8-Konvertierung für korrekte Darstellung von Sonderzeichen
+            $unitWithSpace = ' ' . mb_convert_encoding($unit, 'ISO-8859-1', 'UTF-8');
+        }
 
         // Profil entsprechend Variablentyp erstellen
         if ($variableType === 'float') {
