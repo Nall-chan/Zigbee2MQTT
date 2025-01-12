@@ -304,7 +304,7 @@ abstract class ModulBase extends \IPSModule
         // Statische Profile
         $this->RegisterProfileBooleanEx(
             'Z2M.DeviceStatus',
-            Icon: 'Network',
+            'Network',
             '',
             '',
             [
