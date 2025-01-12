@@ -45,7 +45,7 @@ Zuerst ist eine funktionierende Zigbee2MQTT Umgebung gemäß der [Installationsa
 Ein hierfür benötigter MQTT-Broker ist in Symcon verfügbar und muss entsprechend **vorher** [in Symcon als Instanz erstellt werden (Link)](https://www.symcon.de/de/service/dokumentation/modulreferenz/mqtt/mqtt-server/), sofern er nicht schon vorhanden ist.
 Ein MQTT-Konfigurator wird für Zigbee2MQTT nicht benötigt!
 
-Die Installation des Zigbee2MQTT Moduls erfolgt anschließend über den über den Module Store in der Symcon Konsole.
+Die Installation des Zigbee2MQTT Moduls erfolgt anschließend über den Module Store in der Symcon Konsole.
 ![Modul-Store](imgs/store.png)  
 
 Nach der Installation fragt die Konsole ob eine [Zigbee2MQTT-Discovery](Discovery/README.md)-Instanz erstellt werden soll.  
@@ -79,7 +79,7 @@ Weitere Schritte zur Ersteinrichtung sind unter dem [Zigbee2MQTT-Discovery](Disc
 
 - Die Version 5.0 ändert beim Update alle Ident aller Variablen welche zu einer ZigbeeMQTT-Instanz gehören.
 - Diese Änderung betritt nur User welche mit Scripten auf Variablen per Ident (z.B. Z2M_Brightness) und nicht per ObjektID (z.B. 12345) zugreifen.
-- Die Variablen selbst bleiben dabei erhalten, so das sich hier keine ObjektIDs ändern, und entsprechen auch keine Änderungen an Ereignissen, Links, Automationen etc... ergeben.  
+- Die Variablen selbst bleiben dabei erhalten, so das sich hier keine ObjektIDs ändern, und entsprechend auch keine Änderungen an Ereignissen, Links, Automationen etc... ergeben.  
 
 
 ### 3. Zigbee2MQTT Version <!-- omit in toc -->
@@ -111,7 +111,7 @@ Extension-Dateien und Pfade innerhalb Z2M:
   - [IPSymconExtension2.js](libs/IPSymconExtension2.js)
   - Z2M Pfad: **`data/external_extensions`**  
 
-**Anleitungen zum Einreichten der Erweiterung:**  
+**Anleitungen zum Einrichten der Erweiterung:**  
 
 **zu 1.** Ist in der Dokumentation der [Bridge](Bridge/README.md)-Instanz beschrieben.  
 
