@@ -37,7 +37,7 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
         $this->SetSummary($ieee);
         if (empty($ieee)) {
             if ($this->GetStatus() == IS_ACTIVE) {
-                $this->LogMessage('Keine IEEE-Adresse konfiguriert', KL_WARNING);
+                $this->LogMessage($this->Translate('No IEEE address configured'), KL_WARNING);
             }
         } else {
             if ($this->ReadAttributeString('IEEE') != $ieee) {
@@ -186,7 +186,7 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
             $this->WriteAttributeString('Icon', $Icon);
             $this->WriteAttributeString('Model', $Model);
         } else {
-            $this->LogMessage('Fehler beim Herunterladen des Icons von URL: ' . $Url, KL_WARNING);
+            $this->LogMessage($this->Translate('Error downloading icon from URL: ') . $Url, KL_WARNING);
         }
     }
 }

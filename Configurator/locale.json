@@ -23,7 +23,8 @@
             "Open bridge instance": "Bridge-Instanz öffnen",
             "Create bridge instance": "Bridge-Instanz erstellen",
             "Zigbee2MQTT did not response!": "Zigbee2MQTT antwortet nicht!",
-            "Zigbee2MQTT did not response on Topic %s": "Zigbee2MQTT antwortet nicht auf Topic %s"
+            "Zigbee2MQTT did not response on Topic %s": "Zigbee2MQTT antwortet nicht auf Topic %s",
+            "Transaction Data is locked": "Transaktionen Daten sind gesperrt"
         }
     }
 }

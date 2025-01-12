@@ -125,7 +125,7 @@ trait SendData
     private function AddTransaction(array &$Payload)
     {
         if (!$this->lock('TransactionData')) {
-            throw new \Exception($this->Translate('TransactionData is locked'), E_USER_NOTICE);
+            throw new \Exception($this->Translate('Transaction Data is locked'), E_USER_NOTICE);
         }
         $TransactionId = mt_rand(1, 10000);
         $Payload['transaction'] = $TransactionId;
@@ -147,7 +147,7 @@ trait SendData
     private function UpdateTransaction(array $Data)
     {
         if (!$this->lock('TransactionData')) {
-            throw new \Exception($this->Translate('TransactionData is locked'), E_USER_NOTICE);
+            throw new \Exception($this->Translate('Transaction Data is locked'), E_USER_NOTICE);
         }
         $TransactionData = $this->TransactionData;
         if (isset($TransactionData[$Data['transaction']])) {
@@ -170,7 +170,7 @@ trait SendData
     private function RemoveTransaction(int $TransactionId)
     {
         if (!$this->lock('TransactionData')) {
-            throw new \Exception($this->Translate('TransactionData is locked'), E_USER_NOTICE);
+            throw new \Exception($this->Translate('Transaction Data is locked'), E_USER_NOTICE);
         }
         $TransactionData = $this->TransactionData;
         unset($TransactionData[$TransactionId]);

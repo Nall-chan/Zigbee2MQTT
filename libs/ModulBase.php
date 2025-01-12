@@ -299,12 +299,12 @@ abstract class ModulBase extends \IPSModule
         $this->RegisterAttributeFloat(self::ATTRIBUTE_MODUL_VERSION, 5.0);
         $this->TransactionData = [];
 
-        self::createExposesDirectory();
+        $this->createExposesDirectory();
 
         // Statische Profile
         $this->RegisterProfileBooleanEx(
             'Z2M.DeviceStatus',
-            'Network',
+            Icon: 'Network',
             '',
             '',
             [
@@ -1079,18 +1079,18 @@ abstract class ModulBase extends \IPSModule
         // JSON-Daten mit Pretty-Print erstellen
         $jsonData = json_encode($Result, JSON_PRETTY_PRINT);
         if ($jsonData === false) {
-            $this->LogMessage('Fehler beim JSON-Encoding: ' . json_last_error_msg(), KL_ERROR);
+            $this->LogMessage($this->Translate('JSON encoding error: ') . json_last_error_msg(), KL_ERROR);
             return false;
         }
 
-        self::createExposesDirectory();
+        $this->createExposesDirectory();
 
         // Definieren des Verzeichnisnamens
         $jsonFile = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY . DIRECTORY_SEPARATOR . $this->InstanceID . '.json';
 
         // Schreiben der JSON-Daten in die Datei
         if (file_put_contents($jsonFile, $jsonData) === false) {
-            $this->LogMessage('Fehler beim Schreiben der JSON-Datei.', KL_ERROR);
+            $this->LogMessage($this->Translate('Error writing JSON file.'), KL_ERROR);
             return false;
         }
         return true;
@@ -1107,7 +1107,7 @@ abstract class ModulBase extends \IPSModule
      * @see mkdir()
      * @see IPS_GetKernelDir()
      */
-    private static function createExposesDirectory(): void
+    private function createExposesDirectory(): void
     {
         // Vollständigen Pfad zum Verzeichnis erstellen
         $ExposeDirectory = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY;
@@ -1115,7 +1115,7 @@ abstract class ModulBase extends \IPSModule
         // Verzeichnis erstellen wenn nicht vorhanden
         if (!is_dir($ExposeDirectory)) {
             if (!mkdir($ExposeDirectory)) {
-                throw new \Exception('Error on create Expose Directory');
+                throw new \Exception($this->Translate('Error on create Expose Directory'));
             }
         }
     }
@@ -2880,13 +2880,9 @@ abstract class ModulBase extends \IPSModule
 
         // Neues Profil anlegen
         if ($variableType === 'float') {
-            if (!$this->RegisterProfileFloatEx($profileName, '', '', '', $associations)) {
-                $this->LogMessage(sprintf('%s: Could not create float profile %s', __FUNCTION__, $profileName), KL_DEBUG);
-            }
+            $this->RegisterProfileFloatEx($profileName, '', '', '', $associations);
         } else {
-            if (!$this->RegisterProfileIntegerEx($profileName, '', '', '', $associations)) {
-                $this->LogMessage(sprintf('%s: Could not create integer profile %s', __FUNCTION__, $profileName), KL_DEBUG);
-            }
+            $this->RegisterProfileIntegerEx($profileName, '', '', '', $associations);
         }
 
         return $profileName;

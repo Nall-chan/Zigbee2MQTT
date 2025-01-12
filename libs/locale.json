@@ -18,7 +18,16 @@
             "Error on create folder: ": "Fehler beim Erstellen von dem Ordner: ",
             "MQTTTopic not configured.": "MTTTopic nicht konfiguriert",
             "Device not found. Check topic.": "Gerät nicht gefunden. Topic prüfen.",
-            "IEEE-Address missing.": "Keine IEEE-Adresse gefunden."
+            "IEEE-Address missing.": "Keine IEEE-Adresse gefunden.",
+            "No IEEE address configured": "Keine IEEE-Adresse konfiguriert",
+            "No group ID configured": "Keine Gruppen ID konfiguriert",
+            "Error downloading icon from URL: ": "Fehler beim Herunterladen des Icons von URL: ",
+            "File successfully deleted: ": "Datei erfolgreich gelöscht: ",
+            "Error on delete file: ": "Fehler beim löschen der Datei: ",
+            "JSON encoding error: ": "Fehler beim JSON-Encoding: ",
+            "Error writing JSON file.": "Fehler beim Schreiben der JSON-Datei.",
+            "Error on create Expose Directory": "Fehler beim Erstellen des Expose-Verzeichnisses",
+            "Transaction Data is locked": "Transaktionen Daten sind gesperrt"
         }
     }
 }
