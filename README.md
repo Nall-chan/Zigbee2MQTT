@@ -45,7 +45,7 @@ Zuerst ist eine funktionierende Zigbee2MQTT Umgebung gemäß der [Installationsa
 Ein hierfür benötigter MQTT-Broker ist in Symcon verfügbar und muss entsprechend **vorher** [in Symcon als Instanz erstellt werden (Link)](https://www.symcon.de/de/service/dokumentation/modulreferenz/mqtt/mqtt-server/), sofern er nicht schon vorhanden ist.
 Ein MQTT-Konfigurator wird für Zigbee2MQTT nicht benötigt!
 
-Die Installation des Zigbee2MQTT Moduls erfolgt anschließend über den über den Module Store in der Symcon Konsole.
+Die Installation des Zigbee2MQTT Moduls erfolgt anschließend über den Module Store in der Symcon Konsole.
 ![Modul-Store](imgs/store.png)  
 
 Nach der Installation fragt die Konsole ob eine [Zigbee2MQTT-Discovery](Discovery/README.md)-Instanz erstellt werden soll.  
