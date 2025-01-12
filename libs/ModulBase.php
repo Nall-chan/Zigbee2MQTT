@@ -617,7 +617,7 @@ abstract class ModulBase extends \IPSModule
             // Versuchen zu setzen
             $result = @IPS_SetIdent($childID, $newIdent);
             if ($result === false) {
-                $this->LogMessage(__FUNCTION__ . ' : Fehler: Ident "' . $newIdent . '" konnte nicht für Variable #'.$childID.' gesetzt werden!', KL_ERROR);
+                $this->LogMessage(__FUNCTION__ . ' : Fehler: Ident "' . $newIdent . '" konnte nicht für Variable #' . $childID . ' gesetzt werden!', KL_ERROR);
             } else {
                 $this->LogMessage(__FUNCTION__ . ' : Variable #' . $childID . ': "' . $obj['ObjectIdent'] . '" wurde geändert zu "' . $newIdent . '"', KL_NOTIFY);
             }
