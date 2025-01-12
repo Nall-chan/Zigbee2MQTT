@@ -48,7 +48,7 @@
 
    ![Gruppen_datails](imgs/detail.jpg)
 
-   Genauere Informationen gibt es direkt auf der Seite von Zigbee2mqtt: https://www.zigbee2mqtt.io/guide/configuration/devices-groups.html  
+   Genauere Informationen gibt es direkt auf der Seite von Zigbee2mqtt: [Gerätegruppen](https://www.zigbee2mqtt.io/guide/configuration/devices-groups.html)  
 
    **Wichtig:**  
    Bitte die Themen in der Z2M-Anleitung genauestens lesen. In Gruppen können nicht alle Eigenschaften der enthaltenen Geräte bedient werden. Zusätzlich lassen sich über Z2M noch Szenen erstellen, welche den Gruppen oder einzelnen Geräten zugeordnet werden können.  
