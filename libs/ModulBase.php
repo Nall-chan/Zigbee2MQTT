@@ -294,6 +294,8 @@ abstract class ModulBase extends \IPSModule
         //Never delete this line!
         parent::Create();
 
+        $this->SetBuffer(self::BUFFER_MQTT_SUSPENDED, 'true');
+
         $this->RegisterPropertyString(self::MQTT_BASE_TOPIC, '');
         $this->RegisterPropertyString(self::MQTT_TOPIC, '');
         $this->RegisterAttributeFloat(self::ATTRIBUTE_MODUL_VERSION, 5.0);
@@ -426,6 +428,7 @@ abstract class ModulBase extends \IPSModule
                 break;
             case IM_CHANGESTATUS:
                 if ($Data[0] == IS_ACTIVE) {
+                    $this->SetBuffer(self::BUFFER_MQTT_SUSPENDED, 'false');
                     // Nur ein UpdateDeviceInfo wenn Parent aktiv und System bereit
                     if (($this->HasActiveParent()) && (IPS_GetKernelRunlevel() == KR_READY)) {
                         $this->checkAndCreateJsonFile();
