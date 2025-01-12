@@ -313,6 +313,7 @@ abstract class ModulBase extends \IPSModule
             ]
         );
         $this->RegisterMessage($this->InstanceID, IM_CHANGESTATUS);
+        $this->RegisterMessage($this->InstanceID, FM_CONNECT);
     }
 
     /**
@@ -399,12 +400,6 @@ abstract class ModulBase extends \IPSModule
         $Filter2 = preg_quote('"Topic":"' . $BaseTopic . self::SYMCON_EXTENSION_RESPONSE . static::$ExtensionTopic . $MQTTTopic);
         $this->SendDebug('Filter', '.*(' . $Filter1 . '|' . $Filter2 . ').*', 0);
         $this->SetReceiveDataFilter('.*(' . $Filter1 . '|' . $Filter2 . ').*');
-
-        // Nur ein UpdateDeviceInfo wenn Parent aktiv und System bereit
-        if (($this->HasActiveParent()) && (IPS_GetKernelRunlevel() == KR_READY) && ($this->GetStatus() != IS_CREATING)) {
-            $this->checkAndCreateJsonFile();
-        }
-
         $this->SetStatus(IS_ACTIVE);
     }
 
@@ -424,9 +419,17 @@ abstract class ModulBase extends \IPSModule
             return;
         }
         switch ($Message) {
+            case FM_CONNECT:
+                if (($this->HasActiveParent()) && (IPS_GetKernelRunlevel() == KR_READY)) {
+                    $this->checkAndCreateJsonFile();
+                }
+                break;
             case IM_CHANGESTATUS:
                 if ($Data[0] == IS_ACTIVE) {
+                    // Nur ein UpdateDeviceInfo wenn Parent aktiv und System bereit
+                    if (($this->HasActiveParent()) && (IPS_GetKernelRunlevel() == KR_READY)) {
                     $this->checkAndCreateJsonFile();
+                }
                 }
                 return;
         }
