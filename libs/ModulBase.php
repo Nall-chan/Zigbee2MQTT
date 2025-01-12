@@ -428,8 +428,8 @@ abstract class ModulBase extends \IPSModule
                 if ($Data[0] == IS_ACTIVE) {
                     // Nur ein UpdateDeviceInfo wenn Parent aktiv und System bereit
                     if (($this->HasActiveParent()) && (IPS_GetKernelRunlevel() == KR_READY)) {
-                    $this->checkAndCreateJsonFile();
-                }
+                        $this->checkAndCreateJsonFile();
+                    }
                 }
                 return;
         }
@@ -599,7 +599,7 @@ abstract class ModulBase extends \IPSModule
                 '~Intensity.100',
                 10
             );
-        $this->EnableAction('brightness');
+            $this->EnableAction('brightness');
         }
 
         // 1) Suche alle Kinder-Objekte dieser Instanz

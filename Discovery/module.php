@@ -351,7 +351,10 @@ class Zigbee2MQTTDiscovery extends IPSModule
         }
         foreach ($MqttSplitters as $SplitterId => $Config) {
             if (isset($Config['Host'])) { // client
-                $Topics[$SplitterId] = $this->SearchBridges($Config);
+                $FoundTopics = $this->SearchBridges($Config);
+                if ($FoundTopics !== null) {
+                    $Topics[$SplitterId] = $FoundTopics;
+                }
             } else {  //server
                 foreach (array_filter(MQTT_GetRetainedMessageTopicList($SplitterId), [$this, 'FilterTopics']) as $Topic) {
                     $Found = [];
