@@ -590,18 +590,6 @@ abstract class ModulBase extends \IPSModule
         $this->SetBuffer(self::BUFFER_MQTT_SUSPENDED, 'true');
         $this->SetBuffer(self::BUFFER_PROCESSING_MIGRATION, 'true');
 
-        // Brightness Profil Migration
-        $varID = @$this->GetIDForIdent('brightness');
-        if ($varID !== false) {
-            $this->RegisterVariableInteger(
-                'brightness',
-                $this->Translate('Brightness'),
-                '~Intensity.100',
-                10
-            );
-            $this->EnableAction('brightness');
-        }
-
         // 1) Suche alle Kinder-Objekte dieser Instanz
         // 2) Prüfe, ob ihr Ident z. B. mit "Z2M_" beginnt
         // 3) Bilde den neuen Ident (snake_case) und setze ihn
@@ -629,10 +617,22 @@ abstract class ModulBase extends \IPSModule
             // Versuchen zu setzen
             $result = @IPS_SetIdent($childID, $newIdent);
             if ($result === false) {
-                $this->LogMessage(__FUNCTION__ . ' : Fehler: Ident "' . $newIdent . '" konnte nicht für Variable #{$childID} gesetzt werden!', KL_ERROR);
+                $this->LogMessage(__FUNCTION__ . ' : Fehler: Ident "' . $newIdent . '" konnte nicht für Variable #'.$childID.' gesetzt werden!', KL_ERROR);
             } else {
                 $this->LogMessage(__FUNCTION__ . ' : Variable #' . $childID . ': "' . $obj['ObjectIdent'] . '" wurde geändert zu "' . $newIdent . '"', KL_NOTIFY);
             }
+        }
+
+        // Brightness Profil Migration
+        $varID = @$this->GetIDForIdent('brightness');
+        if ($varID !== false) {
+            $this->RegisterVariableInteger(
+                'brightness',
+                $this->Translate('Brightness'),
+                '~Intensity.100',
+                10
+            );
+            $this->EnableAction('brightness');
         }
 
         // Flag für beendete Migration wieder setzen
