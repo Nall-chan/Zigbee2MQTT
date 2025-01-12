@@ -486,7 +486,7 @@ class Zigbee2MQTTBridge extends IPSModule
     public function SetPermitJoin(bool $PermitJoin)
     {
         $Topic = '/bridge/request/permit_join';
-        $Payload = ['value'=>$PermitJoin, 'time'=> 254];
+        $Payload = ['time'=> ($PermitJoin ? 254 : 0)];
         $Result = $this->SendData($Topic, $Payload);
         if (isset($Result['error'])) {
             trigger_error($Result['error'], E_USER_NOTICE);
