@@ -2457,9 +2457,18 @@ abstract class ModulBase extends \IPSModule
 
         // Prüfen, ob die Einheit in den Float-Einheiten enthalten ist
         if (!empty($unit) && is_string($unit)) {
-            // Einheit in UTF-8 dekodieren.
-            $unit = mb_convert_encoding(mb_convert_encoding($unit, 'ISO-8859-1', 'UTF-8'), 'ISO-8859-1', 'UTF-8');
+            // Debug der Original-Einheit
+            $this->SendDebug(__FUNCTION__, 'Original unit: ' . bin2hex($unit), 0);
+
+            // Verbesserte UTF-8 Behandlung
+            $unit = mb_convert_encoding($unit, 'UTF-8', 'AUTO');
             $unitTrimmed = str_replace(' ', '', $unit);
+
+            // Erweiterte Debug-Ausgaben
+            $this->SendDebug(__FUNCTION__, 'Unit after UTF-8 conversion: ' . bin2hex($unitTrimmed), 0);
+            $this->SendDebug(__FUNCTION__, 'Unit after conversion (readable): ' . $unitTrimmed, 0);
+            $this->SendDebug(__FUNCTION__, 'FLOAT_UNITS content: ' . json_encode(self::FLOAT_UNITS), 0);
+
             if (in_array($unitTrimmed, self::FLOAT_UNITS, true)) {
                 return 'float';
             }
