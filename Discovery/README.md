@@ -34,7 +34,7 @@ Mit dieser Instanz werden alle mit MQTT-Brokern(Servern) verbundenen Zigbee2MQTT
 ## 3. Verwendung der Instanzen
 
  Beim Öffnen der Instanz wird automatisch ein Suchlauf an allen in Symcon eingerichteten MQTT Clients und Server gestartet.   
- Alternativ kann eine externer Broker manuell angegeben werden.  
+ Alternativ kann ein externer Broker manuell angegeben werden.  
 ![Übersicht Konfigurator](imgs/config1.png)
 ![Übersicht Konfigurator](imgs/config2.png)
 
