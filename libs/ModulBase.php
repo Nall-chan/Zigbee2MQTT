@@ -590,6 +590,18 @@ abstract class ModulBase extends \IPSModule
         $this->SetBuffer(self::BUFFER_MQTT_SUSPENDED, 'true');
         $this->SetBuffer(self::BUFFER_PROCESSING_MIGRATION, 'true');
 
+        // Brightness Profil Migration
+        $varID = @$this->GetIDForIdent('brightness');
+        if ($varID !== false) {
+            $this->RegisterVariableInteger(
+                'brightness',
+                $this->Translate('Brightness'),
+                '~Intensity.100',
+                10
+            );
+        $this->EnableAction('brightness');
+        }
+
         // 1) Suche alle Kinder-Objekte dieser Instanz
         // 2) Prüfe, ob ihr Ident z. B. mit "Z2M_" beginnt
         // 3) Bilde den neuen Ident (snake_case) und setze ihn
@@ -2883,9 +2895,13 @@ abstract class ModulBase extends \IPSModule
 
         // Neues Profil anlegen
         if ($variableType === 'float') {
-            $this->RegisterProfileFloatEx($profileName, '', '', '', $associations);
+            if (!$this->RegisterProfileFloatEx($profileName, '', '', '', $associations)) {
+                $this->LogMessage(sprintf('%s: Could not create float profile %s', __FUNCTION__, $profileName), KL_DEBUG);
+            }
         } else {
-            $this->RegisterProfileIntegerEx($profileName, '', '', '', $associations);
+            if (!$this->RegisterProfileIntegerEx($profileName, '', '', '', $associations)) {
+                $this->LogMessage(sprintf('%s: Could not create integer profile %s', __FUNCTION__, $profileName), KL_DEBUG);
+            }
         }
 
         return $profileName;
@@ -3166,14 +3182,7 @@ abstract class ModulBase extends \IPSModule
             return;
         }
 
-        // Frühe Prüfung auf bereits existierende Variable
-        $objectID = @$this->GetIDForIdent($featureId);
-        if ($objectID) {
-            $this->SendDebug(__FUNCTION__ . ' :: Variable already exists: ', $featureId, 0);
-            return;
-        }
-
-        $this->SendDebug(__FUNCTION__ . 'Registriere Variable für Property: ', $featureId, 0);
+        $this->SendDebug(__FUNCTION__ . ' Registriere Variable für Property: ', $featureId, 0);
 
         // Übergebe das komplette Feature-Array für Access-Check
         $stateConfig = $this->getStateConfiguration($featureId, is_array($feature) ? $feature : null);
@@ -3213,13 +3222,6 @@ abstract class ModulBase extends \IPSModule
         $ident = $property;     // Bereits validiert
         $label = ucfirst(str_replace('_', ' ', $property));
         $step = isset($feature['step']) ? (float) $feature['step'] : 1.0;
-
-        // Überprüfen, ob die Variable bereits existiert
-        $objectID = @$this->GetIDForIdent($ident);
-        if ($objectID) {
-            $this->SendDebug(__FUNCTION__ . ' :: Variable already exists: ', $ident, 0);
-            return;
-        }
 
         // Bestimmen des Variablentyps basierend auf Typ, Feature und Einheit
         $variableType = $this->getVariableTypeFromProfile($type, $property, $unit, $step, $groupType);
@@ -3409,20 +3411,13 @@ abstract class ModulBase extends \IPSModule
         $label = $feature['name'] . ' Presets';
         $formattedLabel = $this->convertLabelToName($label);
 
-        // Überprüfen, ob die Variable bereits existiert
-        $variableID = @$this->GetIDForIdent($ident);
-        if ($variableID === false) {
-            // Variable erstellen
-            if ($variableType === 'float') {
-                $this->RegisterVariableFloat($ident, $this->Translate($formattedLabel), $profileName);
-                $this->EnableAction($ident);
-            } else {
-                $this->RegisterVariableInteger($ident, $this->Translate($formattedLabel), $profileName);
-                $this->EnableAction($ident);
-            }
+        // Variable erstellen/aktualisieren
+        if ($variableType === 'float') {
+            $this->RegisterVariableFloat($ident, $this->Translate($formattedLabel), $profileName);
         } else {
-            $this->SendDebug(__FUNCTION__, 'Variable already exists: ' . $ident, 0);
+            $this->RegisterVariableInteger($ident, $this->Translate($formattedLabel), $profileName);
         }
+        $this->EnableAction($ident);
     }
 
     /**
