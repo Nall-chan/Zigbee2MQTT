@@ -157,8 +157,7 @@ class Zigbee2MQTTDiscovery extends IPSModule
 
         if ($FoundZ2mBySplitterId === null) {
             if (!count($this->ManuelTopics)) {
-                //Meldung das kein Splitter gefunden wurde.
-                // manuelles Eingabefeld für MQTT url, username, passwort anzeigen
+                $Form['actions'][2]['visible'] = true;
             }
         } else {
             foreach ($FoundZ2mBySplitterId as $SplitterId => $Topics) {
@@ -204,7 +203,7 @@ class Zigbee2MQTTDiscovery extends IPSModule
             if ($instanceID) {
                 unset($IPSConfigurators[$instanceID]);
             }
-            // Konfigeintrag mit Kette zu SplitterId
+            // Konfigeintrag mit Kette für neuen MQTT-Client an externe Broker
             $value = []; //Array leeren
             if ($instanceID) {
                 $value['name'] = IPS_GetName($instanceID);
@@ -239,7 +238,7 @@ class Zigbee2MQTTDiscovery extends IPSModule
 
         }
         foreach ($IPSConfigurators as $instanceID => $Topic) {
-            // nicht gefundene Bridges hier in rot auflisten
+            // nicht gefundene Konfiguratoren werden hier in rot auflisten
             $value = []; //Array leeren
             $value['name'] = IPS_GetName($instanceID);
             $value['instanceID'] = $instanceID;
@@ -268,7 +267,7 @@ class Zigbee2MQTTDiscovery extends IPSModule
         foreach ($InstanceIDList as $InstanceID) {
             $ConfiguratorList[$InstanceID] = @IPS_GetProperty($InstanceID, self::MQTT_BASE_TOPIC);
         }
-        return array_filter($ConfiguratorList);
+        return $ConfiguratorList;
     }
 
     /**

@@ -24,7 +24,10 @@
             "Create bridge instance": "Bridge-Instanz erstellen",
             "Zigbee2MQTT did not response!": "Zigbee2MQTT antwortet nicht!",
             "Zigbee2MQTT did not response on Topic %s": "Zigbee2MQTT antwortet nicht auf Topic %s",
-            "Transaction Data is locked": "Transaktionen Daten sind gesperrt"
+            "Transaction Data is locked": "Transaktionen Daten sind gesperrt",
+            "Devices that the configurator has found but are connected to the wrong MQTT splitter in Symcon.": "Geräte welche der Konfigurator gefunden hat, aber in Symcon mit einem falschen MQTT-Splitter verbunden sind.",
+            "InstanceId": "InstanzID",
+            "Fix it!": "Repariere es!"
         }
     }
 }

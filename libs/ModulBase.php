@@ -422,12 +422,17 @@ abstract class ModulBase extends \IPSModule
         }
         switch ($Message) {
             case FM_CONNECT:
+                if ($this->GetStatus() == IS_ACTIVE) {
+                    $this->SetBuffer(self::BUFFER_MQTT_SUSPENDED, 'false');
+                }
                 if (($this->HasActiveParent()) && (IPS_GetKernelRunlevel() == KR_READY)) {
+                    $this->LogMessage('FM_CONNECT', KL_NOTIFY);
                     $this->checkAndCreateJsonFile();
                 }
                 break;
             case IM_CHANGESTATUS:
                 if ($Data[0] == IS_ACTIVE) {
+                    $this->LogMessage('IM_CHANGESTATUS', KL_NOTIFY);
                     $this->SetBuffer(self::BUFFER_MQTT_SUSPENDED, 'false');
                     // Nur ein UpdateDeviceInfo wenn Parent aktiv und System bereit
                     if (($this->HasActiveParent()) && (IPS_GetKernelRunlevel() == KR_READY)) {

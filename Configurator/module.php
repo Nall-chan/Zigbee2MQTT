@@ -47,14 +47,12 @@ class Zigbee2MQTTConfigurator extends IPSModule
      * @return void
      *
      * @uses IPSModule::Create()
-     * @uses IPSModule::ConnectParent()
      * @uses IPSModule::RegisterPropertyString()
      */
     public function Create()
     {
         //Never delete this line!
         parent::Create();
-        $this->ConnectParent(self::GUID_MQTT_SERVER);
         $this->RegisterPropertyString(self::MQTT_BASE_TOPIC, '');
         // Init Buffers
         $this->TransactionData = [];
@@ -153,7 +151,6 @@ class Zigbee2MQTTConfigurator extends IPSModule
         if (($this->GetStatus() == IS_CREATING) || (IPS_GetKernelRunlevel() != KR_READY)) {
             return json_encode($Form);
         }
-        $SplitterId = IPS_GetInstance($this->InstanceID)['ConnectionID'];
         if (!$this->HasActiveParent()) {
             $Form['actions'][0]['expanded'] = false;
             $Form['actions'][1]['expanded'] = false;
@@ -193,14 +190,10 @@ class Zigbee2MQTTConfigurator extends IPSModule
             return json_encode($Form);
         }
 
+        $SplitterId = IPS_GetInstance($this->InstanceID)['ConnectionID'];
+        $InstancedWithWrongIo = [];
         $Devices = [];
         $Groups = [];
-        $MyParentConfig = [
-            [
-                'moduleID'      => IPS_GetInstance($SplitterId)['ModuleInfo']['ModuleID'],
-                'configuration' => json_decode(IPS_GetConfiguration($SplitterId), true)
-            ]
-        ];
         $Devices = $this->getDevices(); // Alle Geräte von Z2M laden
         $this->SendDebug('NetworkDevices', json_encode($Devices), 0);
         $IPSDevicesByIEEE = $this->GetIPSInstancesByIEEE(); // ALLE Device-Instanzen mit IEEE holen
@@ -240,6 +233,9 @@ class Zigbee2MQTTConfigurator extends IPSModule
         // Devices
         $valuesDevices = [];
         $valueId = 1;
+        /** @todo Hier eine Liste mitführen, welche Instanzen der IEEE und Topic Prüfung am falschen Splitter hängen
+         * Am Ende Einträge zählen und Popup mit Liste was repariert werden muss
+         * Mit Button zum reparieren der Verbindung*/
         foreach ($Devices as $device) { // Geräte von Z2M durchgehen
             $value = self::$DeviceValues; // Array leeren
             $Location = explode('/', $device['friendly_name']);
@@ -251,10 +247,14 @@ class Zigbee2MQTTConfigurator extends IPSModule
                     unset($IPSBridgeIDs[$BridgeId]);
                     $value['name'] = IPS_GetName($BridgeId);
                     $value['instanceID'] = $BridgeId;
-
+                    if (IPS_GetInstance($BridgeId)['ConnectionID'] != $SplitterId) {
+                        $InstancedWithWrongIo[] = ['name'    => IPS_GetName($BridgeId),
+                            'topic'                          => 'bridge',
+                            'instanceIdStr'                  => '#' . $BridgeId,
+                            'instanceId'                     => $BridgeId];
+                    }
                 } else {
                     $value['name'] = 'Zigbee2MQTT Bridge';
-
                 }
                 $value['parent'] = $this->AddParentElement($valueId, $valuesDevices, $Location, self::$DeviceValues);
                 $value['id'] = $valueId++;
@@ -263,28 +263,42 @@ class Zigbee2MQTTConfigurator extends IPSModule
                 $value['vendor'] = 'Zigbee2MQTT';
                 $value['description'] = 'Zigbee2MQTT Bridge';
                 $value['create'] =
-                    array_merge([[
+                    [
                         'moduleID'      => self::GUID_MODULE_BRIDGE,
                         'location'      => $Location,
                         'configuration' => [
                             self::MQTT_BASE_TOPIC    => $BaseTopic
-                        ]]
-                    ], $MyParentConfig);
+                        ]];
                 array_push($valuesDevices, $value);
                 continue;
             }
-
+            // erst nach IEEE suchen
             $instanceID = array_search($device['ieeeAddr'], $IPSDevicesByIEEE);
-            if ($instanceID) { // erst nach IEEE suchen
+            if ($instanceID) {
                 unset($IPSDevicesByIEEE[$instanceID]);
                 if (isset($IPSDevicesByTopic[$instanceID])) { // wenn auch in IPSDevicesByTopic vorhanden, hier löschen
                     unset($IPSDevicesByTopic[$instanceID]);
                 }
+                if (IPS_GetInstance($instanceID)['ConnectionID'] != $SplitterId) {
+                    $InstancedWithWrongIo[] = ['name'    => IPS_GetName($instanceID),
+                        'topic'                          => IPS_GetProperty($instanceID, self::MQTT_TOPIC),
+                        'instanceIdStr'                  => '#' . $instanceID,
+                        'instanceId'                     => $instanceID];
+
+                }
             } else { // dann nach Topic suchen
                 $instanceID = array_search($device['friendly_name'], $IPSDevicesByTopic);
-                unset($IPSDevicesByTopic[$instanceID]);
-                if (isset($IPSDevicesByIEEE[$instanceID])) { // wenn auch in IPSDevicesByIEEE vorhanden, hier löschen
-                    unset($IPSDevicesByIEEE[$instanceID]);
+                if ($instanceID) {
+                    unset($IPSDevicesByTopic[$instanceID]);
+                    if (isset($IPSDevicesByIEEE[$instanceID])) { // wenn auch in IPSDevicesByIEEE vorhanden, hier löschen
+                        unset($IPSDevicesByIEEE[$instanceID]);
+                    }
+                    if (IPS_GetInstance($instanceID)['ConnectionID'] != $SplitterId) {
+                        $InstancedWithWrongIo[] = ['name'    => IPS_GetName($instanceID),
+                            'topic'                          => IPS_GetProperty($instanceID, self::MQTT_TOPIC),
+                            'instanceIdStr'                  => '#' . $instanceID,
+                            'instanceId'                     => $instanceID];
+                    }
                 }
             }
 
@@ -307,15 +321,15 @@ class Zigbee2MQTTConfigurator extends IPSModule
             $value['description'] = $device['description'] ?? $this->Translate('Unknown');
             $value['power_source'] = isset($device['powerSource']) ? $this->Translate($device['powerSource']) : $this->Translate('Unknown');
             $value['create'] =
-                array_merge([[
+                [
                     'moduleID'      => self::GUID_MODULE_DEVICE,
                     'location'      => $Location,
                     'configuration' => [
                         self::MQTT_BASE_TOPIC    => $BaseTopic,
                         self::MQTT_TOPIC         => $device['friendly_name'],
                         'IEEE'                   => $device['ieeeAddr']
-                    ]]
-                ], $MyParentConfig);
+                    ]
+                ];
             array_push($valuesDevices, $value);
         }
         /** Coordinator Sonderbehandlung */
@@ -405,9 +419,17 @@ class Zigbee2MQTTConfigurator extends IPSModule
                 }
             } else { // dann nach Topic suchen
                 $instanceID = array_search($group['friendly_name'], $IPSGroupByTopic);
-                unset($IPSGroupByTopic[$instanceID]);
-                if (isset($IPSGroupById[$instanceID])) { //wenn auch in IPSGroupById vorhanden, hier löschen
-                    unset($IPSGroupById[$instanceID]);
+                if ($instanceID) {
+                    unset($IPSGroupByTopic[$instanceID]);
+                    if (isset($IPSGroupById[$instanceID])) { //wenn auch in IPSGroupById vorhanden, hier löschen
+                        unset($IPSGroupById[$instanceID]);
+                    }
+                    if (IPS_GetInstance($instanceID)['ConnectionID'] != $SplitterId) {
+                        $InstancedWithWrongIo[] = ['name'    => IPS_GetName($instanceID),
+                            'topic'                          => IPS_GetProperty($instanceID, self::MQTT_TOPIC),
+                            'instanceIdStr'                  => '#' . $instanceID,
+                            'instanceId'                     => $instanceID];
+                    }
                 }
             }
             $Location = explode('/', $group['friendly_name']);
@@ -472,9 +494,15 @@ class Zigbee2MQTTConfigurator extends IPSModule
         }
 
         $Form['actions'][0]['items'][0]['values'] = $valuesDevices;
-        $Form['actions'][0]['items'][0]['rowCount'] = (count($valuesDevices) < 15 ? count($valuesDevices) : 15);
+        $Form['actions'][0]['items'][0]['rowCount'] = (count($valuesDevices) > 15 ? 15 : count($valuesDevices) + 1);
         $Form['actions'][1]['items'][0]['values'] = $valuesGroups;
-        $Form['actions'][1]['items'][0]['rowCount'] = (count($valuesGroups) < 15 ? count($valuesGroups) : 15);
+        $Form['actions'][1]['items'][0]['rowCount'] = (count($valuesGroups) > 15 ? 15 : count($valuesGroups) + 1);
+        $this->SendDebug('defect', json_encode($InstancedWithWrongIo), 0);
+        if (count($InstancedWithWrongIo)) {
+            $Form['actions'][3]['visible'] = true;
+            $Form['actions'][3]['popup']['items'][1]['rowCount'] = (count($InstancedWithWrongIo) > 20) ? 20 : count($InstancedWithWrongIo) + 1;
+            $Form['actions'][3]['popup']['items'][1]['values'] = $InstancedWithWrongIo;
+        }
         $this->SendDebug('Form', json_encode($Form), 0);
         return json_encode($Form);
     }
