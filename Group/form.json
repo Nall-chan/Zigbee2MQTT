@@ -11,16 +11,53 @@
             "caption": "MQTT Topic"
         },
         {
-            "type": "NumberSpinner",
-            "name": "GroupId",
-            "caption": "Group Id",
-            "enabled": false
+            "type": "RowLayout",
+            "items": [
+                {
+                    "type": "NumberSpinner",
+                    "name": "GroupId",
+                    "caption": "Group Id",
+                    "enabled": false
+                },
+                {
+                    "type": "Button",
+                    "caption": "Change Group Id",
+                    "onClick": "IPS_RequestAction($id, 'ShowGroupIdEditWarning', true);"
+                }
+            ]
         }
     ],
     "actions": [
         {
+            "name": "GroupIdWarning",
+            "type": "PopupAlert",
+            "visible": false,
+            "popup": {
+                "closeCaption": "Close",
+                "buttons": [
+                    {
+                        "caption": "I understand",
+                        "onClick": "IPS_RequestAction($id, 'EnableGroupIdEdit', true);"
+                    }
+                ],
+                "items": [
+                    {
+                        "name": "ErrorTitle",
+                        "type": "Label",
+                        "bold": true,
+                        "caption": "Warning!"
+                    },
+                    {
+                        "name": "ErrorText",
+                        "type": "Label",
+                        "caption": "Please use this function carefully!\r\nAn incorrect GroupId can lead to malfunctions."
+                    }
+                ]
+            }
+        },
+        {
             "type": "Button",
-            "label": "Get Device Infos",
+            "caption": "Get Group Infos",
             "onClick": "IPS_RequestAction($id, 'UpdateInfo', true);"
         },
         {
@@ -28,11 +65,11 @@
         },
         {
             "type": "Label",
-            "caption": "Spenden / Schenkung"
+            "caption": "Donations"
         },
         {
             "type": "Label",
-            "caption": "Dieses Modul ist für die nicht kommerzielle Nutzung kostenlos, Schenkungen als Unterstützung für den Autor werden hier akzeptiert:    "
+            "caption": "This module is free for non-commercial use,\r\nDonations in support of the author are accepted here:"
         },
         {
             "type": "RowLayout",

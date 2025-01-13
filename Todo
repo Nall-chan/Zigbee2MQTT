@@ -1,13 +1,25 @@
-ToDo zur 5.0? (inklusive Darstellungsmanager?)
-oder noch zur 4.5? um beide Änderungen nicht Zeitgleich zu haben?
-
-🟨 Command und CommandExt sind public und somit für Device, Group und Configurator verfügbar.
-    Doku hierzu ist aber nur in der Readme vom Configurator enthalten und dort noch falsch erklärt (Topics und Signatur)
-🟨 Fehler beim laden des submodul test/stubs
-🟨 CS-Fixer defekt?!
-🟨 setColorExt 
-    $Z2MMode optional, was bei public nicht funktioniert.
-    Besser wäre das aufteilen auf vier Funktionen?
-    SetStringColor & Ex und SetIntegerColor & Ex
-    setColorExt als deprecated deklarieren.
-
+Dokumentation:
+    ✅ Migrationsanleitung von 4.5 auf 5.0
+        - Auf geänderte Idents hinweisen
+    ✅ Hinweise zum Update von Z2M auf 2.0
+    ✅ Neue Features in Changelog aufnehmen
+        - Neue Aktionen
+        - Keine missing exposes Debugs mehr nötig
+    ✅ Installationsanleitung überarbeiten
+    ✅ Discovery Modul erstellen
+    ✅ Anleitung Discovery, Konfigurator und Bridge fehlen noch.
+    ✅ Konfigurator soll mehr Meldungen an den User ausgeben -> Parent fehlt/inaktiv, Bridge Instanz bzw Erweiterung fehlt.
+    ✅ Bridge Instanz sollte beim Klicken auf dem Button der Erweiterung-Installation eine Rückmeldung im Fehlerfall geben.
+    
+Features 5.x:
+    🟨 Composite Variablen ergänzen.
+    🟨 OTA Update Variablen zerlegen (optional?).
+    🟨 OTA Updates über Bridge Instanz prüfen, darstellen, anbieten?
+    🟨 Oder eigene OTA Instanz?
+    🟨 Geräte und Gruppen Instanzen erhalten einen Support ExpansionPanel:
+        - Fehlende Übersetzungen anzeigen (Buffer).
+        - Mit der Möglichkeit die JSON zu löschen oder anzeigen.
+        - Download eines ZIP Archives mit dem letzten Payload, der expose JSON und der vorhandenen Variablen inkl. Profile der Instanz.
+    🟨 Testfunktionen ergänzen das expose JSON und Payloads mit phpunit getestet werden können.
+    🟩 Diverse Code Optimierungen laut @Burki24
+    

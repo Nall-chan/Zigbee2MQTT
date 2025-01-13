@@ -99,7 +99,7 @@ trait VariableProfileHelper
      * @param string $Suffix   Suffix für die Darstellung.
      * @param int    $MinValue Minimaler Wert.
      * @param int    $MaxValue Maximaler wert.
-     * @param int    $StepSize Schrittweite
+     * @param float  $StepSize Schrittweite
      */
     protected function RegisterProfileInteger(string $Name, string $Icon, string $Prefix, string $Suffix, int $MinValue, int $MaxValue, float $StepSize): void
     {
