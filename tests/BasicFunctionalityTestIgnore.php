@@ -9,7 +9,7 @@ include_once __DIR__ . '/stubs/ModuleStubs.php';
 
 use PHPUnit\Framework\TestCase;
 
-class BasicFunctionalityTest extends TestCase
+class BasicFunctionalityTestIgnore extends TestCase
 {
     private $deviceModuleID = '{E5BB36C6-A70B-EB23-3716-9151A09AC8A2}';
     private $groupControlID = '{11BF3773-E940-469B-9DD7-FB9ACD7199A2}';
@@ -28,12 +28,12 @@ class BasicFunctionalityTest extends TestCase
 
         parent::setUp();
     }
-    public function ignoretestNop(): void
+    public function testNop(): void
     {
         $this->assertTrue(true);
     }
 
-    public function ignoretestCreate()
+    public function testCreate()
     {
         $previousCount = count(IPS_GetInstanceListByModuleID($this->deviceModuleID));
         /*@todo
@@ -43,7 +43,7 @@ class BasicFunctionalityTest extends TestCase
         $this->assertEquals($previousCount + 1, count(IPS_GetInstanceListByModuleID($this->deviceModuleID)));
     }
 
-    public function ignoretestPayload()
+    public function testPayload()
     {
         $Payload = '{"last_seen":1736083201892,"linkquality":61,"power_on_behavior":"off","state":"OFF"}';
         //$Topic = '';
