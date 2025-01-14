@@ -226,6 +226,8 @@ abstract class ModulBase extends \IPSModule
         'update'             => ['type' => VARIABLETYPE_STRING, 'name' => 'Firmware Update Status', 'profile' => '', 'enableAction' => false],
         'device_temperature' => ['type' => VARIABLETYPE_FLOAT, 'name' => 'Device Temperature', 'profile' => '~Temperature', 'enableAction' => false],
         'brightness'         => ['type' => VARIABLETYPE_INTEGER, 'ident' => 'brightness', 'profile' => '~Intensity.100', 'scale' => 1, 'enableAction' => true],
+        'brightness_l1'      => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l1', 'profile' => '~Intensity.100', 'scale' => 1, 'enableAction' => true],
+        'brightness_l2'      => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l2', 'profile' => '~Intensity.100', 'scale' => 1, 'enableAction' => true],
         'voltage'            => ['type' => VARIABLETYPE_FLOAT, 'ident' => 'voltage', 'profile' => '~Volt', 'enableAction' => false],
     ];
 
@@ -3633,24 +3635,5 @@ abstract class ModulBase extends \IPSModule
 
         $this->SendDebug(__FUNCTION__, 'State mapping profile created for: ' . $ProfileName, 0);
         return $ProfileName;
-    }
-
-    /**
-     * buildStatePattern
-     *
-     * Erzeugt ein Zustandsmuster (State Pattern) basierend auf dem angegebenen Typ.
-     *
-     * Diese Methode gibt ein reguläres Ausdrucksmuster zurück, das verwendet werden kann,
-     * um Zustandsinformationen (State) zu verarbeiten. Der Typ des Musters kann entweder
-     * 'MQTT' oder 'SYMCON' sein, um unterschiedliche Anwendungsfälle abzudecken.
-     *
-     * @param string $type Der Typ des Musters, das erzeugt werden soll. Mögliche Werte sind 'MQTT' und 'SYMCON'.
-     *                     Standardwert ist 'MQTT'.
-     *
-     * @return string Das reguläre Ausdrucksmuster für den angegebenen Typ.
-     */
-    private static function buildStatePattern(string $type = 'MQTT'): string
-    {
-        return self::STATE_PATTERN[$type];
     }
 }
