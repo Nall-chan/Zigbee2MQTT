@@ -85,7 +85,7 @@ abstract class ModulBase extends \IPSModule
         'MHz',
         'GHz',
         'cd',
-        'ppm',
+        //'ppm',
         'ppb',
         'ppt',
         'pH',
@@ -1170,6 +1170,9 @@ abstract class ModulBase extends \IPSModule
         //    Bsp: "ColorTemp" -> "_Color_Temp"
         //    Bsp: "BrightnessABC" -> "_Brightness_A_B_C"
         $withUnderscore = preg_replace('/([A-Z])/', '_$1', $withoutPrefix);
+
+        // 2a) Bei Statel1-9 oder BrightnessL1-9 einen Unterstrich einfügen vor l1-9
+        $withUnderscore = preg_replace('/(Brightness|State)(L[1-9]|l[1-9])/m', '$1_$2', $withUnderscore);
 
         // 3) Falls jetzt am Anfang ein "_" ist, entfernen
         $withUnderscore = ltrim($withUnderscore, '_');
