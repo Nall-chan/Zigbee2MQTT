@@ -36,11 +36,11 @@ abstract class ModulBase extends \IPSModule
      *      KEY:
      *      - BASE     'state' (Basisbezeichner)
      *      - SUFFIX:   Zusatzbezeichner
-     *          - NUMERIC:   _1, _2, etc.
-     *          - DIRECTION: _left, _right
-     *          - COMBINED:  _left_1, _right_2
+     *          - NUMERIC:   statel1, state_l1, StateL1, state_L1
+     *          - DIRECTION: state_left, state_right, State_Left
+     *          - COMBINED:  state_left_l1, State_Right_L1
      *      - MQTT:    Validiert MQTT-Payload (state, state_l1)
-     *      - SYMCON:  Validiert Symcon-Variablen (state, stateL1)
+     *      - SYMCON:  Validiert Symcon-Variablen (state, State, statel1, state_l1, State_Left, state_right_l1)
      */
     private const STATE_PATTERN = [
         'PREFIX' => '',
@@ -1167,21 +1167,27 @@ abstract class ModulBase extends \IPSModule
         // 1) Prefix "Z2M_" entfernen
         $withoutPrefix = preg_replace('/^Z2M_/', '', $oldIdent);
 
-        // 2) Vor jedem Großbuchstaben einen Unterstrich einfügen
+        // 2) Prüfe ob der Identifier dem MQTT-Pattern oder STATE_PATTERN entspricht
+        foreach ([self::STATE_PATTERN['MQTT'], self::STATE_PATTERN['SYMCON']] as $pattern) {
+            if (preg_match($pattern, $withoutPrefix)) {
+                // Spezielles Handling für State-Pattern
+                $result = preg_replace('/([LR])([0-9]+)$/', '_$1$2', $withoutPrefix);
+                return strtolower($result);
+            }
+        }
+
+        // 3) Vor jedem Großbuchstaben einen Unterstrich einfügen
         //    Bsp: "ColorTemp" -> "_Color_Temp"
         //    Bsp: "BrightnessABC" -> "_Brightness_A_B_C"
         $withUnderscore = preg_replace('/([A-Z])/', '_$1', $withoutPrefix);
 
-        // 2a) Bei Statel1-9 oder BrightnessL1-9 einen Unterstrich einfügen vor l1-9
-        $withUnderscore = preg_replace('/(Brightness|State)(L[1-9]|l[1-9])/m', '$1_$2', $withUnderscore);
-
-        // 3) Falls jetzt am Anfang ein "_" ist, entfernen
+        // 4) Falls jetzt am Anfang ein "_" ist, entfernen
         $withUnderscore = ltrim($withUnderscore, '_');
 
-        // 4) Mehrere aufeinanderfolgende Unterstriche auf einen reduzieren
+        // 5) Mehrere aufeinanderfolgende Unterstriche auf einen reduzieren
         $withUnderscore = preg_replace('/_+/', '_', $withUnderscore);
 
-        // 5) Jetzt alles in kleingeschrieben
+        // 6) Jetzt alles in kleingeschrieben
         $snakeCase = strtolower($withUnderscore);
 
         return $snakeCase;
