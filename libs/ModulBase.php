@@ -148,6 +148,50 @@ abstract class ModulBase extends \IPSModule
         'dB/m'
     ];
 
+        /**
+     * Liste bekannter Abkürzungen, die bei der Konvertierung von Identifikatoren
+     * in snake_case beibehalten werden sollen.
+     *
+     * Diese Konstante wird im convertToSnakeCase() verwendet, um sicherzustellen,
+     * dass gängige Abkürzungen (z.B. CO2, LED) korrekt formatiert werden.
+     *
+     * @var string[]
+     */
+    private const KNOWN_ABBREVIATIONS = [
+        'VOC',
+        'CO2',
+        'PM25',
+        'LED',
+        'RGB',
+        'HSV',
+        'HSL',
+        'XY',
+        'MV',
+        'KV',
+        'MA',
+        'KW',
+        'MW',
+        'GW',
+        'kWH',
+        'MWH',
+        'GWH',
+        'KHZ',
+        'MHZ',
+        'GHZ',
+        'PH',
+        'KPA',
+        'MPA',
+        'GPA',
+        'MS',
+        'MF',
+        'NF',
+        'PF',
+        'MH',
+        'DB',
+        'DBA',
+        'DBC'
+    ];
+
     /**
      * @var string $ExtensionTopic
      * Muss überschrieben werden.
@@ -1173,18 +1217,26 @@ abstract class ModulBase extends \IPSModule
             }
         }
 
-        // 3) Vor jedem Großbuchstaben einen Unterstrich einfügen
+        // 3) Prüfen ob der Identifier eine bekannte Abkürzung enthält
+        foreach (self::KNOWN_ABBREVIATIONS as $abbr) {
+            if (stripos($withoutPrefix, $abbr) !== false) {
+                // Ersetze die Abkürzung durch ihre Kleinschreibung
+                $withoutPrefix = str_ireplace($abbr, strtolower($abbr), $withoutPrefix);
+            }
+        }
+
+        // 4) Vor jedem Großbuchstaben einen Unterstrich einfügen
         //    Bsp: "ColorTemp" -> "_Color_Temp"
         //    Bsp: "BrightnessABC" -> "_Brightness_A_B_C"
         $withUnderscore = preg_replace('/([A-Z])/', '_$1', $withoutPrefix);
 
-        // 4) Falls jetzt am Anfang ein "_" ist, entfernen
+        // 5) Falls jetzt am Anfang ein "_" ist, entfernen
         $withUnderscore = ltrim($withUnderscore, '_');
 
-        // 5) Mehrere aufeinanderfolgende Unterstriche auf einen reduzieren
+        // 6) Mehrere aufeinanderfolgende Unterstriche auf einen reduzieren
         $withUnderscore = preg_replace('/_+/', '_', $withUnderscore);
 
-        // 6) Jetzt alles in kleingeschrieben
+        // 7) Jetzt alles in kleingeschrieben
         $snakeCase = strtolower($withUnderscore);
 
         return $snakeCase;
