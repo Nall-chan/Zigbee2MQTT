@@ -51,7 +51,7 @@ abstract class ModulBase extends \IPSModule
             'COMBINED'  => '_(?:left|right)_[0-9]+'
         ],
         'MQTT'   => '/^state(?:_[a-z0-9]+)?$/i',  // Für MQTT-Payload
-        'SYMCON' => '/^[Ss]tate(?:(?:[Ll][0-9]+)|(?:[Ll]eft|[Rr]ight)(?:[Ll][0-9]+)?)?$/'
+        'SYMCON' => '/^[Ss]tate(?:_?(?:[Ll][0-9]+)|(?:[Ll]eft|[Rr]ight)(?:[Ll][0-9]+)?)?$/'
     ];
 
     /**
