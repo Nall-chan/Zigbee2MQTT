@@ -36,11 +36,11 @@ abstract class ModulBase extends \IPSModule
      *      KEY:
      *      - BASE     'state' (Basisbezeichner)
      *      - SUFFIX:   Zusatzbezeichner
-     *          - NUMERIC:   _1, _2, etc.
-     *          - DIRECTION: _left, _right
-     *          - COMBINED:  _left_1, _right_2
+     *          - NUMERIC:   statel1, state_l1, StateL1, state_L1
+     *          - DIRECTION: state_left, state_right, State_Left
+     *          - COMBINED:  state_left_l1, State_Right_L1
      *      - MQTT:    Validiert MQTT-Payload (state, state_l1)
-     *      - SYMCON:  Validiert Symcon-Variablen (state, stateL1)
+     *      - SYMCON:  Validiert Symcon-Variablen (state, State, statel1, state_l1, State_Left, state_right_l1)
      */
     private const STATE_PATTERN = [
         'PREFIX' => '',
@@ -51,7 +51,7 @@ abstract class ModulBase extends \IPSModule
             'COMBINED'  => '_(?:left|right)_[0-9]+'
         ],
         'MQTT'   => '/^state(?:_[a-z0-9]+)?$/i',  // Für MQTT-Payload
-        'SYMCON' => '/^[Ss]tate(?:(?:[Ll][0-9]+)|(?:[Ll]eft|[Rr]ight)(?:[Ll][0-9]+)?)?$/'
+        'SYMCON' => '/^[Ss]tate(?:_?(?:[Ll][0-9]+)|(?:[Ll]eft|[Rr]ight)(?:[Ll][0-9]+)?)?$/'
     ];
 
     /**
@@ -63,7 +63,6 @@ abstract class ModulBase extends \IPSModule
         '°F',
         'K',
         'mg/L',
-        'µg/m³',
         'g/m³',
         'mV',
         'V',
@@ -85,9 +84,6 @@ abstract class ModulBase extends \IPSModule
         'MHz',
         'GHz',
         'cd',
-        'ppm',
-        'ppb',
-        'ppt',
         'pH',
         'm',
         'cm',
@@ -148,7 +144,8 @@ abstract class ModulBase extends \IPSModule
         '%',
         'dB',
         'dBA',
-        'dBC'
+        'dBC',
+        'dB/m'
     ];
 
     /**
@@ -198,7 +195,8 @@ abstract class ModulBase extends \IPSModule
         ['group_type' => '', 'feature' => 'window_open', 'profile' => '~Window', 'variableType' => VARIABLETYPE_BOOLEAN],
         ['group_type' => '', 'feature' => 'valve', 'profile' => '~Valve', 'variableType' => VARIABLETYPE_INTEGER],
         ['group_type' => '', 'feature' => 'window_detection', 'profile' =>'~Window', 'variableType' => VARIABLETYPE_BOOLEAN],
-        ['group_type' => 'light', 'feature' => 'color', 'profile' => '~HexColor', 'variableType' => VARIABLETYPE_INTEGER]
+        ['group_type' => 'light', 'feature' => 'color', 'profile' => '~HexColor', 'variableType' => VARIABLETYPE_INTEGER],
+        ['group_type' => 'climate', 'feature' => 'occupied_heating_setpoint', 'profile' => '~Temperature.Room', 'variableType' => VARIABLETYPE_FLOAT]
     ];
 
     /**
@@ -226,6 +224,8 @@ abstract class ModulBase extends \IPSModule
         'update'             => ['type' => VARIABLETYPE_STRING, 'name' => 'Firmware Update Status', 'profile' => '', 'enableAction' => false],
         'device_temperature' => ['type' => VARIABLETYPE_FLOAT, 'name' => 'Device Temperature', 'profile' => '~Temperature', 'enableAction' => false],
         'brightness'         => ['type' => VARIABLETYPE_INTEGER, 'ident' => 'brightness', 'profile' => '~Intensity.100', 'scale' => 1, 'enableAction' => true],
+        'brightness_l1'      => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l1', 'profile' => '~Intensity.100', 'scale' => 1, 'enableAction' => true],
+        'brightness_l2'      => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l2', 'profile' => '~Intensity.100', 'scale' => 1, 'enableAction' => true],
         'voltage'            => ['type' => VARIABLETYPE_FLOAT, 'ident' => 'voltage', 'profile' => '~Volt', 'enableAction' => false],
     ];
 
@@ -422,12 +422,17 @@ abstract class ModulBase extends \IPSModule
         }
         switch ($Message) {
             case FM_CONNECT:
+                if ($this->GetStatus() == IS_ACTIVE) {
+                    $this->SetBuffer(self::BUFFER_MQTT_SUSPENDED, 'false');
+                }
                 if (($this->HasActiveParent()) && (IPS_GetKernelRunlevel() == KR_READY)) {
+                    $this->LogMessage('FM_CONNECT', KL_NOTIFY);
                     $this->checkAndCreateJsonFile();
                 }
                 break;
             case IM_CHANGESTATUS:
                 if ($Data[0] == IS_ACTIVE) {
+                    $this->LogMessage('IM_CHANGESTATUS', KL_NOTIFY);
                     $this->SetBuffer(self::BUFFER_MQTT_SUSPENDED, 'false');
                     // Nur ein UpdateDeviceInfo wenn Parent aktiv und System bereit
                     if (($this->HasActiveParent()) && (IPS_GetKernelRunlevel() == KR_READY)) {
@@ -1159,18 +1164,27 @@ abstract class ModulBase extends \IPSModule
         // 1) Prefix "Z2M_" entfernen
         $withoutPrefix = preg_replace('/^Z2M_/', '', $oldIdent);
 
-        // 2) Vor jedem Großbuchstaben einen Unterstrich einfügen
+        // 2) Prüfe ob der Identifier dem MQTT-Pattern oder STATE_PATTERN entspricht
+        foreach ([self::STATE_PATTERN['MQTT'], self::STATE_PATTERN['SYMCON']] as $pattern) {
+            if (preg_match($pattern, $withoutPrefix)) {
+                // Spezielles Handling für State-Pattern
+                $result = preg_replace('/^(state)([LlRr][0-9]+)$/i', '$1_$2', $withoutPrefix);
+                return strtolower($result);
+            }
+        }
+
+        // 3) Vor jedem Großbuchstaben einen Unterstrich einfügen
         //    Bsp: "ColorTemp" -> "_Color_Temp"
         //    Bsp: "BrightnessABC" -> "_Brightness_A_B_C"
         $withUnderscore = preg_replace('/([A-Z])/', '_$1', $withoutPrefix);
 
-        // 3) Falls jetzt am Anfang ein "_" ist, entfernen
+        // 4) Falls jetzt am Anfang ein "_" ist, entfernen
         $withUnderscore = ltrim($withUnderscore, '_');
 
-        // 4) Mehrere aufeinanderfolgende Unterstriche auf einen reduzieren
+        // 5) Mehrere aufeinanderfolgende Unterstriche auf einen reduzieren
         $withUnderscore = preg_replace('/_+/', '_', $withUnderscore);
 
-        // 5) Jetzt alles in kleingeschrieben
+        // 6) Jetzt alles in kleingeschrieben
         $snakeCase = strtolower($withUnderscore);
 
         return $snakeCase;
@@ -3628,24 +3642,5 @@ abstract class ModulBase extends \IPSModule
 
         $this->SendDebug(__FUNCTION__, 'State mapping profile created for: ' . $ProfileName, 0);
         return $ProfileName;
-    }
-
-    /**
-     * buildStatePattern
-     *
-     * Erzeugt ein Zustandsmuster (State Pattern) basierend auf dem angegebenen Typ.
-     *
-     * Diese Methode gibt ein reguläres Ausdrucksmuster zurück, das verwendet werden kann,
-     * um Zustandsinformationen (State) zu verarbeiten. Der Typ des Musters kann entweder
-     * 'MQTT' oder 'SYMCON' sein, um unterschiedliche Anwendungsfälle abzudecken.
-     *
-     * @param string $type Der Typ des Musters, das erzeugt werden soll. Mögliche Werte sind 'MQTT' und 'SYMCON'.
-     *                     Standardwert ist 'MQTT'.
-     *
-     * @return string Das reguläre Ausdrucksmuster für den angegebenen Typ.
-     */
-    private static function buildStatePattern(string $type = 'MQTT'): string
-    {
-        return self::STATE_PATTERN[$type];
     }
 }

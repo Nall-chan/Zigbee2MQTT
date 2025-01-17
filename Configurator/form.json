@@ -150,6 +150,64 @@
             }
         },
         {
+            "type": "PopupAlert",
+            "name": "WrongConnectedInstancesPopup",
+            "visible": false,
+            "popup": {
+                "closeCaption": "Close",
+                "buttons": [
+                    {
+                        "caption": "Fix it!",
+                        "onClick": [
+                            "$SplitterId = IPS_GetInstance($id)['ConnectionID'];",
+                            "foreach ($WrongConnectedInstances as $Instance){",
+                            "   @IPS_DisconnectInstance($Instance['instanceId']);",
+                            "   @IPS_ConnectInstance($Instance['instanceId'], $SplitterId);",
+                            "}",
+                            "IPS_RequestAction($id, 'ReloadForm', true);"
+                        ]
+                    }
+                ],
+                "items": [
+                    {
+                        "name": "ErrorTitle",
+                        "type": "Label",
+                        "bold": true,
+                        "color": 16711680,
+                        "caption": "Devices that the configurator has found but are connected to the wrong MQTT splitter in Symcon."
+                    },
+                    {
+                        "type": "List",
+                        "name": "WrongConnectedInstances",
+                        "add": false,
+                        "delete": false,
+                        "rowCount": 0,
+                        "sort": {
+                            "column": "name",
+                            "direction": "ascending"
+                        },
+                        "columns": [
+                            {
+                                "caption": "Topic",
+                                "name": "topic",
+                                "width": "300px"
+                            },
+                            {
+                                "caption": "Name",
+                                "name": "name",
+                                "width": "auto"
+                            },
+                            {
+                                "caption": "InstanceId",
+                                "name": "instanceIdStr",
+                                "width": "75px"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
             "type": "Label",
             "caption": "Donations"
         },

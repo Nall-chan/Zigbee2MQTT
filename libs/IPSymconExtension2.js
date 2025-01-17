@@ -1,6 +1,6 @@
 /*
  IPSymconExtension
- Version: 5.01
+ Version: 5.02
 */
 
 class MyLogger {
@@ -89,16 +89,16 @@ class IPSymconExtension {
                     for (const device of group.zh.members) {
                         listEntry.devices.push(device.deviceIeeeAddress);
                     }
-                    message.list.push(listEntry);
+                    if (typeof listEntry.friendly_name !== "undefined") {
+                        message.list.push(listEntry);
+                    }
                 }
             }
             if (data.topic == `${this.baseTopic}/${this.symconExtensionTopic}/lists/request/getDevices`) {
                 this.logger.info('Symcon: lists/request/getDevices');
                 message.list = [];
                 for (const device of this.zigbee.devicesIterator()) {
-                    //if (device.zh.type !== 'Coordinator') {
-                        message.list = message.list.concat(this.#createDevicePayload(device, false));
-                    //}
+                    message.list = message.list.concat(this.#createDevicePayload(device, false));
                 }
             }
             message.transaction = transaction;
