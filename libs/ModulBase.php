@@ -84,8 +84,6 @@ abstract class ModulBase extends \IPSModule
         'MHz',
         'GHz',
         'cd',
-        'ppb',
-        'ppt',
         'pH',
         'm',
         'cm',
