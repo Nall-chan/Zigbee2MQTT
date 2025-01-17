@@ -1167,7 +1167,7 @@ abstract class ModulBase extends \IPSModule
         foreach ([self::STATE_PATTERN['MQTT'], self::STATE_PATTERN['SYMCON']] as $pattern) {
             if (preg_match($pattern, $withoutPrefix)) {
                 // Spezielles Handling für State-Pattern
-                $result = preg_replace('/([LR])([0-9]+)$/', '_$1$2', $withoutPrefix);
+                $result = preg_replace('/^(state)([LlRr][0-9]+)$/i', '$1_$2', $withoutPrefix);
                 return strtolower($result);
             }
         }
