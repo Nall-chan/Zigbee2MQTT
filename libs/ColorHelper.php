@@ -278,34 +278,32 @@ trait ColorHelper
      * @param  bool $toDevice `TRUE` wenn Richtung Gerät gerechnet wird, `FALSE` in Richtung Prozent.
      * @return int Helligkeit
      */
-    protected function normalizeValueToRange(int $value, bool $toDevice = true): int
+    protected function normalizeValueToRange(int|float $value, bool $toDevice = true): int
     {
         $oldMin = $this->getBrightnessValue('min');
         $oldMax = $this->getBrightnessValue('max');
 
         if ($toDevice) {
-            // Prozent -> Gerätewert
             $this->SendDebug(__FUNCTION__, sprintf(
-                'Converting %d%% to device value (range %d-%d)',
+                'Converting %.2f%% to device value (range %d-%d)',
                 $value,
                 $oldMin,
                 $oldMax
             ), 0);
 
             $value = max(0, min(100, $value));
-            // Konvertierung von Prozent (0-100) in Gerätewert (oldMin-oldMax)
             $result = (int) (($value * ($oldMax - $oldMin) / 100) + $oldMin);
         } else {
-            // Gerätewert -> Prozent
             $this->SendDebug(__FUNCTION__, sprintf(
-                'Converting device value %d (range %d-%d) to percent',
+                'Converting device value %.2f (range %d-%d) to percent',
                 $value,
                 $oldMin,
                 $oldMax
             ), 0);
 
             $value = max($oldMin, min($oldMax, $value));
-            $result = intdiv(($value - $oldMin) * 100, $oldMax - $oldMin);
+            // Float zu Integer casten vor intdiv
+            $result = intdiv((int) ($value - $oldMin) * 100, $oldMax - $oldMin);
         }
 
         $this->SendDebug(__FUNCTION__, sprintf(
