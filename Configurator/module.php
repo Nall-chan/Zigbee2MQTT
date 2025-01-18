@@ -231,17 +231,16 @@ class Zigbee2MQTTConfigurator extends IPSModule
             return json_encode($Form);
         }
         // Devices
+        $CoordinatorFound = false;
         $valuesDevices = [];
         $valueId = 1;
-        /** @todo Hier eine Liste mitführen, welche Instanzen der IEEE und Topic Prüfung am falschen Splitter hängen
-         * Am Ende Einträge zählen und Popup mit Liste was repariert werden muss
-         * Mit Button zum reparieren der Verbindung*/
+
         foreach ($Devices as $device) { // Geräte von Z2M durchgehen
             $value = self::$DeviceValues; // Array leeren
             $Location = explode('/', $device['friendly_name']);
             $Name = array_pop($Location);
             /** Coordinator Sonderbehandlung */
-            if ($device['type'] == 'Coordinator') { //Coordinator Eintrag wird für die Bridge benutzt
+            if (($device['type'] == 'Coordinator') && !$CoordinatorFound) { //Coordinator Eintrag wird für die Bridge benutzt
                 if (count($IPSBridgeIDs)) {
                     $BridgeId = array_key_first($IPSBridgeIDs);
                     unset($IPSBridgeIDs[$BridgeId]);
@@ -270,6 +269,7 @@ class Zigbee2MQTTConfigurator extends IPSModule
                             self::MQTT_BASE_TOPIC    => $BaseTopic
                         ]];
                 array_push($valuesDevices, $value);
+                $CoordinatorFound = true;
                 continue;
             }
             // erst nach IEEE suchen
@@ -333,7 +333,7 @@ class Zigbee2MQTTConfigurator extends IPSModule
             array_push($valuesDevices, $value);
         }
         /** Coordinator Sonderbehandlung */
-        foreach ($IPSBridgeIDs as $instanceID => $Topic) { // Alle restlichen Bridge Instanten mit gleichem BaseTopic anzeigen
+        foreach ($IPSBridgeIDs as $instanceID => $Topic) { // Alle restlichen Bridge Instanzen mit gleichem BaseTopic anzeigen
             $valuesDevices[] = [
                 'name'               => IPS_GetName($instanceID),
                 'id'                 => $valueId++,
