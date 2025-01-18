@@ -245,7 +245,7 @@ trait ColorHelper
             $miredValue = intdiv(1000000, $value);
             $this->SendDebug(__FUNCTION__, 'Kelvin zu Mired konvertiert: ' . $miredValue, 0);
         } else {
-            $miredValue = (int) $value;
+            $miredValue = (int)$value;
             $this->SendDebug(__FUNCTION__, 'Wert unter 1000, Keine Konvertierung: ' . $miredValue, 0);
         }
         return $miredValue;
@@ -292,7 +292,7 @@ trait ColorHelper
             ), 0);
 
             $value = max(0, min(100, $value));
-            $result = (int) (($value * ($oldMax - $oldMin) / 100) + $oldMin);
+            $result = (int)(($value * ($oldMax - $oldMin) / 100) + $oldMin);
         } else {
             $this->SendDebug(__FUNCTION__, sprintf(
                 'Converting device value %.2f (range %d-%d) to percent',
@@ -336,7 +336,7 @@ trait ColorHelper
             'max' => 254
         ];
 
-        $value = isset($config[$type]) ? (int) $config[$type] : $defaults[$type];
+        $value = isset($config[$type]) ? (int)$config[$type] : $defaults[$type];
         $this->SendDebug(__FUNCTION__, sprintf(
             'Brightness %s-Wert: %d (%s)',
             $type,
