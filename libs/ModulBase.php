@@ -742,6 +742,42 @@ abstract class ModulBase extends \IPSModule
     }
 
     /**
+     * UIExportDebugData
+     *
+     * @return string
+     */
+    public function UIExportDebugData(): string
+    {
+        $DebugData = [];
+        $DebugData['Instance'] = [IPS_GetObject($this->InstanceID) + IPS_GetInstance($this->InstanceID)];
+        if (IPS_GetInstance($this->InstanceID)['ModuleInfo']['ModuleID'] == self::GUID_MODULE_DEVICE) {
+            $DebugData['Model'] = $this->ReadAttributeString('Model');
+            $ModelUrl = str_replace([' ', '/'], '_', $DebugData['Model']);
+            $DebugData['ModelUrl'] = 'https://www.zigbee2mqtt.io/devices/' . rawurlencode($ModelUrl) . '.html';
+        }
+        $DebugData['Config'] = json_decode(IPS_GetConfiguration($this->InstanceID), true);
+        $jsonFile = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY . DIRECTORY_SEPARATOR . $this->InstanceID . '.json';
+
+        // Prüfe ob JSON existiert
+        if (file_exists($jsonFile)) {
+            $DebugData['Exposes'] = json_decode(file_get_contents($jsonFile), true);
+        } else {
+            $DebugData['Exposes'] = [];
+        }
+        $DebugData['LastPayload'] = $this->lastPayload;
+        $DebugData['Childs'] = [];
+        foreach (IPS_GetChildrenIDs($this->InstanceID) as $childID) {
+            $obj = IPS_GetObject($childID);
+            if ($obj['ObjectType'] !== OBJECTTYPE_VARIABLE) {
+                continue;
+            }
+            $DebugData['Childs'][$childID] = [IPS_GetObject($childID) + IPS_GetVariable($childID)];
+        }
+
+        return 'data:application/json;base64,' . base64_encode(json_encode($DebugData, JSON_PRETTY_PRINT));
+    }
+
+    /**
      * Translate
      *
      * Überschreibt Translate um die Übersetzung aus der globalen json zu nutzen.
@@ -1012,7 +1048,7 @@ abstract class ModulBase extends \IPSModule
     {
         // Zeige das eingehende Payload im Debug
         $this->SendDebug(__FUNCTION__ . ' :: Line ' . __LINE__ . ' :: Eingehendes Payload: ', json_encode($Payload), 0);
-
+        $this->lastPayload = $Payload;
         foreach ($Payload as $key => $value) {
             // Prüfe, ob die Variable existiert
             $objectID = @$this->GetIDForIdent($key);
@@ -1077,7 +1113,7 @@ abstract class ModulBase extends \IPSModule
                                 'min' => $feature['value_min'] ?? 0,
                                 'max' => $feature['value_max'] ?? 255
                             ];
-                            $this->$brightnessConfig = $brightnessConfig;
+                            $this->brightnessConfig = $brightnessConfig;
                             $this->SendDebug(__FUNCTION__, 'Brightness Config: ' . json_encode($brightnessConfig), 0);
                         }
                     }

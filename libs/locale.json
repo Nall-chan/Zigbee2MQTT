@@ -9,6 +9,7 @@
             "Get Device Infos": "Geräteinformationen abrufen",
             "Change Group Id": "Gruppen-ID ändern",
             "Please use this function carefully!\r\nAn incorrect GroupId can lead to malfunctions.": "Bitte benutzen Sie diese Funktion mit Aufmerksamkeit!\r\nEine falsche Gruppen-ID kann zu Fehlfunktionen führen.",
+            "Link to device information: ": "Link zur Geräteinformation: ",
             "Get Group Infos": "Gruppeninformationen abrufen",
             "Group not found. Check topic.": "Gruppe nicht gefunden. Topic prüfen.",
             "Group Id": "Gruppen ID",
