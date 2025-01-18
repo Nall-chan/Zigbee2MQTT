@@ -16,10 +16,9 @@ Features 5.x:
     🟨 OTA Update Variablen zerlegen (optional?).
     🟨 OTA Updates über Bridge Instanz prüfen, darstellen, anbieten?
     🟨 Oder eigene OTA Instanz?
-    🟨 Geräte und Gruppen Instanzen erhalten einen Support ExpansionPanel:
-        - Fehlende Übersetzungen anzeigen (Buffer).
-        - Mit der Möglichkeit die JSON zu löschen oder anzeigen.
-        - Download eines ZIP Archives mit dem letzten Payload, der expose JSON und der vorhandenen Variablen inkl. Profile der Instanz.
+    ✅ Geräte und Gruppen Instanzen erhalten einen Support ExpansionPanel:
+        🟨 Fehlende Übersetzungen anzeigen (Buffer).
+        ✅ Download eines JSON Archives mit dem letzten Payload, der expose JSON und der vorhandenen Variablen inkl. Profile der Instanz.
     🟨 Testfunktionen ergänzen das expose JSON und Payloads mit phpunit getestet werden können.
     🟩 Diverse Code Optimierungen laut @Burki24
     
