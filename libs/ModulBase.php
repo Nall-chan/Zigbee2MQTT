@@ -148,7 +148,7 @@ abstract class ModulBase extends \IPSModule
         'dB/m'
     ];
 
-        /**
+    /**
      * Liste bekannter Abkürzungen, die bei der Konvertierung von Identifikatoren
      * in snake_case beibehalten werden sollen.
      *
