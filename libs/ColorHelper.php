@@ -336,7 +336,7 @@ trait ColorHelper
             'max' => 254
         ];
 
-        $value = isset($config[$type]) ? (int )$config[$type] : $defaults[$type];
+        $value = isset($config[$type]) ? (int) $config[$type] : $defaults[$type];
         $this->SendDebug(__FUNCTION__, sprintf(
             'Brightness %s-Wert: %d (%s)',
             $type,
