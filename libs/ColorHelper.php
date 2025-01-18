@@ -245,7 +245,7 @@ trait ColorHelper
             $miredValue = intdiv(1000000, $value);
             $this->SendDebug(__FUNCTION__, 'Kelvin zu Mired konvertiert: ' . $miredValue, 0);
         } else {
-            $miredValue = (int)$value;
+            $miredValue = (int) $value;
             $this->SendDebug(__FUNCTION__, 'Wert unter 1000, Keine Konvertierung: ' . $miredValue, 0);
         }
         return $miredValue;
