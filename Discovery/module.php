@@ -173,7 +173,7 @@ class Zigbee2MQTTDiscovery extends IPSModule
                         $value['instanceID'] = $instanceID;
 
                     } else {
-                        $value['name'] = $Topic;
+                        $value['name'] = $Topic . ' ' . $this->Translate('Configurator');
                         $value['instanceID'] = 0;
                     }
                     $value['topic'] = $Topic;
