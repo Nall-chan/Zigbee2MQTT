@@ -13,6 +13,7 @@
             "Password": "Passwort",
             "Save": "Speichern",
             "Please wait": "Bitte warte",
+            "Configurator": "Konfigurator",
             "Could not connect to broker!": "Verbindung zum Broker konnte\r\nnicht hergestellt werden!",
             "Transaction Data is locked": "Transaktionen Daten sind gesperrt"
         }
