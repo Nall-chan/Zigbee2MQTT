@@ -86,6 +86,15 @@ Weitere Schritte zur Ersteinrichtung sind unter dem [Zigbee2MQTT-Discovery](Disc
 - Diese Änderung betrifft nur User welche mit Scripten auf Variablen per Ident (z.B. Z2M_Brightness) und nicht per ObjektID (z.B. 12345) zugreifen.
 - Die Variablen selbst bleiben dabei erhalten, so das sich hier keine ObjektIDs ändern, und entsprechend auch keine Änderungen an Ereignissen, Links, Automationen etc... ergeben.  
 
+#### geänderte Variablentypen <!-- omit in toc -->  
+
+Folgende Liste enthält alle Variablen wo zuvor eine Variable vom falschen Typ genutzt wurde.
+Diese werden nicht migriert, sondern bleiben erhalten.
+Es werden die neuen Variablen zusätzlich angelegt, so das hier anschließend manuell z.B. Links oder Ereignisse, angepasst werden müssen.
+
+| Name                 | Ident ALT           | Ident Neu              |
+| :------------------- | :------------------ | :--------------------- |
+| Aktion Übergangszeit | Z2M_ActionTransTime | action_transition_time |
 
 ### 3. Zigbee2MQTT Version <!-- omit in toc -->
 

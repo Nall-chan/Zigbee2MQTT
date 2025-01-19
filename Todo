@@ -21,4 +21,7 @@ Features 5.x:
         ✅ Download eines JSON Archives mit dem letzten Payload, der expose JSON und der vorhandenen Variablen inkl. Profile der Instanz.
     🟨 Testfunktionen ergänzen das expose JSON und Payloads mit phpunit getestet werden können.
     🟩 Diverse Code Optimierungen laut @Burki24
+    🟨 Instanz sollte sich alle erstellen Profile merken, und beim löschen aufräumen
+        Problem -> InstanzBuffer ist dort nicht mehr verfügbar.
+        Sind die Variablen zu dem Zeitpunkt schon gelöscht? Wenn nein, dann diese durchgehen?
     
