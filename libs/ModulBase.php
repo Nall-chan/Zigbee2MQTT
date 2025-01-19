@@ -281,14 +281,14 @@ abstract class ModulBase extends \IPSModule
      *   - enableAction: bool Aktionen erlaubt (true/false)
      */
     protected static $specialVariables = [
-        'last_seen'          => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Last Seen', 'profile' => '~UnixTimestamp', 'scale' => 0.001, 'enableAction' => false],
-        'color_mode'         => ['type' => VARIABLETYPE_STRING, 'name' => 'Color Mode', 'profile' => '', 'enableAction' => false],
-        'update'             => ['type' => VARIABLETYPE_STRING, 'name' => 'Firmware Update Status', 'profile' => '', 'enableAction' => false],
-        'device_temperature' => ['type' => VARIABLETYPE_FLOAT, 'name' => 'Device Temperature', 'profile' => '~Temperature', 'enableAction' => false],
-        'brightness'         => ['type' => VARIABLETYPE_INTEGER, 'ident' => 'brightness', 'profile' => '~Intensity.100', 'scale' => 1, 'enableAction' => true],
-        'brightness_l1'      => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l1', 'profile' => '~Intensity.100', 'scale' => 1, 'enableAction' => true],
-        'brightness_l2'      => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l2', 'profile' => '~Intensity.100', 'scale' => 1, 'enableAction' => true],
-        'voltage'            => ['type' => VARIABLETYPE_FLOAT, 'ident' => 'voltage', 'profile' => '~Volt', 'enableAction' => false],
+        'last_seen'          => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Last Seen', 'profile' => '~UnixTimestamp', 'scale' => 0.001],
+        'color_mode'         => ['type' => VARIABLETYPE_STRING, 'name' => 'Color Mode', 'profile' => ''],
+        'update'             => ['type' => VARIABLETYPE_STRING, 'name' => 'Firmware Update Status', 'profile' => ''],
+        'device_temperature' => ['type' => VARIABLETYPE_FLOAT, 'name' => 'Device Temperature', 'profile' => '~Temperature'],
+        'brightness'         => ['type' => VARIABLETYPE_INTEGER, 'ident' => 'brightness', 'profile' => '~Intensity.100', 'scale' => 1],
+        'brightness_l1'      => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l1', 'profile' => '~Intensity.100', 'scale' => 1],
+        'brightness_l2'      => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l2', 'profile' => '~Intensity.100', 'scale' => 1],
+        'voltage'            => ['type' => VARIABLETYPE_FLOAT, 'ident' => 'voltage', 'profile' => '~Volt'],
         // Folgende Variablen waren früher ein anderer Typ, als jetzt automatisch erkannt wird.
         // Aus gründen der Kompatibilität werden diese zwangsweise auf den Typ festgelegt.
         // @todo
@@ -296,9 +296,9 @@ abstract class ModulBase extends \IPSModule
         // Ebenso wird bei nicht gesetzten enableAction nicht access aus dem exposes genutzt.
         // Dabei ist calibration_time je nach Gerät mal bedienbar und mal nicht. Jetzt immer nicht bedienbar
         'calibration_time'   => ['type' => VARIABLETYPE_FLOAT, 'profile' => 'Z2M.calibration_time'],
-        'countdown'          => ['type' => VARIABLETYPE_INTEGER, 'profile' => 'Z2M.countdown_0_43200', 'enableAction' => true],
-        'countdown_l1'       => ['type' => VARIABLETYPE_INTEGER, 'profile' => 'Z2M.countdown_0_43200', 'enableAction' => true],
-        'countdown_l2'       => ['type' => VARIABLETYPE_INTEGER, 'profile' => 'Z2M.countdown_0_43200', 'enableAction' => true],
+        'countdown'          => ['type' => VARIABLETYPE_INTEGER, 'profile' => 'Z2M.countdown_0_43200'],
+        'countdown_l1'       => ['type' => VARIABLETYPE_INTEGER, 'profile' => 'Z2M.countdown_0_43200'],
+        'countdown_l2'       => ['type' => VARIABLETYPE_INTEGER, 'profile' => 'Z2M.countdown_0_43200'],
     ];
 
     /**
@@ -3369,18 +3369,16 @@ abstract class ModulBase extends \IPSModule
                     $this->SendDebug(__FUNCTION__, 'Unsupported state dataType: ' . $stateConfig['dataType'], 0);
                     return;
             }
+            $ident = $stateConfig['ident'];
+            $this->enableActionIfWritable($feature, $ident);
 
-            if (isset($stateConfig['enableAction']) && $stateConfig['enableAction']) {
-                $this->EnableAction($stateConfig['ident']);
-                $this->SendDebug(__FUNCTION__, 'Enabled action for ' . $featureId . ' (writable state)', 0);
+            return;
+
+            // Überprüfung auf spezielle Fälle
+            if (isset(self::$specialVariables[$feature['property']])) {
+                $this->registerSpecialVariable($feature);
+                return;
             }
-            return;
-        }
-
-        // Überprüfung auf spezielle Fälle
-        if (isset(self::$specialVariables[$feature['property']])) {
-            $this->registerSpecialVariable($feature);
-            return;
         }
 
         // Setze den Typ auf den übergebenen Expose-Typ, falls vorhanden
@@ -3458,10 +3456,8 @@ abstract class ModulBase extends \IPSModule
                 return;
         }
 
-        if (isset($feature['access']) && ($feature['access'] & 0b010) != 0) {
-            $this->EnableAction($ident);
-            $this->SendDebug(__FUNCTION__, 'Set EnableAction for ident: ' . $ident . ' to: true', 0);
-        }
+        $this->enableActionIfWritable($feature, $ident);
+
         // Zusätzliche Registrierung der color_temp_kelvin Variable, wenn color_temp registriert wird
         if ($ident === 'color_temp') {
             $kelvinIdent = $ident . '_kelvin';
@@ -3671,6 +3667,8 @@ abstract class ModulBase extends \IPSModule
 
         if ($varDef['enableAction'] ?? false) {
             $this->EnableAction($ident);
+        } elseif (isset($this->features[$ident])) {
+            $this->enableActionIfWritable($ident);
         }
         return;
     }
@@ -3760,7 +3758,7 @@ abstract class ModulBase extends \IPSModule
                     'dataType'     => VARIABLETYPE_STRING,
                     'values'       => $feature['values'],
                     'profile'      => $profileName,
-                    'enableAction' => (isset($feature['access']) && ($feature['access'] & 0b010) != 0),
+                    'enableAction' => $this->enableActionIfWritable($feature, $featureId),
                     'ident'        => $featureId
                 ];
             }
@@ -3771,7 +3769,7 @@ abstract class ModulBase extends \IPSModule
                 'dataType'     => VARIABLETYPE_BOOLEAN,
                 'values'       => ['ON', 'OFF'],
                 'profile'      => '~Switch',
-                'enableAction' => (isset($feature['access']) && ($feature['access'] & 0b010) != 0),
+                'enableAction' => $this->enableActionIfWritable($feature, $featureId),
                 'ident'        => $featureId
             ];
         }
@@ -3839,5 +3837,36 @@ abstract class ModulBase extends \IPSModule
 
         $this->SendDebug(__FUNCTION__, 'State mapping profile created for: ' . $ProfileName, 0);
         return $ProfileName;
+    }
+
+    /**
+     * Prüft ob EnableAction für eine Variable aktiviert werden soll und aktiviert diese ggf.
+     * basierend auf dem access-Flag des Features
+     *
+     * @param array|string $featureOrIdent Feature-Array mit access-Flag oder Ident einer Variable
+     * @param string|null $ident Optional: Ident für EnableAction wenn Feature-Array übergeben wird
+     * @return bool true wenn EnableAction aktiviert wurde, sonst false
+     */
+    private function enableActionIfWritable($featureOrIdent, ?string $ident = null): bool
+    {
+        $shouldEnable = false;
+
+        // Wenn Feature-Array direkt übergeben wurde
+        if (is_array($featureOrIdent)) {
+            $shouldEnable = isset($featureOrIdent['access']) && ($featureOrIdent['access'] & 0b010) != 0;
+            $ident = $ident ?? $featureOrIdent['property'] ?? null;
+        } else {
+            // Bei String-Ident: Prüfe features
+            $ident = $featureOrIdent;
+            $shouldEnable = isset($this->features[$ident]['access']) &&
+                        ($this->features[$ident]['access'] & 0b010) != 0;
+        }
+
+        if ($shouldEnable && $ident !== null) {
+            $this->EnableAction($ident);
+            $this->SendDebug(__FUNCTION__, 'Set EnableAction for ident: ' . $ident . ' to: true', 0);
+        }
+
+        return $shouldEnable;
     }
 }
