@@ -3758,7 +3758,7 @@ abstract class ModulBase extends \IPSModule
                     'dataType'     => VARIABLETYPE_STRING,
                     'values'       => $feature['values'],
                     'profile'      => $profileName,
-                    'enableAction' => $this->enableActionIfWritable($feature),
+                    'enableAction' => $this->enableActionIfWritable($feature, $featureId),
                     'ident'        => $featureId
                 ];
             }
@@ -3769,7 +3769,7 @@ abstract class ModulBase extends \IPSModule
                 'dataType'     => VARIABLETYPE_BOOLEAN,
                 'values'       => ['ON', 'OFF'],
                 'profile'      => '~Switch',
-                'enableAction' => $this->enableActionIfWritable($feature),
+                'enableAction' => $this->enableActionIfWritable($feature, $featureId),
                 'ident'        => $featureId
             ];
         }
