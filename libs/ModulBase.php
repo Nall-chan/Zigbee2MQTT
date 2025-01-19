@@ -3846,10 +3846,26 @@ abstract class ModulBase extends \IPSModule
      * @param string $ident Identifikator der Variable
      * @return void
      */
-    private function enableActionIfWritable(string $ident): void {
-        if (isset($this->features[$ident]['access']) && ($this->features[$ident]['access'] & 0b010) != 0) {
-            $this->EnableAction($ident);
-            $this->SendDebug(__FUNCTION__, 'Set EnableAction for ident: ' . $ident . ' to: true', 0);
-        }
+/**
+ * Prüft und aktiviert EnableAction basierend auf Access-Flags
+ * @param string|array $featureOrIdent Feature-Array oder Ident-String
+ * @param string|null $ident Optional: Ident wenn Feature-Array als erster Parameter
+ */
+private function enableActionIfWritable($featureOrIdent, ?string $ident = null): void
+{
+    // Fall 1: Nur Ident wurde übergeben
+    if (is_string($featureOrIdent)) {
+        $ident = $featureOrIdent;
+        $feature = $this->features[$ident] ?? null;
     }
+    // Fall 2: Feature-Array + Ident wurden übergeben
+    else {
+        $feature = $featureOrIdent;
+    }
+
+    if (isset($feature['access']) && ($feature['access'] & 0b010) != 0) {
+        $this->EnableAction($ident);
+        $this->SendDebug(__FUNCTION__, 'Set EnableAction for ident: ' . $ident . ' to: true', 0);
+    }
+}
 }
