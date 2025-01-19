@@ -291,6 +291,10 @@ abstract class ModulBase extends \IPSModule
         'y_axis'             => ['type' => VARIABLETYPE_FLOAT, 'profile' => '', 'enableAction' => false],
         'z_axis'             => ['type' => VARIABLETYPE_FLOAT, 'profile' => '', 'enableAction' => false],
         'action_transaction' => ['type' => VARIABLETYPE_FLOAT, 'profile' => 'Z2M.action_transaction', 'enableAction' => false],
+        'calibration_time'   => ['type' => VARIABLETYPE_FLOAT, 'profile' => 'Z2M.calibration_time'],
+        'countdown'          => ['type' => VARIABLETYPE_INTEGER, 'profile' => 'Z2M.countdown_0_43200'],
+        'countdown_l1'       => ['type' => VARIABLETYPE_INTEGER, 'profile' => 'Z2M.countdown_0_43200'],
+        'countdown_l2'       => ['type' => VARIABLETYPE_INTEGER, 'profile' => 'Z2M.countdown_0_43200'],
     ];
 
     /**
@@ -712,7 +716,6 @@ abstract class ModulBase extends \IPSModule
             );
             $this->EnableAction('brightness');
         }
-
         // Flag für beendete Migration wieder setzen
         $this->BUFFER_MQTT_SUSPENDED = false;
         $this->BUFFER_PROCESSING_MIGRATION = false;
