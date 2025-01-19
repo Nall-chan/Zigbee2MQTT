@@ -3370,18 +3370,16 @@ abstract class ModulBase extends \IPSModule
                     return;
             }
 
-            if (isset($stateConfig['enableAction']) && $stateConfig['enableAction']) {
-                $this->EnableAction($stateConfig['ident']);
-                $this->SendDebug(__FUNCTION__, 'Enabled action for ' . $featureId . ' (writable state)', 0);
-            }
+            $this->enableActionIfWritable($feature, $featureId);
+
             return;
-        }
 
         // Überprüfung auf spezielle Fälle
         if (isset(self::$specialVariables[$feature['property']])) {
             $this->registerSpecialVariable($feature);
             return;
         }
+    }
 
         // Setze den Typ auf den übergebenen Expose-Typ, falls vorhanden
         if ($exposeType !== null) {
@@ -3458,10 +3456,8 @@ abstract class ModulBase extends \IPSModule
                 return;
         }
 
-        if (isset($feature['access']) && ($feature['access'] & 0b010) != 0) {
-            $this->EnableAction($ident);
-            $this->SendDebug(__FUNCTION__, 'Set EnableAction for ident: ' . $ident . ' to: true', 0);
-        }
+        $this->enableActionIfWritable($feature, $ident);
+
         // Zusätzliche Registrierung der color_temp_kelvin Variable, wenn color_temp registriert wird
         if ($ident === 'color_temp') {
             $kelvinIdent = $ident . '_kelvin';
@@ -3671,6 +3667,8 @@ abstract class ModulBase extends \IPSModule
 
         if ($varDef['enableAction'] ?? false) {
             $this->EnableAction($ident);
+        } elseif (isset($this->features[$ident])) {
+            $this->enableActionIfWritable($ident);
         }
         return;
     }
@@ -3760,7 +3758,7 @@ abstract class ModulBase extends \IPSModule
                     'dataType'     => VARIABLETYPE_STRING,
                     'values'       => $feature['values'],
                     'profile'      => $profileName,
-                    'enableAction' => (isset($feature['access']) && ($feature['access'] & 0b010) != 0),
+                    'enableAction' => $this->enableActionIfWritable($feature, $featureId),
                     'ident'        => $featureId
                 ];
             }
@@ -3771,7 +3769,7 @@ abstract class ModulBase extends \IPSModule
                 'dataType'     => VARIABLETYPE_BOOLEAN,
                 'values'       => ['ON', 'OFF'],
                 'profile'      => '~Switch',
-                'enableAction' => (isset($feature['access']) && ($feature['access'] & 0b010) != 0),
+                'enableAction' => $this->enableActionIfWritable($feature, $featureId),
                 'ident'        => $featureId
             ];
         }
@@ -3839,5 +3837,19 @@ abstract class ModulBase extends \IPSModule
 
         $this->SendDebug(__FUNCTION__, 'State mapping profile created for: ' . $ProfileName, 0);
         return $ProfileName;
+    }
+
+    /**
+     * Prüft und aktiviert EnableAction für eine Variable basierend auf den Access-Flags
+     *
+     * @param array $feature Feature mit access Flags
+     * @param string $ident Identifikator der Variable
+     * @return void
+     */
+    private function enableActionIfWritable(string $ident): void {
+        if (isset($this->features[$ident]['access']) && ($this->features[$ident]['access'] & 0b010) != 0) {
+            $this->EnableAction($ident);
+            $this->SendDebug(__FUNCTION__, 'Set EnableAction for ident: ' . $ident . ' to: true', 0);
+        }
     }
 }
