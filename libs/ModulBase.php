@@ -366,6 +366,7 @@ abstract class ModulBase extends \IPSModule
         $this->BUFFER_MQTT_SUSPENDED = true;
         $this->BUFFER_PROCESSING_MIGRATION = false;
         $this->TransactionData = [];
+        $this->lastPayload = [];
 
         $this->createExposesDirectory();
 
