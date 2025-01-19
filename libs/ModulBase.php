@@ -201,7 +201,11 @@ abstract class ModulBase extends \IPSModule
      * z.B. Z2M_ActionTransTime, was eigentlich action_transition_time ist.
      */
     private const SKIP_IDENTS = [
-        'Z2M_ActionTransTime'
+        'Z2M_ActionTransaction',
+        'Z2M_ActionTransTime',
+        'Z2M_XAxis',
+        'Z2M_YAxis',
+        'Z2M_ZAxis'
     ];
 
     /**
@@ -285,12 +289,12 @@ abstract class ModulBase extends \IPSModule
         'brightness_l1'      => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l1', 'profile' => '~Intensity.100', 'scale' => 1, 'enableAction' => true],
         'brightness_l2'      => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l2', 'profile' => '~Intensity.100', 'scale' => 1, 'enableAction' => true],
         'voltage'            => ['type' => VARIABLETYPE_FLOAT, 'ident' => 'voltage', 'profile' => '~Volt', 'enableAction' => false],
-        //Folgende Variablen waren früher ein anderer Typ, als jetzt automatisch erkannt wird.
+        // Folgende Variablen waren früher ein anderer Typ, als jetzt automatisch erkannt wird.
         // Aus gründen der Kompatibilität werden diese zwangsweise auf den Typ festgelegt.
-        'x_axis'             => ['type' => VARIABLETYPE_FLOAT, 'profile' => '', 'enableAction' => false],
-        'y_axis'             => ['type' => VARIABLETYPE_FLOAT, 'profile' => '', 'enableAction' => false],
-        'z_axis'             => ['type' => VARIABLETYPE_FLOAT, 'profile' => '', 'enableAction' => false],
-        'action_transaction' => ['type' => VARIABLETYPE_FLOAT, 'profile' => 'Z2M.action_transaction', 'enableAction' => false],
+        // @todo
+        // Leider werden hier aktuell nur StandardProfile unterstützt -> Fehler bei Z2M. Profilen
+        // Ebenso wird bei nicht gesetzten enableAction nicht access aus dem exposes genutzt.
+        // Dabei ist calibration_time je nach Gerät mal bedienbar und mal nicht. Jetzt immer nicht bedienbar
         'calibration_time'   => ['type' => VARIABLETYPE_FLOAT, 'profile' => 'Z2M.calibration_time'],
         'countdown'          => ['type' => VARIABLETYPE_INTEGER, 'profile' => 'Z2M.countdown_0_43200'],
         'countdown_l1'       => ['type' => VARIABLETYPE_INTEGER, 'profile' => 'Z2M.countdown_0_43200'],

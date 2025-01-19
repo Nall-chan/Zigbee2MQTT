@@ -114,9 +114,13 @@ Folgende Liste enthält alle Variablen wo zuvor eine Variable vom falschen Typ g
 Diese werden nicht migriert, sondern bleiben erhalten.
 Es werden die neuen Variablen zusätzlich angelegt, so das hier anschließend manuell z.B. Links oder Ereignisse, angepasst werden müssen.
 
-| Name                 | Ident Alt           | Type Alt | Ident Neu              | Typ neu |
-| :------------------- | :------------------ | :------- | :--------------------- | ------- |
-| Aktion Übergangszeit | Z2M_ActionTransTime | int      | action_transition_time | float   |
+| Name                 | Ident Alt             | Type Alt | Ident Neu              | Typ neu |
+| :------------------- | :-------------------- | :------- | :--------------------- | ------- |
+| Aktion Übergangszeit | Z2M_ActionTransTime   | int      | action_transition_time | float   |
+| Aktion Transaktion   | Z2M_ActionTransaction | float    | action_transaction     | int     |
+| X Achse              | Z2M_XAxis             | float    | x_axis                 | int     |
+| Y Achse              | Z2M_YAxis             | float    | y_axis                 | int     |
+| Z Achse              | Z2M_ZAxis             | float    | Z_axis                 | int     |
 
 ### 3. Zigbee2MQTT Version <!-- omit in toc -->
 
