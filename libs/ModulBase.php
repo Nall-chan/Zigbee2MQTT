@@ -3370,7 +3370,7 @@ abstract class ModulBase extends \IPSModule
                     return;
             }
 
-            $this->enableActionIfWritable($feature, $featureId);
+            $this->enableActionIfWritable($feature);
 
             return;
 
@@ -3456,7 +3456,7 @@ abstract class ModulBase extends \IPSModule
                 return;
         }
 
-        $this->enableActionIfWritable($feature, $ident);
+        $this->enableActionIfWritable($feature);
 
         // Zusätzliche Registrierung der color_temp_kelvin Variable, wenn color_temp registriert wird
         if ($ident === 'color_temp') {
@@ -3758,7 +3758,7 @@ abstract class ModulBase extends \IPSModule
                     'dataType'     => VARIABLETYPE_STRING,
                     'values'       => $feature['values'],
                     'profile'      => $profileName,
-                    'enableAction' => $this->enableActionIfWritable($feature, $featureId),
+                    'enableAction' => $this->enableActionIfWritable($feature),
                     'ident'        => $featureId
                 ];
             }
@@ -3769,7 +3769,7 @@ abstract class ModulBase extends \IPSModule
                 'dataType'     => VARIABLETYPE_BOOLEAN,
                 'values'       => ['ON', 'OFF'],
                 'profile'      => '~Switch',
-                'enableAction' => $this->enableActionIfWritable($feature, $featureId),
+                'enableAction' => $this->enableActionIfWritable($feature),
                 'ident'        => $featureId
             ];
         }
