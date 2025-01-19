@@ -80,12 +80,47 @@ Weitere Schritte zur Ersteinrichtung sind unter dem [Zigbee2MQTT-Discovery](Disc
 - Die Variablen welche bei `Helligkeit` vorher einen Wertebereich von 0 - 254 hatten, werden auf das Profil `~Intensity.100` angepasst. Das Modul rechnet ab sofort automatisch den Wertebereich aus Z2M in Prozent um.  
 - Entsprechende Aktion auf oder Auswertungen des Rohwertes der Variablen sind zu prüfen und gglfs. anzupassen.  
 
+Folgendes Script kann in Symcon ausgeführt werden, um veraltete Variablenprofile zu löschen.
+```php
+$Z2M_Profile = array_filter(IPS_GetVariableProfileList(),function($Profil)
+{
+    return substr($Profil, 0, 4) === 'Z2M.';
+});
+
+foreach (IPS_GetVariableList() as $VariableId)
+{
+    $Variable = IPS_GetVariable($VariableId);
+    $Found = array_search($Variable['VariableProfile'],$Z2M_Profile);
+    if($Found !== false){
+        unset($Z2M_Profile[$Found]);
+    }
+}
+
+foreach ($Z2M_Profile as $Profile){
+            IPS_DeleteVariableProfile($Profile);
+            echo 'Delete: '.$Profile.PHP_EOL;
+}
+```
+
 #### geänderte Variablen-Idents <!-- omit in toc -->  
 
 - Die Version 5.0 ändert beim Update alle Ident aller Variablen welche zu einer ZigbeeMQTT-Instanz gehören.
 - Diese Änderung betrifft nur User welche mit Scripten auf Variablen per Ident (z.B. Z2M_Brightness) und nicht per ObjektID (z.B. 12345) zugreifen.
 - Die Variablen selbst bleiben dabei erhalten, so das sich hier keine ObjektIDs ändern, und entsprechend auch keine Änderungen an Ereignissen, Links, Automationen etc... ergeben.  
 
+#### geänderte Variablentypen <!-- omit in toc -->  
+
+Folgende Liste enthält alle Variablen wo zuvor eine Variable vom falschen Typ genutzt wurde.
+Diese werden nicht migriert, sondern bleiben erhalten.
+Es werden die neuen Variablen zusätzlich angelegt, so das hier anschließend manuell z.B. Links oder Ereignisse, angepasst werden müssen.
+
+| Name                 | Ident Alt             | Type Alt | Ident Neu              | Typ neu |
+| :------------------- | :-------------------- | :------- | :--------------------- | ------- |
+| Aktion Übergangszeit | Z2M_ActionTransTime   | int      | action_transition_time | float   |
+| Aktion Transaktion   | Z2M_ActionTransaction | float    | action_transaction     | int     |
+| X Achse              | Z2M_XAxis             | float    | x_axis                 | int     |
+| Y Achse              | Z2M_YAxis             | float    | y_axis                 | int     |
+| Z Achse              | Z2M_ZAxis             | float    | Z_axis                 | int     |
 
 ### 3. Zigbee2MQTT Version <!-- omit in toc -->
 

@@ -194,6 +194,21 @@ abstract class ModulBase extends \IPSModule
     ];
 
     /**
+     * @var string[]
+     * Liste von alten Z2M Idents, welche bei der Konvertierung übersprungen werden müssen
+     * damit sie erhalten bleiben.
+     * Weil sich entweder der VariablenTyp ändert, oder der alte Name nicht konvertiert werden kann.
+     * z.B. Z2M_ActionTransTime, was eigentlich action_transition_time ist.
+     */
+    private const SKIP_IDENTS = [
+        'Z2M_ActionTransaction',
+        'Z2M_ActionTransTime',
+        'Z2M_XAxis',
+        'Z2M_YAxis',
+        'Z2M_ZAxis'
+    ];
+
+    /**
      * @var string $ExtensionTopic
      * Muss überschrieben werden.
      * - für den ReceiveFilter
@@ -224,6 +239,8 @@ abstract class ModulBase extends \IPSModule
      */
     protected static $VariableUseStandardProfile = [
         ['group_type' => 'cover', 'feature' => 'position', 'profile' => '~Shutter.Reversed', 'variableType' => VARIABLETYPE_INTEGER],
+        ['group_type' => 'cover', 'feature' => 'position_left', 'profile' => '~Shutter.Reversed', 'variableType' => VARIABLETYPE_INTEGER],
+        ['group_type' => 'cover', 'feature' => 'position_right', 'profile' => '~Shutter.Reversed', 'variableType' => VARIABLETYPE_INTEGER],
         ['group_type' => '', 'feature' => 'temperature', 'profile' => '~Temperature', 'variableType' => VARIABLETYPE_FLOAT],
         ['group_type' => '', 'feature' => 'humidity', 'profile' => '~Humidity.F', 'variableType' => VARIABLETYPE_FLOAT],
         ['group_type' => '', 'feature' => 'local_temperature', 'profile' => '~Temperature', 'variableType' => VARIABLETYPE_FLOAT],
@@ -257,10 +274,10 @@ abstract class ModulBase extends \IPSModule
      *
      * Schlüssel:
      *   - type: int Variablentyp
-     *   - name: string Anzeigename der Variable
+     *   - name: string Anzeigename der Variable -> @todo Wozu? Wird in registerSpecialVariable nicht genutzt
      *   - profile: string Profilname oder leer
-     *   - scale?: float Optional: Skalierungsfaktor
-     *   - ident?: string Optional: Benutzerdefinierter Identifier
+     *   - scale?: float Optional: Skalierungsfaktor -> @todo Wozu? Wird in adjustSpecialValue nicht genutzt.  last_seen ist dort hart kodiert
+     *   - ident?: string Optional: Benutzerdefinierter Identifier -> @todo Wozu? Wird in registerSpecialVariable nicht genutzt.
      *   - enableAction: bool Aktionen erlaubt (true/false)
      */
     protected static $specialVariables = [
@@ -272,6 +289,16 @@ abstract class ModulBase extends \IPSModule
         'brightness_l1'      => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l1', 'profile' => '~Intensity.100', 'scale' => 1, 'enableAction' => true],
         'brightness_l2'      => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l2', 'profile' => '~Intensity.100', 'scale' => 1, 'enableAction' => true],
         'voltage'            => ['type' => VARIABLETYPE_FLOAT, 'ident' => 'voltage', 'profile' => '~Volt', 'enableAction' => false],
+        // Folgende Variablen waren früher ein anderer Typ, als jetzt automatisch erkannt wird.
+        // Aus gründen der Kompatibilität werden diese zwangsweise auf den Typ festgelegt.
+        // @todo
+        // Leider werden hier aktuell nur StandardProfile unterstützt -> Fehler bei Z2M. Profilen
+        // Ebenso wird bei nicht gesetzten enableAction nicht access aus dem exposes genutzt.
+        // Dabei ist calibration_time je nach Gerät mal bedienbar und mal nicht. Jetzt immer nicht bedienbar
+        'calibration_time'   => ['type' => VARIABLETYPE_FLOAT, 'profile' => 'Z2M.calibration_time'],
+        'countdown'          => ['type' => VARIABLETYPE_INTEGER, 'profile' => 'Z2M.countdown_0_43200', 'enableAction' => true],
+        'countdown_l1'       => ['type' => VARIABLETYPE_INTEGER, 'profile' => 'Z2M.countdown_0_43200', 'enableAction' => true],
+        'countdown_l2'       => ['type' => VARIABLETYPE_INTEGER, 'profile' => 'Z2M.countdown_0_43200', 'enableAction' => true],
     ];
 
     /**
@@ -347,6 +374,7 @@ abstract class ModulBase extends \IPSModule
         $this->BUFFER_MQTT_SUSPENDED = true;
         $this->BUFFER_PROCESSING_MIGRATION = false;
         $this->TransactionData = [];
+        $this->lastPayload = [];
 
         $this->createExposesDirectory();
 
@@ -666,7 +694,10 @@ abstract class ModulBase extends \IPSModule
                 // Überspringen
                 continue;
             }
-
+            if (in_array($obj['ObjectIdent'], self::SKIP_IDENTS)) {
+                // Überspringen
+                continue;
+            }
             // Neuen Ident bilden
             $newIdent = self::convertToSnakeCase($obj['ObjectIdent']);
             // Versuchen zu setzen
@@ -689,7 +720,6 @@ abstract class ModulBase extends \IPSModule
             );
             $this->EnableAction('brightness');
         }
-
         // Flag für beendete Migration wieder setzen
         $this->BUFFER_MQTT_SUSPENDED = false;
         $this->BUFFER_PROCESSING_MIGRATION = false;
@@ -749,7 +779,7 @@ abstract class ModulBase extends \IPSModule
     public function UIExportDebugData(): string
     {
         $DebugData = [];
-        $DebugData['Instance'] = [IPS_GetObject($this->InstanceID) + IPS_GetInstance($this->InstanceID)];
+        $DebugData['Instance'] = IPS_GetObject($this->InstanceID) + IPS_GetInstance($this->InstanceID);
         if (IPS_GetInstance($this->InstanceID)['ModuleInfo']['ModuleID'] == self::GUID_MODULE_DEVICE) {
             $DebugData['Model'] = $this->ReadAttributeString('Model');
             $ModelUrl = str_replace([' ', '/'], '_', $DebugData['Model']);
@@ -760,18 +790,26 @@ abstract class ModulBase extends \IPSModule
 
         // Prüfe ob JSON existiert
         if (file_exists($jsonFile)) {
-            $DebugData['Exposes'] = json_decode(file_get_contents($jsonFile), true);
+            $DebugData['Exposes'] = json_decode(file_get_contents($jsonFile), true)['exposes'];
         } else {
             $DebugData['Exposes'] = [];
         }
         $DebugData['LastPayload'] = $this->lastPayload;
         $DebugData['Childs'] = [];
+        $DebugData['Profile'] = [];
         foreach (IPS_GetChildrenIDs($this->InstanceID) as $childID) {
             $obj = IPS_GetObject($childID);
             if ($obj['ObjectType'] !== OBJECTTYPE_VARIABLE) {
                 continue;
             }
-            $DebugData['Childs'][$childID] = [IPS_GetObject($childID) + IPS_GetVariable($childID)];
+            $var = IPS_GetVariable($childID);
+            $DebugData['Childs'][$childID] = IPS_GetObject($childID) + $var;
+            if ($var['VariableCustomProfile'] != '') {
+                $DebugData['Profile'][$var['VariableCustomProfile']] = IPS_GetVariableProfile($var['VariableCustomProfile']);
+            }
+            if ($var['VariableProfile'] != '') {
+                $DebugData['Profile'][$var['VariableProfile']] = IPS_GetVariableProfile($var['VariableProfile']);
+            }
         }
 
         return 'data:application/json;base64,' . base64_encode(json_encode($DebugData, JSON_PRETTY_PRINT));
@@ -1048,7 +1086,7 @@ abstract class ModulBase extends \IPSModule
     {
         // Zeige das eingehende Payload im Debug
         $this->SendDebug(__FUNCTION__ . ' :: Line ' . __LINE__ . ' :: Eingehendes Payload: ', json_encode($Payload), 0);
-        $this->lastPayload = $Payload;
+        $this->lastPayload = $this->lastPayload + $Payload;
         foreach ($Payload as $key => $value) {
             // Prüfe, ob die Variable existiert
             $objectID = @$this->GetIDForIdent($key);
