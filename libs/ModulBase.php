@@ -3841,6 +3841,7 @@ abstract class ModulBase extends \IPSModule
 
     /**
      * Prüft ob EnableAction für eine Variable aktiviert werden soll und aktiviert diese ggf.
+     * basierend auf dem access-Flag des Features
      *
      * @param array|string $featureOrIdent Feature-Array mit access-Flag oder Ident einer Variable
      * @param string|null $ident Optional: Ident für EnableAction wenn Feature-Array übergeben wird
@@ -3853,14 +3854,12 @@ abstract class ModulBase extends \IPSModule
         // Wenn Feature-Array direkt übergeben wurde
         if (is_array($featureOrIdent)) {
             $shouldEnable = isset($featureOrIdent['access']) && ($featureOrIdent['access'] & 0b010) != 0;
-            // Wenn kein extra Ident übergeben wurde, Property als Ident nutzen
             $ident = $ident ?? $featureOrIdent['property'] ?? null;
         } else {
-            // Bei String-Ident: Prüfe specialVariables, dann features
+            // Bei String-Ident: Prüfe features
             $ident = $featureOrIdent;
-            $shouldEnable = self::$specialVariables[$ident]['enableAction'] ??
-                        (isset($this->features[$ident]['access']) &&
-                        ($this->features[$ident]['access'] & 0b010) != 0);
+            $shouldEnable = isset($this->features[$ident]['access']) &&
+                        ($this->features[$ident]['access'] & 0b010) != 0;
         }
 
         if ($shouldEnable && $ident !== null) {
