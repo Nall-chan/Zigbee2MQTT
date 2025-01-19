@@ -281,14 +281,14 @@ abstract class ModulBase extends \IPSModule
      *   - enableAction: bool Aktionen erlaubt (true/false)
      */
     protected static $specialVariables = [
-        'last_seen'          => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Last Seen', 'profile' => '~UnixTimestamp', 'scale' => 0.001, 'enableAction' => false],
-        'color_mode'         => ['type' => VARIABLETYPE_STRING, 'name' => 'Color Mode', 'profile' => '', 'enableAction' => false],
-        'update'             => ['type' => VARIABLETYPE_STRING, 'name' => 'Firmware Update Status', 'profile' => '', 'enableAction' => false],
-        'device_temperature' => ['type' => VARIABLETYPE_FLOAT, 'name' => 'Device Temperature', 'profile' => '~Temperature', 'enableAction' => false],
+        'last_seen'          => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Last Seen', 'profile' => '~UnixTimestamp', 'scale' => 0.001],
+        'color_mode'         => ['type' => VARIABLETYPE_STRING, 'name' => 'Color Mode', 'profile' => ''],
+        'update'             => ['type' => VARIABLETYPE_STRING, 'name' => 'Firmware Update Status', 'profile' => ''],
+        'device_temperature' => ['type' => VARIABLETYPE_FLOAT, 'name' => 'Device Temperature', 'profile' => '~Temperature'],
         'brightness'         => ['type' => VARIABLETYPE_INTEGER, 'ident' => 'brightness', 'profile' => '~Intensity.100', 'scale' => 1],
-        'brightness_l1'      => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l1', 'profile' => '~Intensity.100', 'scale' => 1, 'enableAction' => true],
-        'brightness_l2'      => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l2', 'profile' => '~Intensity.100', 'scale' => 1, 'enableAction' => true],
-        'voltage'            => ['type' => VARIABLETYPE_FLOAT, 'ident' => 'voltage', 'profile' => '~Volt', 'enableAction' => false],
+        'brightness_l1'      => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l1', 'profile' => '~Intensity.100', 'scale' => 1],
+        'brightness_l2'      => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l2', 'profile' => '~Intensity.100', 'scale' => 1],
+        'voltage'            => ['type' => VARIABLETYPE_FLOAT, 'ident' => 'voltage', 'profile' => '~Volt'],
         // Folgende Variablen waren früher ein anderer Typ, als jetzt automatisch erkannt wird.
         // Aus gründen der Kompatibilität werden diese zwangsweise auf den Typ festgelegt.
         // @todo
@@ -296,9 +296,9 @@ abstract class ModulBase extends \IPSModule
         // Ebenso wird bei nicht gesetzten enableAction nicht access aus dem exposes genutzt.
         // Dabei ist calibration_time je nach Gerät mal bedienbar und mal nicht. Jetzt immer nicht bedienbar
         'calibration_time'   => ['type' => VARIABLETYPE_FLOAT, 'profile' => 'Z2M.calibration_time'],
-        'countdown'          => ['type' => VARIABLETYPE_INTEGER, 'profile' => 'Z2M.countdown_0_43200', 'enableAction' => true],
-        'countdown_l1'       => ['type' => VARIABLETYPE_INTEGER, 'profile' => 'Z2M.countdown_0_43200', 'enableAction' => true],
-        'countdown_l2'       => ['type' => VARIABLETYPE_INTEGER, 'profile' => 'Z2M.countdown_0_43200', 'enableAction' => true],
+        'countdown'          => ['type' => VARIABLETYPE_INTEGER, 'profile' => 'Z2M.countdown_0_43200'],
+        'countdown_l1'       => ['type' => VARIABLETYPE_INTEGER, 'profile' => 'Z2M.countdown_0_43200'],
+        'countdown_l2'       => ['type' => VARIABLETYPE_INTEGER, 'profile' => 'Z2M.countdown_0_43200'],
     ];
 
     /**
@@ -3840,32 +3840,34 @@ abstract class ModulBase extends \IPSModule
     }
 
     /**
-     * Prüft und aktiviert EnableAction für eine Variable basierend auf den Access-Flags
+     * Prüft ob EnableAction für eine Variable aktiviert werden soll und aktiviert diese ggf.
      *
-     * @param array $feature Feature mit access Flags
-     * @param string $ident Identifikator der Variable
-     * @return void
+     * @param array|string $featureOrIdent Feature-Array mit access-Flag oder Ident einer Variable
+     * @param string|null $ident Optional: Ident für EnableAction wenn Feature-Array übergeben wird
+     * @return bool true wenn EnableAction aktiviert wurde, sonst false
      */
-/**
- * Prüft und aktiviert EnableAction basierend auf Access-Flags
- * @param string|array $featureOrIdent Feature-Array oder Ident-String
- * @param string|null $ident Optional: Ident wenn Feature-Array als erster Parameter
- */
-private function enableActionIfWritable($featureOrIdent, ?string $ident = null): void
-{
-    // Fall 1: Nur Ident wurde übergeben
-    if (is_string($featureOrIdent)) {
-        $ident = $featureOrIdent;
-        $feature = $this->features[$ident] ?? null;
-    }
-    // Fall 2: Feature-Array + Ident wurden übergeben
-    else {
-        $feature = $featureOrIdent;
-    }
+    private function enableActionIfWritable($featureOrIdent, ?string $ident = null): bool
+    {
+        $shouldEnable = false;
 
-    if (isset($feature['access']) && ($feature['access'] & 0b010) != 0) {
-        $this->EnableAction($ident);
-        $this->SendDebug(__FUNCTION__, 'Set EnableAction for ident: ' . $ident . ' to: true', 0);
+        // Wenn Feature-Array direkt übergeben wurde
+        if (is_array($featureOrIdent)) {
+            $shouldEnable = isset($featureOrIdent['access']) && ($featureOrIdent['access'] & 0b010) != 0;
+            // Wenn kein extra Ident übergeben wurde, Property als Ident nutzen
+            $ident = $ident ?? $featureOrIdent['property'] ?? null;
+        } else {
+            // Bei String-Ident: Prüfe specialVariables, dann features
+            $ident = $featureOrIdent;
+            $shouldEnable = self::$specialVariables[$ident]['enableAction'] ??
+                        (isset($this->features[$ident]['access']) &&
+                        ($this->features[$ident]['access'] & 0b010) != 0);
+        }
+
+        if ($shouldEnable && $ident !== null) {
+            $this->EnableAction($ident);
+            $this->SendDebug(__FUNCTION__, 'Set EnableAction for ident: ' . $ident . ' to: true', 0);
+        }
+
+        return $shouldEnable;
     }
-}
 }
