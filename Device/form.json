@@ -17,20 +17,10 @@
                             "caption": "MQTT Topic"
                         },
                         {
-                            "type": "RowLayout",
-                            "items": [
-                                {
-                                    "type": "ValidationTextBox",
-                                    "name": "IEEE",
-                                    "caption": "IEEE Address",
-                                    "enabled": false
-                                },
-                                {
-                                    "type": "Button",
-                                    "caption": "Change IEEE Address",
-                                    "onClick": "IPS_RequestAction($id, 'ShowIeeeEditWarning', true);"
-                                }
-                            ]
+                            "type": "ValidationTextBox",
+                            "name": "IEEE",
+                            "caption": "IEEE Address",
+                            "enabled": false
                         }
                     ]
                 },
@@ -43,7 +33,7 @@
         },
         {
             "type": "Label",
-            "caption": "Link zur Geräteinformation: https://www.zigbee2mqtt.io/devices/%MODEL%.html"
+            "caption": ""
         }
     ],
     "actions": [
@@ -75,9 +65,35 @@
             }
         },
         {
-            "type": "Button",
-            "caption": "Get Device Infos",
-            "onClick": "IPS_RequestAction($id, 'UpdateInfo', true);"
+            "type": "ExpansionPanel",
+            "caption": "Expert Settings",
+            "expanded": false,
+            "width": "800px",
+            "items": [
+                {
+                    "type": "RowLayout",
+                    "items": [
+                        {
+                            "type": "Button",
+                            "caption": "Get Device Infos",
+                            "onClick": "IPS_RequestAction($id, 'UpdateInfo', true);"
+                        },
+                        {
+                            "type": "Button",
+                            "caption": "Download Debug Data",
+                            "download": "Z2M_Debug.json",
+                            "onClick": [
+                                "echo Z2M_UIExportDebugData($id);"
+                            ]
+                        },
+                        {
+                            "type": "Button",
+                            "caption": "Change IEEE Address",
+                            "onClick": "IPS_RequestAction($id, 'ShowIeeeEditWarning', true);"
+                        }
+                    ]
+                }
+            ]
         },
         {
             "type": "TestCenter"

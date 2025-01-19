@@ -14,6 +14,13 @@ require_once __DIR__ . '/ColorHelper.php';
  * ModulBase
  *
  * Basisklasse für Geräte (Devices module.php) und Gruppen (Groups module.php)
+ *
+ * Pseudo Variablen, welche über BufferHelper und die Magic-Functions __get und __set
+ * direkt typensichere Werte, Arrays und Objekte in einem Instanz-Buffer schreiben und lesen können.
+ * @property bool $BUFFER_MQTT_SUSPENDED Zugriff auf den Buffer für laufende Migration
+ * @property bool $BUFFER_PROCESSING_MIGRATION Zugriff auf den Buffer für MQTT Nachrichten nicht verarbeiten
+ * @property string $lastPayload Zugriff auf den Buffer welcher das Letzte Payload enthält (für Download-Button)
+ * @property string $missingTranslations Zugriff auf den Buffer welcher ein array von fehlenden Übersetzungen enthält (für Download-Button)
  */
 abstract class ModulBase extends \IPSModule
 {
@@ -22,12 +29,6 @@ abstract class ModulBase extends \IPSModule
     use ColorHelper;
     use VariableProfileHelper;
     use SendData;
-
-    /** @var string Name des Buffers für laufende Migration */
-    protected const BUFFER_PROCESSING_MIGRATION = 'processingMigration';
-    /** @var string Name des Buffers für MQTT Nachrichten nicht verarbeiten */
-    protected const BUFFER_MQTT_SUSPENDED = 'mqttSuspended';
-
     private const MINIMAL_MODUL_VERSION = 5.0;
 
     /**
@@ -338,11 +339,13 @@ abstract class ModulBase extends \IPSModule
         //Never delete this line!
         parent::Create();
 
-        $this->SetBuffer(self::BUFFER_MQTT_SUSPENDED, 'true');
-
         $this->RegisterPropertyString(self::MQTT_BASE_TOPIC, '');
         $this->RegisterPropertyString(self::MQTT_TOPIC, '');
         $this->RegisterAttributeFloat(self::ATTRIBUTE_MODUL_VERSION, 5.0);
+
+        /** Init Buffers */
+        $this->BUFFER_MQTT_SUSPENDED = true;
+        $this->BUFFER_PROCESSING_MIGRATION = false;
         $this->TransactionData = [];
 
         $this->createExposesDirectory();
@@ -467,7 +470,7 @@ abstract class ModulBase extends \IPSModule
         switch ($Message) {
             case FM_CONNECT:
                 if ($this->GetStatus() == IS_ACTIVE) {
-                    $this->SetBuffer(self::BUFFER_MQTT_SUSPENDED, 'false');
+                    $this->BUFFER_MQTT_SUSPENDED = false;
                 }
                 if (($this->HasActiveParent()) && (IPS_GetKernelRunlevel() == KR_READY)) {
                     $this->LogMessage('FM_CONNECT', KL_NOTIFY);
@@ -477,7 +480,7 @@ abstract class ModulBase extends \IPSModule
             case IM_CHANGESTATUS:
                 if ($Data[0] == IS_ACTIVE) {
                     $this->LogMessage('IM_CHANGESTATUS', KL_NOTIFY);
-                    $this->SetBuffer(self::BUFFER_MQTT_SUSPENDED, 'false');
+                    $this->BUFFER_MQTT_SUSPENDED = false;
                     // Nur ein UpdateDeviceInfo wenn Parent aktiv und System bereit
                     if (($this->HasActiveParent()) && (IPS_GetKernelRunlevel() == KR_READY)) {
                         $this->checkAndCreateJsonFile();
@@ -573,7 +576,7 @@ abstract class ModulBase extends \IPSModule
     public function ReceiveData($JSONString)
     {
         // Während Migration keine MQTT Nachrichten verarbeiten
-        if ($this->GetBuffer(self::BUFFER_MQTT_SUSPENDED) === 'true') {
+        if ($this->BUFFER_MQTT_SUSPENDED) {
             return '';
         }
         // Instanz im CREATE-Status überspringen
@@ -639,8 +642,8 @@ abstract class ModulBase extends \IPSModule
         $j->attributes->{self::ATTRIBUTE_MODUL_VERSION} = self::MINIMAL_MODUL_VERSION;
 
         // Flag für laufende Migration setzen
-        $this->SetBuffer(self::BUFFER_MQTT_SUSPENDED, 'true');
-        $this->SetBuffer(self::BUFFER_PROCESSING_MIGRATION, 'true');
+        $this->BUFFER_MQTT_SUSPENDED = true;
+        $this->BUFFER_PROCESSING_MIGRATION = true;
 
         // 1) Suche alle Kinder-Objekte dieser Instanz
         // 2) Prüfe, ob ihr Ident z. B. mit "Z2M_" beginnt
@@ -688,8 +691,8 @@ abstract class ModulBase extends \IPSModule
         }
 
         // Flag für beendete Migration wieder setzen
-        $this->SetBuffer(self::BUFFER_MQTT_SUSPENDED, 'false');
-        $this->SetBuffer(self::BUFFER_PROCESSING_MIGRATION, 'false');
+        $this->BUFFER_MQTT_SUSPENDED = false;
+        $this->BUFFER_PROCESSING_MIGRATION = false;
         return json_encode($j);
     }
 
@@ -736,6 +739,42 @@ abstract class ModulBase extends \IPSModule
     public function SetColorExt(int $color, int $TransitionTime): bool
     {
         return $this->setColor($color, 'cie', 'color', $TransitionTime);
+    }
+
+    /**
+     * UIExportDebugData
+     *
+     * @return string
+     */
+    public function UIExportDebugData(): string
+    {
+        $DebugData = [];
+        $DebugData['Instance'] = [IPS_GetObject($this->InstanceID) + IPS_GetInstance($this->InstanceID)];
+        if (IPS_GetInstance($this->InstanceID)['ModuleInfo']['ModuleID'] == self::GUID_MODULE_DEVICE) {
+            $DebugData['Model'] = $this->ReadAttributeString('Model');
+            $ModelUrl = str_replace([' ', '/'], '_', $DebugData['Model']);
+            $DebugData['ModelUrl'] = 'https://www.zigbee2mqtt.io/devices/' . rawurlencode($ModelUrl) . '.html';
+        }
+        $DebugData['Config'] = json_decode(IPS_GetConfiguration($this->InstanceID), true);
+        $jsonFile = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY . DIRECTORY_SEPARATOR . $this->InstanceID . '.json';
+
+        // Prüfe ob JSON existiert
+        if (file_exists($jsonFile)) {
+            $DebugData['Exposes'] = json_decode(file_get_contents($jsonFile), true);
+        } else {
+            $DebugData['Exposes'] = [];
+        }
+        $DebugData['LastPayload'] = $this->lastPayload;
+        $DebugData['Childs'] = [];
+        foreach (IPS_GetChildrenIDs($this->InstanceID) as $childID) {
+            $obj = IPS_GetObject($childID);
+            if ($obj['ObjectType'] !== OBJECTTYPE_VARIABLE) {
+                continue;
+            }
+            $DebugData['Childs'][$childID] = [IPS_GetObject($childID) + IPS_GetVariable($childID)];
+        }
+
+        return 'data:application/json;base64,' . base64_encode(json_encode($DebugData, JSON_PRETTY_PRINT));
     }
 
     /**
@@ -1009,7 +1048,7 @@ abstract class ModulBase extends \IPSModule
     {
         // Zeige das eingehende Payload im Debug
         $this->SendDebug(__FUNCTION__ . ' :: Line ' . __LINE__ . ' :: Eingehendes Payload: ', json_encode($Payload), 0);
-
+        $this->lastPayload = $Payload;
         foreach ($Payload as $key => $value) {
             // Prüfe, ob die Variable existiert
             $objectID = @$this->GetIDForIdent($key);
@@ -1074,7 +1113,7 @@ abstract class ModulBase extends \IPSModule
                                 'min' => $feature['value_min'] ?? 0,
                                 'max' => $feature['value_max'] ?? 255
                             ];
-                            $this->SetBuffer(self::BUFFER_BRIGHTNESS_CONFIG, json_encode($brightnessConfig));
+                            $this->brightnessConfig = $brightnessConfig;
                             $this->SendDebug(__FUNCTION__, 'Brightness Config: ' . json_encode($brightnessConfig), 0);
                         }
                     }
@@ -1456,7 +1495,7 @@ abstract class ModulBase extends \IPSModule
     private function getOrRegisterVariable(string $ident, ?array $variableProps = null, ?string $formattedLabel = null): ?int
     {
         // Während Migration keine Variablen erstellen
-        if ($this->GetBuffer(self::BUFFER_PROCESSING_MIGRATION) === 'true') {
+        if ($this->BUFFER_PROCESSING_MIGRATION) {
             return null;
         }
 
@@ -3253,7 +3292,7 @@ abstract class ModulBase extends \IPSModule
     private function registerVariable(mixed $feature, ?string $exposeType = null): void
     {
         // Während Migration keine Variablen erstellen
-        if ($this->GetBuffer(self::BUFFER_PROCESSING_MIGRATION) === 'true') {
+        if ($this->BUFFER_PROCESSING_MIGRATION) {
             return;
         }
 
@@ -3428,7 +3467,7 @@ abstract class ModulBase extends \IPSModule
     private function registerColorVariable(array $feature): void
     {
         // Während Migration keine Variablen erstellen
-        if ($this->GetBuffer(self::BUFFER_PROCESSING_MIGRATION) === 'true') {
+        if ($this->BUFFER_PROCESSING_MIGRATION) {
             return;
         }
 
@@ -3498,7 +3537,7 @@ abstract class ModulBase extends \IPSModule
     private function registerPresetVariables(array $presets, string $label, string $variableType, array $feature): void
     {
         // Während Migration keine Variablen erstellen
-        if ($this->GetBuffer(self::BUFFER_PROCESSING_MIGRATION) === 'true') {
+        if ($this->BUFFER_PROCESSING_MIGRATION) {
             return;
         }
 
@@ -3546,7 +3585,7 @@ abstract class ModulBase extends \IPSModule
     private function registerSpecialVariable($feature): void
     {
         // Während Migration keine Variablen erstellen
-        if ($this->GetBuffer(self::BUFFER_PROCESSING_MIGRATION) === 'true') {
+        if ($this->BUFFER_PROCESSING_MIGRATION) {
             return;
         }
 

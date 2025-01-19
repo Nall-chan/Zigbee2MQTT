@@ -11,20 +11,10 @@
             "caption": "MQTT Topic"
         },
         {
-            "type": "RowLayout",
-            "items": [
-                {
-                    "type": "NumberSpinner",
-                    "name": "GroupId",
-                    "caption": "Group Id",
-                    "enabled": false
-                },
-                {
-                    "type": "Button",
-                    "caption": "Change Group Id",
-                    "onClick": "IPS_RequestAction($id, 'ShowGroupIdEditWarning', true);"
-                }
-            ]
+            "type": "NumberSpinner",
+            "name": "GroupId",
+            "caption": "Group Id",
+            "enabled": false
         }
     ],
     "actions": [
@@ -56,9 +46,35 @@
             }
         },
         {
-            "type": "Button",
-            "caption": "Get Group Infos",
-            "onClick": "IPS_RequestAction($id, 'UpdateInfo', true);"
+            "type": "ExpansionPanel",
+            "caption": "Expert Settings",
+            "expanded": false,
+            "width": "800px",
+            "items": [
+                {
+                    "type": "RowLayout",
+                    "items": [
+                        {
+                            "type": "Button",
+                            "caption": "Get Group Infos",
+                            "onClick": "IPS_RequestAction($id, 'UpdateInfo', true);"
+                        },
+                        {
+                            "type": "Button",
+                            "caption": "Download Debug Data",
+                            "download": "Z2M_Debug.json",
+                            "onClick": [
+                                "echo Z2M_UIExportDebugData($id);"
+                            ]
+                        },
+                        {
+                            "type": "Button",
+                            "caption": "Change Group Id",
+                            "onClick": "IPS_RequestAction($id, 'ShowGroupIdEditWarning', true);"
+                        }
+                    ]
+                }
+            ]
         },
         {
             "type": "TestCenter"

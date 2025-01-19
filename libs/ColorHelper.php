@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace Zigbee2MQTT;
 
+/**
+ *
+ * @property array $brightnessConfig Zugriff auf den Buffer für Config der Helligkeit
+ */
 trait ColorHelper
 {
-    /** @var string Name des Buffers für Config der Helligkeit */
-    protected const BUFFER_BRIGHTNESS_CONFIG = 'brightnessConfig';
-
     /**
      * RGBToHSL
      *
@@ -328,7 +329,7 @@ trait ColorHelper
      */
     private function getBrightnessValue(string $type = 'max'): int
     {
-        $config = json_decode($this->GetBuffer(self::BUFFER_BRIGHTNESS_CONFIG), true);
+        $config = $this->brightnessConfig;
         $this->SendDebug(__FUNCTION__, 'Gelesene Brightness-Config: ' . print_r($config, true), 0);
 
         $defaults = [
