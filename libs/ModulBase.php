@@ -3373,13 +3373,12 @@ abstract class ModulBase extends \IPSModule
             $this->enableActionIfWritable($feature, $ident);
 
             return;
-
+        }
             // Überprüfung auf spezielle Fälle
             if (isset(self::$specialVariables[$feature['property']])) {
                 $this->registerSpecialVariable($feature);
                 return;
             }
-        }
 
         // Setze den Typ auf den übergebenen Expose-Typ, falls vorhanden
         if ($exposeType !== null) {
