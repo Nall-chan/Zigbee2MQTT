@@ -3456,7 +3456,7 @@ abstract class ModulBase extends \IPSModule
                 return;
         }
 
-        $this->enableActionIfWritable($feature);
+        $this->enableActionIfWritable($feature, $ident);
 
         // Zusätzliche Registrierung der color_temp_kelvin Variable, wenn color_temp registriert wird
         if ($ident === 'color_temp') {
