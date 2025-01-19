@@ -3369,8 +3369,8 @@ abstract class ModulBase extends \IPSModule
                     $this->SendDebug(__FUNCTION__, 'Unsupported state dataType: ' . $stateConfig['dataType'], 0);
                     return;
             }
-
-            $this->enableActionIfWritable($feature);
+            $ident = $stateConfig['ident'];
+            $this->enableActionIfWritable($feature, $ident);
 
             return;
 
