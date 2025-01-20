@@ -1274,7 +1274,7 @@ abstract class ModulBase extends \IPSModule
     {
         // 1) Z2M_ Prefix entfernen
         $withoutPrefix = preg_replace('/^Z2M_/', '', $oldIdent);
-    
+
         // 2) State Pattern Check
         foreach ([self::STATE_PATTERN['MQTT'], self::STATE_PATTERN['SYMCON']] as $pattern) {
             if (preg_match($pattern, $withoutPrefix)) {
@@ -1282,7 +1282,7 @@ abstract class ModulBase extends \IPSModule
                 return strtolower($result);
             }
         }
-    
+
         // 3) Bekannte Abkürzungen prüfen
         foreach (self::KNOWN_ABBREVIATIONS as $abbr) {
             $pattern = '/\b' . preg_quote($abbr, '/') . '\b/';
@@ -1290,7 +1290,7 @@ abstract class ModulBase extends \IPSModule
                 $withoutPrefix = preg_replace($pattern, strtolower($abbr), $withoutPrefix);
             }
         }
-    
+
         // 4) Großbuchstaben verarbeiten
         $result = $withoutPrefix;
         // a) Einzelner Großbuchstabe am Wortanfang bleibt erhalten
@@ -1298,11 +1298,11 @@ abstract class ModulBase extends \IPSModule
         $result = preg_replace('/([a-z])([A-Z])/', '$1_$2', $result);
         // c) Großbuchstabenblöcke im Wort
         $result = preg_replace('/([A-Z])([A-Z][a-z])/', '$1_$2', $result);
-    
+
         // 5) Formatierung finalisieren
         $result = preg_replace('/_+/', '_', $result);
         $result = strtolower($result);
-    
+
         return $result;
     }
 
