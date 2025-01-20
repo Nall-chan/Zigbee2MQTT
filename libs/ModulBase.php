@@ -201,11 +201,7 @@ abstract class ModulBase extends \IPSModule
      * z.B. Z2M_ActionTransTime, was eigentlich action_transition_time ist.
      */
     private const SKIP_IDENTS = [
-        'Z2M_ActionTransaction',
-        'Z2M_ActionTransTime',
-        'Z2M_XAxis',
-        'Z2M_YAxis',
-        'Z2M_ZAxis'
+        'Z2M_ActionTransTime'
     ];
 
     /**
@@ -289,16 +285,12 @@ abstract class ModulBase extends \IPSModule
         'brightness_l1'      => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l1', 'profile' => '~Intensity.100', 'scale' => 1, 'enableAction' => true],
         'brightness_l2'      => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l2', 'profile' => '~Intensity.100', 'scale' => 1, 'enableAction' => true],
         'voltage'            => ['type' => VARIABLETYPE_FLOAT, 'ident' => 'voltage', 'profile' => '~Volt', 'enableAction' => false],
-        // Folgende Variablen waren früher ein anderer Typ, als jetzt automatisch erkannt wird.
+        //Folgende Variablen waren früher ein anderer Typ, als jetzt automatisch erkannt wird.
         // Aus gründen der Kompatibilität werden diese zwangsweise auf den Typ festgelegt.
-        // @todo
-        // Leider werden hier aktuell nur StandardProfile unterstützt -> Fehler bei Z2M. Profilen
-        // Ebenso wird bei nicht gesetzten enableAction nicht access aus dem exposes genutzt.
-        // Dabei ist calibration_time je nach Gerät mal bedienbar und mal nicht. Jetzt immer nicht bedienbar
-        'calibration_time'   => ['type' => VARIABLETYPE_FLOAT, 'profile' => 'Z2M.calibration_time'],
-        'countdown'          => ['type' => VARIABLETYPE_INTEGER, 'profile' => 'Z2M.countdown_0_43200', 'enableAction' => true],
-        'countdown_l1'       => ['type' => VARIABLETYPE_INTEGER, 'profile' => 'Z2M.countdown_0_43200', 'enableAction' => true],
-        'countdown_l2'       => ['type' => VARIABLETYPE_INTEGER, 'profile' => 'Z2M.countdown_0_43200', 'enableAction' => true],
+        'x_axis'             => ['type' => VARIABLETYPE_FLOAT, 'profile' => '', 'enableAction' => false],
+        'y_axis'             => ['type' => VARIABLETYPE_FLOAT, 'profile' => '', 'enableAction' => false],
+        'z_axis'             => ['type' => VARIABLETYPE_FLOAT, 'profile' => '', 'enableAction' => false],
+        'action_transaction' => ['type' => VARIABLETYPE_FLOAT, 'profile' => 'Z2M.action_transaction', 'enableAction' => false],
     ];
 
     /**
@@ -374,7 +366,6 @@ abstract class ModulBase extends \IPSModule
         $this->BUFFER_MQTT_SUSPENDED = true;
         $this->BUFFER_PROCESSING_MIGRATION = false;
         $this->TransactionData = [];
-        $this->lastPayload = [];
 
         $this->createExposesDirectory();
 
@@ -720,6 +711,7 @@ abstract class ModulBase extends \IPSModule
             );
             $this->EnableAction('brightness');
         }
+
         // Flag für beendete Migration wieder setzen
         $this->BUFFER_MQTT_SUSPENDED = false;
         $this->BUFFER_PROCESSING_MIGRATION = false;
