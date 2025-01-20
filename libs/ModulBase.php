@@ -2710,17 +2710,13 @@ abstract class ModulBase extends \IPSModule
             // Typ aus specialVariables verwenden statt aus expose
             switch ($specialVar['type']) {
                 case VARIABLETYPE_INTEGER:
-                    $type = 'numeric';
-                    break;
+                    return $this->registerValueProfile($ProfileName, 'Integer');
                 case VARIABLETYPE_FLOAT:
-                    $type = 'numeric';
-                    break;
+                    return $this->registerValueProfile($ProfileName, 'Float');
                 case VARIABLETYPE_STRING:
-                    $type = 'string';
-                    break;
+                    return $this->registerValueProfile($ProfileName, 'String');
                 case VARIABLETYPE_BOOLEAN:
-                    $type = 'binary';
-                    break;
+                    return $this->registerValueProfile($ProfileName, 'Boolean');
             }
         }
 
