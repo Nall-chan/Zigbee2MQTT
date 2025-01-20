@@ -3669,8 +3669,9 @@ abstract class ModulBase extends \IPSModule
                 break;
         }
 
-        if ($varDef['enableAction'] ?? false) {
+        if (isset($feature['access']) && ($feature['access'] & 0b010) != 0) {
             $this->EnableAction($ident);
+            $this->SendDebug(__FUNCTION__, 'Set EnableAction for ident: ' . $ident . ' to: true', 0);
         }
         return;
     }
