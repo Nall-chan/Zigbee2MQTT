@@ -266,9 +266,7 @@ abstract class ModulBase extends \IPSModule
      *   type: int,
      *   name: string,
      *   profile: string,
-     *   scale?: float,
      *   ident?: string,
-     *   enableAction: bool
      *
      * Definiert spezielle Variablen mit vordefinierten Eigenschaften
      *
@@ -276,29 +274,25 @@ abstract class ModulBase extends \IPSModule
      *   - type: int Variablentyp
      *   - name: string Anzeigename der Variable -> @todo Wozu? Wird in registerSpecialVariable nicht genutzt
      *   - profile: string Profilname oder leer
-     *   - scale?: float Optional: Skalierungsfaktor -> @todo Wozu? Wird in adjustSpecialValue nicht genutzt.  last_seen ist dort hart kodiert
      *   - ident?: string Optional: Benutzerdefinierter Identifier -> @todo Wozu? Wird in registerSpecialVariable nicht genutzt.
-     *   - enableAction: bool Aktionen erlaubt (true/false)
      */
     protected static $specialVariables = [
-        'last_seen'          => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Last Seen', 'profile' => '~UnixTimestamp', 'scale' => 0.001, 'enableAction' => false],
-        'color_mode'         => ['type' => VARIABLETYPE_STRING, 'name' => 'Color Mode', 'profile' => '', 'enableAction' => false],
-        'update'             => ['type' => VARIABLETYPE_STRING, 'name' => 'Firmware Update Status', 'profile' => '', 'enableAction' => false],
-        'device_temperature' => ['type' => VARIABLETYPE_FLOAT, 'name' => 'Device Temperature', 'profile' => '~Temperature', 'enableAction' => false],
-        'brightness'         => ['type' => VARIABLETYPE_INTEGER, 'ident' => 'brightness', 'profile' => '~Intensity.100', 'scale' => 1, 'enableAction' => true],
-        'brightness_l1'      => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l1', 'profile' => '~Intensity.100', 'scale' => 1, 'enableAction' => true],
-        'brightness_l2'      => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l2', 'profile' => '~Intensity.100', 'scale' => 1, 'enableAction' => true],
-        'voltage'            => ['type' => VARIABLETYPE_FLOAT, 'ident' => 'voltage', 'profile' => '~Volt', 'enableAction' => false],
+        'last_seen'          => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Last Seen', 'profile' => '~UnixTimestamp', 'scale' => 0.001],
+        'color_mode'         => ['type' => VARIABLETYPE_STRING, 'name' => 'Color Mode', 'profile' => ''],
+        'update'             => ['type' => VARIABLETYPE_STRING, 'name' => 'Firmware Update Status', 'profile' => ''],
+        'device_temperature' => ['type' => VARIABLETYPE_FLOAT, 'name' => 'Device Temperature', 'profile' => '~Temperature'],
+        'brightness'         => ['type' => VARIABLETYPE_INTEGER, 'ident' => 'brightness', 'profile' => '~Intensity.100', 'scale' => 1],
+        'brightness_l1'      => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l1', 'profile' => '~Intensity.100', 'scale' => 1],
+        'brightness_l2'      => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l2', 'profile' => '~Intensity.100', 'scale' => 1],
+        'voltage'            => ['type' => VARIABLETYPE_FLOAT, 'ident' => 'voltage', 'profile' => '~Volt'],
         // Folgende Variablen waren früher ein anderer Typ, als jetzt automatisch erkannt wird.
         // Aus gründen der Kompatibilität werden diese zwangsweise auf den Typ festgelegt.
         // @todo
         // Leider werden hier aktuell nur StandardProfile unterstützt -> Fehler bei Z2M. Profilen
-        // Ebenso wird bei nicht gesetzten enableAction nicht access aus dem exposes genutzt.
-        // Dabei ist calibration_time je nach Gerät mal bedienbar und mal nicht. Jetzt immer nicht bedienbar
         'calibration_time'   => ['type' => VARIABLETYPE_FLOAT, 'profile' => 'Z2M.calibration_time'],
-        'countdown'          => ['type' => VARIABLETYPE_INTEGER, 'profile' => 'Z2M.countdown_0_43200', 'enableAction' => true],
-        'countdown_l1'       => ['type' => VARIABLETYPE_INTEGER, 'profile' => 'Z2M.countdown_0_43200', 'enableAction' => true],
-        'countdown_l2'       => ['type' => VARIABLETYPE_INTEGER, 'profile' => 'Z2M.countdown_0_43200', 'enableAction' => true],
+        'countdown'          => ['type' => VARIABLETYPE_INTEGER, 'profile' => 'Z2M.countdown_0_43200'],
+        'countdown_l1'       => ['type' => VARIABLETYPE_INTEGER, 'profile' => 'Z2M.countdown_0_43200'],
+        'countdown_l2'       => ['type' => VARIABLETYPE_INTEGER, 'profile' => 'Z2M.countdown_0_43200'],
     ];
 
     /**
@@ -3644,13 +3638,15 @@ abstract class ModulBase extends \IPSModule
 
         switch ($varDef['type']) {
             case VARIABLETYPE_FLOAT:
-                $this->RegisterVariableFloat($ident, $this->Translate($formattedLabel), $varDef['profile'] ?? '');
+                $profile = $varDef['profile'] ?? $this->registerVariableProfile($feature);
+                $this->RegisterVariableFloat($ident, $this->Translate($formattedLabel), $profile);
                 if (isset($value)) {
                     $this->SetValue($ident, $value);
                 }
                 break;
             case VARIABLETYPE_INTEGER:
-                $this->RegisterVariableInteger($ident, $this->Translate($formattedLabel), $varDef['profile'] ?? '');
+                $profile = $varDef['profile'] ?? $this->registerVariableProfile($feature);
+                $this->RegisterVariableInteger($ident, $this->Translate($formattedLabel), $profile);
                 if (isset($value)) {
                     $this->SetValue($ident, $value);
                 }
@@ -3662,7 +3658,8 @@ abstract class ModulBase extends \IPSModule
                 }
                 break;
             case VARIABLETYPE_BOOLEAN:
-                $this->RegisterVariableBoolean($ident, $this->Translate($formattedLabel), $varDef['profile'] ?? '');
+                $profile = $varDef['profile'] ?? $this->registerVariableProfile($feature);
+                $this->RegisterVariableBoolean($ident, $this->Translate($formattedLabel), $profile);
                 if (isset($value)) {
                     $this->SetValue($ident, $value);
                 }
