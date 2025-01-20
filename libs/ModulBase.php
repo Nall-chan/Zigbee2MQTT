@@ -2287,6 +2287,7 @@ abstract class ModulBase extends \IPSModule
         switch ($ident) {
             case 'last_seen':
                 // Umrechnung von Millisekunden auf Sekunden
+                $value = (int)$value;
                 $adjustedValue = intdiv($value, 1000);
                 $this->SendDebug(__FUNCTION__, 'Converted value: ' . $adjustedValue, 0);
                 return $adjustedValue;
