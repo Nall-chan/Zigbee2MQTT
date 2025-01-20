@@ -1270,7 +1270,7 @@ abstract class ModulBase extends \IPSModule
      * @see ltrim()
      * @see strtolower()
      */
-    function convertToSnakeCase(string $oldIdent): string
+    private static function convertToSnakeCase(string $oldIdent): string
     {
         // 1) Z2M_ Prefix entfernen
         $withoutPrefix = preg_replace('/^Z2M_/', '', $oldIdent);
