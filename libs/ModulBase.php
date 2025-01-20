@@ -2579,6 +2579,21 @@ abstract class ModulBase extends \IPSModule
      */
     private function getVariableTypeFromProfile(string $type, string $feature, $unit = '', float $value_step = 1.0, ?string $groupType = null): string
     {
+        // Erst prüfen ob es eine specialVariable ist und einen Typ hat
+        if (isset(self::$specialVariables[$feature])) {
+            $specialVar = self::$specialVariables[$feature];
+            switch ($specialVar['type']) {
+                case VARIABLETYPE_BOOLEAN:
+                    return 'bool';
+                case VARIABLETYPE_INTEGER:
+                    return 'int';
+                case VARIABLETYPE_FLOAT:
+                    return 'float';
+                case VARIABLETYPE_STRING:
+                    return 'string';
+            }
+        }
+
         // Erst StandardProfile prüfen
         foreach (self::$VariableUseStandardProfile as $profile) {
             if ($profile['feature'] === $feature) {
