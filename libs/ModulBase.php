@@ -2222,7 +2222,12 @@ abstract class ModulBase extends \IPSModule
             return false;
         }
 
-        $variableProps = ['property' => $key];
+        // Erstelle Feature-Array mit korrektem Typ aus specialVariables
+        $variableProps = [
+            'property' => $key,
+            'type' => self::$specialVariables[$key]['type']  // Hier war der Fehler - der Typ wurde nicht korrekt übergeben
+        ];
+
         $ident = $key;
         $formattedLabel = $this->convertLabelToName($key);
         $variableID = $this->getOrRegisterVariable($ident, $variableProps, $formattedLabel);
