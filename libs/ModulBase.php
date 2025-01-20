@@ -2704,6 +2704,27 @@ abstract class ModulBase extends \IPSModule
         $this->SendDebug(__FUNCTION__, 'Processing type: ' . $type . ' for profile: ' . $ProfileName, 0);
         $this->SendDebug(__FUNCTION__, 'Expose data: ' . json_encode($expose), 0);
 
+        // Zuerst prüfen ob es eine specialVariable ist
+        if (isset(self::$specialVariables[$expose['property']])) {
+            $specialVar = self::$specialVariables[$expose['property']];
+            // Typ aus specialVariables verwenden statt aus expose
+            switch ($specialVar['type']) {
+                case VARIABLETYPE_INTEGER:
+                    $type = 'numeric';
+                    break;
+                case VARIABLETYPE_FLOAT:
+                    $type = 'numeric';
+                    break;
+                case VARIABLETYPE_STRING:
+                    $type = 'string';
+                    break;
+                case VARIABLETYPE_BOOLEAN:
+                    $type = 'binary';
+                    break;
+            }
+        }
+
+        // Dann normale Typ-Verarbeitung
         switch ($type) {
             case 'binary':
                 return $this->registerBinaryProfile($ProfileName);
