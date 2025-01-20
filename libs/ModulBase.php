@@ -1270,43 +1270,40 @@ abstract class ModulBase extends \IPSModule
      * @see ltrim()
      * @see strtolower()
      */
-    private static function convertToSnakeCase(string $oldIdent): string
+    function convertToSnakeCase(string $oldIdent): string
     {
-        // 1) Prefix "Z2M_" entfernen
+        // 1) Z2M_ Prefix entfernen
         $withoutPrefix = preg_replace('/^Z2M_/', '', $oldIdent);
-
-        // 2) Prüfe ob der Identifier dem MQTT-Pattern oder STATE_PATTERN entspricht
+    
+        // 2) State Pattern Check
         foreach ([self::STATE_PATTERN['MQTT'], self::STATE_PATTERN['SYMCON']] as $pattern) {
             if (preg_match($pattern, $withoutPrefix)) {
-                // Spezielles Handling für State-Pattern
                 $result = preg_replace('/^(state)([LlRr][0-9]+)$/i', '$1_$2', $withoutPrefix);
                 return strtolower($result);
             }
         }
-
-        // 3) Prüfen ob der Identifier eine bekannte Abkürzung enthält
+    
+        // 3) Bekannte Abkürzungen prüfen
         foreach (self::KNOWN_ABBREVIATIONS as $abbr) {
-            if (stripos($withoutPrefix, $abbr) !== false) {
-                // Ersetze die Abkürzung durch ihre Kleinschreibung
-                $withoutPrefix = str_ireplace($abbr, strtolower($abbr), $withoutPrefix);
+            $pattern = '/\b' . preg_quote($abbr, '/') . '\b/';
+            if (preg_match($pattern, $withoutPrefix)) {
+                $withoutPrefix = preg_replace($pattern, strtolower($abbr), $withoutPrefix);
             }
         }
-
-        // 4) Vor jedem Großbuchstaben einen Unterstrich einfügen
-        //    Bsp: "ColorTemp" -> "_Color_Temp"
-        //    Bsp: "BrightnessABC" -> "_Brightness_A_B_C"
-        $withUnderscore = preg_replace('/([A-Z])/', '_$1', $withoutPrefix);
-
-        // 5) Falls jetzt am Anfang ein "_" ist, entfernen
-        $withUnderscore = ltrim($withUnderscore, '_');
-
-        // 6) Mehrere aufeinanderfolgende Unterstriche auf einen reduzieren
-        $withUnderscore = preg_replace('/_+/', '_', $withUnderscore);
-
-        // 7) Jetzt alles in kleingeschrieben
-        $snakeCase = strtolower($withUnderscore);
-
-        return $snakeCase;
+    
+        // 4) Großbuchstaben verarbeiten
+        $result = $withoutPrefix;
+        // a) Einzelner Großbuchstabe am Wortanfang bleibt erhalten
+        // b) Großbuchstabe nach Kleinbuchstaben bekommt Unterstrich
+        $result = preg_replace('/([a-z])([A-Z])/', '$1_$2', $result);
+        // c) Großbuchstabenblöcke im Wort
+        $result = preg_replace('/([A-Z])([A-Z][a-z])/', '$1_$2', $result);
+    
+        // 5) Formatierung finalisieren
+        $result = preg_replace('/_+/', '_', $result);
+        $result = strtolower($result);
+    
+        return $result;
     }
 
     // MQTT Kommunikation
