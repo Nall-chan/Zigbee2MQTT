@@ -3634,39 +3634,58 @@ abstract class ModulBase extends \IPSModule
 
         switch ($varDef['type']) {
             case VARIABLETYPE_FLOAT:
-                $profile = $varDef['profile'] ?? $this->registerVariableProfile($feature);
+                $this->SendDebug(__FUNCTION__, 'Checking profile for ' . $ident . ': ' . json_encode($varDef), 0);
+                if (!isset($varDef['profile'])) {
+                    $this->SendDebug(__FUNCTION__, 'No profile defined, creating from: ' . json_encode($feature), 0);
+                    $profile = $this->registerVariableProfile($feature);
+                } else {
+                    $profile = $varDef['profile'];
+                    $this->SendDebug(__FUNCTION__, 'Using predefined profile: ' . $profile, 0);
+                }
                 $this->RegisterVariableFloat($ident, $this->Translate($formattedLabel), $profile);
                 if (isset($value)) {
                     $this->SetValue($ident, $value);
                 }
                 break;
+
             case VARIABLETYPE_INTEGER:
-                $profile = $varDef['profile'] ?? $this->registerVariableProfile($feature);
+                $this->SendDebug(__FUNCTION__, 'Checking profile for ' . $ident . ': ' . json_encode($varDef), 0);
+                if (!isset($varDef['profile'])) {
+                    $this->SendDebug(__FUNCTION__, 'No profile defined, creating from: ' . json_encode($feature), 0);
+                    $profile = $this->registerVariableProfile($feature);
+                } else {
+                    $profile = $varDef['profile'];
+                    $this->SendDebug(__FUNCTION__, 'Using predefined profile: ' . $profile, 0);
+                }
                 $this->RegisterVariableInteger($ident, $this->Translate($formattedLabel), $profile);
                 if (isset($value)) {
                     $this->SetValue($ident, $value);
                 }
                 break;
+
             case VARIABLETYPE_STRING:
+                $this->SendDebug(__FUNCTION__, 'Registering String Variable: ' . $ident, 0);
                 $this->RegisterVariableString($ident, $this->Translate($formattedLabel));
                 if (isset($value)) {
                     $this->SetValue($ident, $value);
                 }
                 break;
+
             case VARIABLETYPE_BOOLEAN:
-                $profile = $varDef['profile'] ?? $this->registerVariableProfile($feature);
+                $this->SendDebug(__FUNCTION__, 'Checking profile for ' . $ident . ': ' . json_encode($varDef), 0);
+                if (!isset($varDef['profile'])) {
+                    $this->SendDebug(__FUNCTION__, 'No profile defined, creating from: ' . json_encode($feature), 0);
+                    $profile = $this->registerVariableProfile($feature);
+                } else {
+                    $profile = $varDef['profile'];
+                    $this->SendDebug(__FUNCTION__, 'Using predefined profile: ' . $profile, 0);
+                }
                 $this->RegisterVariableBoolean($ident, $this->Translate($formattedLabel), $profile);
                 if (isset($value)) {
                     $this->SetValue($ident, $value);
                 }
                 break;
         }
-
-        if (isset($feature['access']) && ($feature['access'] & 0b010) != 0) {
-            $this->EnableAction($ident);
-            $this->SendDebug(__FUNCTION__, 'Set EnableAction for ident: ' . $ident . ' to: true', 0);
-        }
-        return;
     }
 
     /**
