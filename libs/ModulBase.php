@@ -2287,7 +2287,9 @@ abstract class ModulBase extends \IPSModule
         switch ($ident) {
             case 'last_seen':
                 // Umrechnung von Millisekunden auf Sekunden
-                $adjustedValue = intdiv((int) $value, 1000);
+                // $value nur mit Gleitkommazahlen Division durchführen um 32Bit-Systeme zu unterstützen
+                // Anschließend zu INT casten.
+                $adjustedValue = (int) ($value / 1000);
                 $this->SendDebug(__FUNCTION__, 'Converted value: ' . $adjustedValue, 0);
                 return $adjustedValue;
             case 'color_mode':
