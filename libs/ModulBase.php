@@ -266,9 +266,7 @@ abstract class ModulBase extends \IPSModule
      *   type: int,
      *   name: string,
      *   profile: string,
-     *   scale?: float,
      *   ident?: string,
-     *   enableAction: bool
      *
      * Definiert spezielle Variablen mit vordefinierten Eigenschaften
      *
@@ -276,29 +274,21 @@ abstract class ModulBase extends \IPSModule
      *   - type: int Variablentyp
      *   - name: string Anzeigename der Variable -> @todo Wozu? Wird in registerSpecialVariable nicht genutzt
      *   - profile: string Profilname oder leer
-     *   - scale?: float Optional: Skalierungsfaktor -> @todo Wozu? Wird in adjustSpecialValue nicht genutzt.  last_seen ist dort hart kodiert
      *   - ident?: string Optional: Benutzerdefinierter Identifier -> @todo Wozu? Wird in registerSpecialVariable nicht genutzt.
-     *   - enableAction: bool Aktionen erlaubt (true/false)
      */
     protected static $specialVariables = [
-        'last_seen'          => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Last Seen', 'profile' => '~UnixTimestamp', 'scale' => 0.001],
+        'last_seen'          => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Last Seen', 'profile' => '~UnixTimestamp'],
         'color_mode'         => ['type' => VARIABLETYPE_STRING, 'name' => 'Color Mode', 'profile' => ''],
         'update'             => ['type' => VARIABLETYPE_STRING, 'name' => 'Firmware Update Status', 'profile' => ''],
         'device_temperature' => ['type' => VARIABLETYPE_FLOAT, 'name' => 'Device Temperature', 'profile' => '~Temperature'],
-        'brightness'         => ['type' => VARIABLETYPE_INTEGER, 'ident' => 'brightness', 'profile' => '~Intensity.100', 'scale' => 1],
-        'brightness_l1'      => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l1', 'profile' => '~Intensity.100', 'scale' => 1],
-        'brightness_l2'      => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l2', 'profile' => '~Intensity.100', 'scale' => 1],
+        'brightness'         => ['type' => VARIABLETYPE_INTEGER, 'ident' => 'brightness', 'profile' => '~Intensity.100'],
+        'brightness_l1'      => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l1', 'profile' => '~Intensity.100'],
+        'brightness_l2'      => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l2', 'profile' => '~Intensity.100'],
         'voltage'            => ['type' => VARIABLETYPE_FLOAT, 'ident' => 'voltage', 'profile' => '~Volt'],
-        // Folgende Variablen waren früher ein anderer Typ, als jetzt automatisch erkannt wird.
-        // Aus gründen der Kompatibilität werden diese zwangsweise auf den Typ festgelegt.
-        // @todo
-        // Leider werden hier aktuell nur StandardProfile unterstützt -> Fehler bei Z2M. Profilen
-        // Ebenso wird bei nicht gesetzten enableAction nicht access aus dem exposes genutzt.
-        // Dabei ist calibration_time je nach Gerät mal bedienbar und mal nicht. Jetzt immer nicht bedienbar
-        'calibration_time'   => ['type' => VARIABLETYPE_FLOAT, 'profile' => 'Z2M.calibration_time'],
-        'countdown'          => ['type' => VARIABLETYPE_INTEGER, 'profile' => 'Z2M.countdown_0_43200'],
-        'countdown_l1'       => ['type' => VARIABLETYPE_INTEGER, 'profile' => 'Z2M.countdown_0_43200'],
-        'countdown_l2'       => ['type' => VARIABLETYPE_INTEGER, 'profile' => 'Z2M.countdown_0_43200'],
+        'calibration_time'   => ['type' => VARIABLETYPE_FLOAT, 'profile' => ''],
+        'countdown'          => ['type' => VARIABLETYPE_INTEGER, 'profile' => ''],
+        'countdown_l1'       => ['type' => VARIABLETYPE_INTEGER, 'profile' => ''],
+        'countdown_l2'       => ['type' => VARIABLETYPE_INTEGER, 'profile' => ''],
     ];
 
     /**
@@ -1282,41 +1272,38 @@ abstract class ModulBase extends \IPSModule
      */
     private static function convertToSnakeCase(string $oldIdent): string
     {
-        // 1) Prefix "Z2M_" entfernen
+        // 1) Z2M_ Prefix entfernen
         $withoutPrefix = preg_replace('/^Z2M_/', '', $oldIdent);
 
-        // 2) Prüfe ob der Identifier dem MQTT-Pattern oder STATE_PATTERN entspricht
+        // 2) State Pattern Check
         foreach ([self::STATE_PATTERN['MQTT'], self::STATE_PATTERN['SYMCON']] as $pattern) {
             if (preg_match($pattern, $withoutPrefix)) {
-                // Spezielles Handling für State-Pattern
                 $result = preg_replace('/^(state)([LlRr][0-9]+)$/i', '$1_$2', $withoutPrefix);
                 return strtolower($result);
             }
         }
 
-        // 3) Prüfen ob der Identifier eine bekannte Abkürzung enthält
+        // 3) Bekannte Abkürzungen prüfen
         foreach (self::KNOWN_ABBREVIATIONS as $abbr) {
-            if (stripos($withoutPrefix, $abbr) !== false) {
-                // Ersetze die Abkürzung durch ihre Kleinschreibung
-                $withoutPrefix = str_ireplace($abbr, strtolower($abbr), $withoutPrefix);
+            $pattern = '/\b' . preg_quote($abbr, '/') . '\b/';
+            if (preg_match($pattern, $withoutPrefix)) {
+                $withoutPrefix = preg_replace($pattern, strtolower($abbr), $withoutPrefix);
             }
         }
 
-        // 4) Vor jedem Großbuchstaben einen Unterstrich einfügen
-        //    Bsp: "ColorTemp" -> "_Color_Temp"
-        //    Bsp: "BrightnessABC" -> "_Brightness_A_B_C"
-        $withUnderscore = preg_replace('/([A-Z])/', '_$1', $withoutPrefix);
+        // 4) Großbuchstaben verarbeiten
+        $result = $withoutPrefix;
+        // a) Einzelner Großbuchstabe am Wortanfang bleibt erhalten
+        // b) Großbuchstabe nach Kleinbuchstaben bekommt Unterstrich
+        $result = preg_replace('/([a-z])([A-Z])/', '$1_$2', $result);
+        // c) Großbuchstabenblöcke im Wort
+        $result = preg_replace('/([A-Z])([A-Z][a-z])/', '$1_$2', $result);
 
-        // 5) Falls jetzt am Anfang ein "_" ist, entfernen
-        $withUnderscore = ltrim($withUnderscore, '_');
+        // 5) Formatierung finalisieren
+        $result = preg_replace('/_+/', '_', $result);
+        $result = strtolower($result);
 
-        // 6) Mehrere aufeinanderfolgende Unterstriche auf einen reduzieren
-        $withUnderscore = preg_replace('/_+/', '_', $withUnderscore);
-
-        // 7) Jetzt alles in kleingeschrieben
-        $snakeCase = strtolower($withUnderscore);
-
-        return $snakeCase;
+        return $result;
     }
 
     // MQTT Kommunikation
@@ -2300,6 +2287,7 @@ abstract class ModulBase extends \IPSModule
         switch ($ident) {
             case 'last_seen':
                 // Umrechnung von Millisekunden auf Sekunden
+                $value = (int) $value;
                 $adjustedValue = intdiv($value, 1000);
                 $this->SendDebug(__FUNCTION__, 'Converted value: ' . $adjustedValue, 0);
                 return $adjustedValue;
@@ -3644,13 +3632,15 @@ abstract class ModulBase extends \IPSModule
 
         switch ($varDef['type']) {
             case VARIABLETYPE_FLOAT:
-                $this->RegisterVariableFloat($ident, $this->Translate($formattedLabel), $varDef['profile'] ?? '');
+                $profile = $varDef['profile'] ?? $this->registerVariableProfile($feature);
+                $this->RegisterVariableFloat($ident, $this->Translate($formattedLabel), $profile);
                 if (isset($value)) {
                     $this->SetValue($ident, $value);
                 }
                 break;
             case VARIABLETYPE_INTEGER:
-                $this->RegisterVariableInteger($ident, $this->Translate($formattedLabel), $varDef['profile'] ?? '');
+                $profile = $varDef['profile'] ?? $this->registerVariableProfile($feature);
+                $this->RegisterVariableInteger($ident, $this->Translate($formattedLabel), $profile);
                 if (isset($value)) {
                     $this->SetValue($ident, $value);
                 }
@@ -3662,7 +3652,8 @@ abstract class ModulBase extends \IPSModule
                 }
                 break;
             case VARIABLETYPE_BOOLEAN:
-                $this->RegisterVariableBoolean($ident, $this->Translate($formattedLabel), $varDef['profile'] ?? '');
+                $profile = $varDef['profile'] ?? $this->registerVariableProfile($feature);
+                $this->RegisterVariableBoolean($ident, $this->Translate($formattedLabel), $profile);
                 if (isset($value)) {
                     $this->SetValue($ident, $value);
                 }
