@@ -2289,11 +2289,11 @@ abstract class ModulBase extends \IPSModule
                 // Sicherere Verarbeitung von großen Timestamps
                 if (PHP_INT_SIZE === 4) { // 32-bit System
                     // Nutze String-Operation für große Zahlen
-                    $value = (string)$value;
-                    $adjustedValue = (int)(substr($value, 0, -3)); // Entferne letzte 3 Stellen (Millisekunden)
+                    $value = (string) $value;
+                    $adjustedValue = (int) (substr($value, 0, -3)); // Entferne letzte 3 Stellen (Millisekunden)
                 } else {
                     // 64-bit System kann große Zahlen verarbeiten
-                    $value = (int)$value;
+                    $value = (int) $value;
                     $adjustedValue = intdiv($value, 1000);
                 }
                 return $adjustedValue;
