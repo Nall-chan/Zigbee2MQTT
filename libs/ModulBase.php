@@ -2286,9 +2286,16 @@ abstract class ModulBase extends \IPSModule
         $this->SendDebug(__FUNCTION__, 'Processing special variable: ' . $ident . ' with value: ' . $debugValue, 0);
         switch ($ident) {
             case 'last_seen':
-                // Umrechnung von Millisekunden auf Sekunden
-                $adjustedValue = intdiv((int) $value, 1000);
-                $this->SendDebug(__FUNCTION__, 'Converted value: ' . $adjustedValue, 0);
+                // Sicherere Verarbeitung von großen Timestamps
+                if (PHP_INT_SIZE === 4) { // 32-bit System
+                    // Nutze String-Operation für große Zahlen
+                    $value = (string)$value;
+                    $adjustedValue = (int)(substr($value, 0, -3)); // Entferne letzte 3 Stellen (Millisekunden)
+                } else {
+                    // 64-bit System kann große Zahlen verarbeiten
+                    $value = (int)$value;
+                    $adjustedValue = intdiv($value, 1000);
+                }
                 return $adjustedValue;
             case 'color_mode':
                 // Konvertierung von 'hs' zu 'HS' und 'xy' zu 'XY'
