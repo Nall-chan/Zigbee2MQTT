@@ -274,7 +274,7 @@ abstract class ModulBase extends \IPSModule
      *   - type: int Variablentyp
      *   - name: string Anzeigename der Variable -> @todo Wozu? Wird in registerSpecialVariable nicht genutzt
      *   - profile: string Profilname oder leer
-     *   - ident?: string Optional: Benutzerdefinierter Identifier -> @todo Wozu? Wird in registerSpecialVariable nicht genutzt.
+     *   - ident?: string Optional: Benutzerdefinierter Identifier
      */
     protected static $specialVariables = [
         'last_seen'          => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Last Seen', 'profile' => '~UnixTimestamp'],
@@ -285,10 +285,10 @@ abstract class ModulBase extends \IPSModule
         'brightness_l1'      => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l1', 'profile' => '~Intensity.100'],
         'brightness_l2'      => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l2', 'profile' => '~Intensity.100'],
         'voltage'            => ['type' => VARIABLETYPE_FLOAT, 'ident' => 'voltage', 'profile' => '~Volt'],
-        'calibration_time'   => ['type' => VARIABLETYPE_FLOAT, 'profile' => ''],
-        'countdown'          => ['type' => VARIABLETYPE_INTEGER, 'profile' => ''],
-        'countdown_l1'       => ['type' => VARIABLETYPE_INTEGER, 'profile' => ''],
-        'countdown_l2'       => ['type' => VARIABLETYPE_INTEGER, 'profile' => ''],
+        'calibration_time'   => ['type' => VARIABLETYPE_FLOAT],
+        'countdown'          => ['type' => VARIABLETYPE_INTEGER],
+        'countdown_l1'       => ['type' => VARIABLETYPE_INTEGER],
+        'countdown_l2'       => ['type' => VARIABLETYPE_INTEGER],
     ];
 
     /**
@@ -2287,8 +2287,7 @@ abstract class ModulBase extends \IPSModule
         switch ($ident) {
             case 'last_seen':
                 // Umrechnung von Millisekunden auf Sekunden
-                $value = (int) $value;
-                $adjustedValue = intdiv($value, 1000);
+                $adjustedValue = intdiv((int) $value, 1000);
                 $this->SendDebug(__FUNCTION__, 'Converted value: ' . $adjustedValue, 0);
                 return $adjustedValue;
             case 'color_mode':
