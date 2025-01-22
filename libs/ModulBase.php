@@ -3416,9 +3416,12 @@ abstract class ModulBase extends \IPSModule
                 $this->RegisterVariableFloat($ident, $this->Translate($this->convertLabelToName($label)), $profileName);
                 break;
             case 'string':
-            case 'text':
                 $this->SendDebug(__FUNCTION__, 'Registering String Variable: ' . $ident, 0);
                 $this->RegisterVariableString($ident, $this->Translate($this->convertLabelToName($label)), $profileName);
+                break;
+            case 'text':
+                $this->SendDebug(__FUNCTION__, 'Registering Text Variable: ' . $ident, 0);
+                $this->RegisterVariableString($ident, $this->Translate($this->convertLabelToName($label))); // Kein Profilname übergeben
                 break;
                 // Zusätzliche Registrierung für 'composite' Farb-Variablen
             case 'composite':
