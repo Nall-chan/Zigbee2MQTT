@@ -274,7 +274,7 @@ abstract class ModulBase extends \IPSModule
      *   - type: int Variablentyp
      *   - name: string Anzeigename der Variable -> @todo Wozu? Wird in registerSpecialVariable nicht genutzt
      *   - profile: string Profilname oder leer
-     *   - ident?: string Optional: Benutzerdefinierter Identifier -> @todo Wozu? Wird in registerSpecialVariable nicht genutzt.
+     *   - ident?: string Optional: Benutzerdefinierter Identifier
      */
     protected static $specialVariables = [
         'last_seen'          => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Last Seen', 'profile' => '~UnixTimestamp'],
@@ -285,10 +285,10 @@ abstract class ModulBase extends \IPSModule
         'brightness_l1'      => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l1', 'profile' => '~Intensity.100'],
         'brightness_l2'      => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l2', 'profile' => '~Intensity.100'],
         'voltage'            => ['type' => VARIABLETYPE_FLOAT, 'ident' => 'voltage', 'profile' => '~Volt'],
-        'calibration_time'   => ['type' => VARIABLETYPE_FLOAT, 'profile' => ''],
-        'countdown'          => ['type' => VARIABLETYPE_INTEGER, 'profile' => ''],
-        'countdown_l1'       => ['type' => VARIABLETYPE_INTEGER, 'profile' => ''],
-        'countdown_l2'       => ['type' => VARIABLETYPE_INTEGER, 'profile' => ''],
+        'calibration_time'   => ['type' => VARIABLETYPE_FLOAT],
+        'countdown'          => ['type' => VARIABLETYPE_INTEGER],
+        'countdown_l1'       => ['type' => VARIABLETYPE_INTEGER],
+        'countdown_l2'       => ['type' => VARIABLETYPE_INTEGER],
     ];
 
     /**
@@ -1272,41 +1272,38 @@ abstract class ModulBase extends \IPSModule
      */
     private static function convertToSnakeCase(string $oldIdent): string
     {
-        // 1) Prefix "Z2M_" entfernen
+        // 1) Z2M_ Prefix entfernen
         $withoutPrefix = preg_replace('/^Z2M_/', '', $oldIdent);
 
-        // 2) Prüfe ob der Identifier dem MQTT-Pattern oder STATE_PATTERN entspricht
+        // 2) State Pattern Check
         foreach ([self::STATE_PATTERN['MQTT'], self::STATE_PATTERN['SYMCON']] as $pattern) {
             if (preg_match($pattern, $withoutPrefix)) {
-                // Spezielles Handling für State-Pattern
                 $result = preg_replace('/^(state)([LlRr][0-9]+)$/i', '$1_$2', $withoutPrefix);
                 return strtolower($result);
             }
         }
 
-        // 3) Prüfen ob der Identifier eine bekannte Abkürzung enthält
+        // 3) Bekannte Abkürzungen prüfen
         foreach (self::KNOWN_ABBREVIATIONS as $abbr) {
-            if (stripos($withoutPrefix, $abbr) !== false) {
-                // Ersetze die Abkürzung durch ihre Kleinschreibung
-                $withoutPrefix = str_ireplace($abbr, strtolower($abbr), $withoutPrefix);
+            $pattern = '/\b' . preg_quote($abbr, '/') . '\b/';
+            if (preg_match($pattern, $withoutPrefix)) {
+                $withoutPrefix = preg_replace($pattern, strtolower($abbr), $withoutPrefix);
             }
         }
 
-        // 4) Vor jedem Großbuchstaben einen Unterstrich einfügen
-        //    Bsp: "ColorTemp" -> "_Color_Temp"
-        //    Bsp: "BrightnessABC" -> "_Brightness_A_B_C"
-        $withUnderscore = preg_replace('/([A-Z])/', '_$1', $withoutPrefix);
+        // 4) Großbuchstaben verarbeiten
+        $result = $withoutPrefix;
+        // a) Einzelner Großbuchstabe am Wortanfang bleibt erhalten
+        // b) Großbuchstabe nach Kleinbuchstaben bekommt Unterstrich
+        $result = preg_replace('/([a-z])([A-Z])/', '$1_$2', $result);
+        // c) Großbuchstabenblöcke im Wort
+        $result = preg_replace('/([A-Z])([A-Z][a-z])/', '$1_$2', $result);
 
-        // 5) Falls jetzt am Anfang ein "_" ist, entfernen
-        $withUnderscore = ltrim($withUnderscore, '_');
+        // 5) Formatierung finalisieren
+        $result = preg_replace('/_+/', '_', $result);
+        $result = strtolower($result);
 
-        // 6) Mehrere aufeinanderfolgende Unterstriche auf einen reduzieren
-        $withUnderscore = preg_replace('/_+/', '_', $withUnderscore);
-
-        // 7) Jetzt alles in kleingeschrieben
-        $snakeCase = strtolower($withUnderscore);
-
-        return $snakeCase;
+        return $result;
     }
 
     // MQTT Kommunikation
@@ -2290,7 +2287,9 @@ abstract class ModulBase extends \IPSModule
         switch ($ident) {
             case 'last_seen':
                 // Umrechnung von Millisekunden auf Sekunden
-                $adjustedValue = intdiv($value, 1000);
+                // $value nur mit Gleitkommazahlen Division durchführen um 32Bit-Systeme zu unterstützen
+                // Anschließend zu INT casten.
+                $adjustedValue = (int) ($value / 1000);
                 $this->SendDebug(__FUNCTION__, 'Converted value: ' . $adjustedValue, 0);
                 return $adjustedValue;
             case 'color_mode':
@@ -3634,58 +3633,39 @@ abstract class ModulBase extends \IPSModule
 
         switch ($varDef['type']) {
             case VARIABLETYPE_FLOAT:
-                $this->SendDebug(__FUNCTION__, 'Checking profile for ' . $ident . ': ' . json_encode($varDef), 0);
-                if (!isset($varDef['profile'])) {
-                    $this->SendDebug(__FUNCTION__, 'No profile defined, creating from: ' . json_encode($feature), 0);
-                    $profile = $this->registerVariableProfile($feature);
-                } else {
-                    $profile = $varDef['profile'];
-                    $this->SendDebug(__FUNCTION__, 'Using predefined profile: ' . $profile, 0);
-                }
+                $profile = $varDef['profile'] ?? $this->registerVariableProfile($feature);
                 $this->RegisterVariableFloat($ident, $this->Translate($formattedLabel), $profile);
                 if (isset($value)) {
                     $this->SetValue($ident, $value);
                 }
                 break;
-
             case VARIABLETYPE_INTEGER:
-                $this->SendDebug(__FUNCTION__, 'Checking profile for ' . $ident . ': ' . json_encode($varDef), 0);
-                if (!isset($varDef['profile'])) {
-                    $this->SendDebug(__FUNCTION__, 'No profile defined, creating from: ' . json_encode($feature), 0);
-                    $profile = $this->registerVariableProfile($feature);
-                } else {
-                    $profile = $varDef['profile'];
-                    $this->SendDebug(__FUNCTION__, 'Using predefined profile: ' . $profile, 0);
-                }
+                $profile = $varDef['profile'] ?? $this->registerVariableProfile($feature);
                 $this->RegisterVariableInteger($ident, $this->Translate($formattedLabel), $profile);
                 if (isset($value)) {
                     $this->SetValue($ident, $value);
                 }
                 break;
-
             case VARIABLETYPE_STRING:
-                $this->SendDebug(__FUNCTION__, 'Registering String Variable: ' . $ident, 0);
                 $this->RegisterVariableString($ident, $this->Translate($formattedLabel));
                 if (isset($value)) {
                     $this->SetValue($ident, $value);
                 }
                 break;
-
             case VARIABLETYPE_BOOLEAN:
-                $this->SendDebug(__FUNCTION__, 'Checking profile for ' . $ident . ': ' . json_encode($varDef), 0);
-                if (!isset($varDef['profile'])) {
-                    $this->SendDebug(__FUNCTION__, 'No profile defined, creating from: ' . json_encode($feature), 0);
-                    $profile = $this->registerVariableProfile($feature);
-                } else {
-                    $profile = $varDef['profile'];
-                    $this->SendDebug(__FUNCTION__, 'Using predefined profile: ' . $profile, 0);
-                }
+                $profile = $varDef['profile'] ?? $this->registerVariableProfile($feature);
                 $this->RegisterVariableBoolean($ident, $this->Translate($formattedLabel), $profile);
                 if (isset($value)) {
                     $this->SetValue($ident, $value);
                 }
                 break;
         }
+
+        if (isset($feature['access']) && ($feature['access'] & 0b010) != 0) {
+            $this->EnableAction($ident);
+            $this->SendDebug(__FUNCTION__, 'Set EnableAction for ident: ' . $ident . ' to: true', 0);
+        }
+        return;
     }
 
     /**
