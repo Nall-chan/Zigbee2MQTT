@@ -4,6 +4,7 @@
             "Zigbee2MQTT Device": "Zigbee2MQTT Gerät",
             "IEEE Address": "IEEE Adresse",
             "Device not found. Check topic": "Gerät nicht gefunden. Topic prüfen.",
+            "Expert Settings": "Experteneinstellungen",
             "Change IEEE Address": "IEEE Adresse ändern",
             "Warning!": "Warnung!",
             "Close": "Schließen",
