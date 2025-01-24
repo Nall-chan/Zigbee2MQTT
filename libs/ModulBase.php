@@ -1145,6 +1145,8 @@ abstract class ModulBase extends \IPSModule
                             $this->SendDebug(__FUNCTION__, 'Brightness Config: ' . json_encode($brightnessConfig), 0);
                         }
                     }
+                } else {
+                    $this->registerVariable($expose);
                 }
             } else {
                 $this->registerVariable($expose);
@@ -2508,7 +2510,9 @@ abstract class ModulBase extends \IPSModule
      */
     private function getStandardProfile(string $type, string $property, ?string $groupType = null): string
     {
-        $this->SendDebug(__FUNCTION__, "Checking for standard profile with type: $type, property: $property, groupType: $groupType", 0);
+        $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2);
+        $caller = isset($backtrace[1]['function']) ? $backtrace[1]['function'] : 'unknown';
+        $this->SendDebug(__FUNCTION__ . ' (' . $caller . ')', "Checking for standard profile with type: $type, property: $property, groupType: $groupType", 0);
 
         // Überprüfen, ob ein Standardprofil für den Typ und die Eigenschaft definiert ist
         foreach (self::$VariableUseStandardProfile as $entry) {
@@ -2724,7 +2728,7 @@ abstract class ModulBase extends \IPSModule
 
             default:
                 $this->SendDebug(__FUNCTION__, 'Unsupported profile type: ' . $type, 0);
-                return $ProfileName;
+                return ''; // Fallback: kein Profil
         }
     }
 
