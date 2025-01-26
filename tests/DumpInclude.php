@@ -6,7 +6,7 @@ include_once __DIR__ . '/stubs/autoload.php';
 
 use PHPUnit\Framework\TestCase;
 
-class BasicFunctionalityTestIgnore extends TestCase
+class DumpInclude extends TestCase
 {
     private $deviceModuleID = '{E5BB36C6-A70B-EB23-3716-9151A09AC8A2}';
     private $groupModuleID = '{11BF3773-E940-469B-9DD7-FB9ACD7199A2}';
@@ -35,9 +35,14 @@ class BasicFunctionalityTestIgnore extends TestCase
 
         parent::setUp();
         IPS_CreateVariableProfile('~Alert.Reversed', VARIABLETYPE_BOOLEAN);
+        IPS_CreateVariableProfile('~Lock', VARIABLETYPE_BOOLEAN);
         IPS_CreateVariableProfile('~Switch', VARIABLETYPE_BOOLEAN);
+        IPS_CreateVariableProfile('~Temperature', VARIABLETYPE_FLOAT);
+        IPS_CreateVariableProfile('~Temperature.Room', VARIABLETYPE_FLOAT);
+        IPS_CreateVariableProfile('~Valve', VARIABLETYPE_INTEGER);
         IPS_CreateVariableProfile('~UnixTimestamp', VARIABLETYPE_INTEGER);
-        //IPS_CreateVariableProfile('Z2M.calibration_time', VARIABLETYPE_FLOAT);
+        IPS_CreateVariableProfile('~Shutter.Reversed', VARIABLETYPE_INTEGER);
+        IPS_CreateVariableProfile('~Battery.100', VARIABLETYPE_INTEGER);
     }
     public function testCreateBridge()
     {
@@ -53,25 +58,22 @@ class BasicFunctionalityTestIgnore extends TestCase
         $this->assertEquals($previousCount + 1, count(IPS_GetInstanceListByModuleID($this->deviceModuleID)));
     }
 
-    public function IGNORE_testPayload()
+    public function createTestInstance(string $File)
     {
         $iid = IPS_CreateInstance($this->deviceModuleID);
         $intf = IPS\InstanceManager::getInstanceInterface($iid);
         $this->assertTrue($intf instanceof Zigbee2MQTTDevice); // Instanz angelegt?
         // Lade Z2M_Debug.json
-        $Debug = json_decode(file_get_contents(dirname(__DIR__) . '/Z2M_Debug.json'), true);
+        $Debug = json_decode(file_get_contents(__DIR__ . '/TestDumps/' . $File), true);
         // Config aus Debug JSON
         IPS_SetConfiguration($iid, json_encode($Debug['Config']));
         IPS_ApplyChanges($iid);
         $intf->BUFFER_MQTT_SUSPENDED = false; // Instanz zwangsweise aktivieren, da keine MessageSink vorhanden ist.
-        // Exposes aus Debug JSON laden -> wie bekommen wir die bei den Tests in die Instanz? -> mit dem Payload mergen?
-        // Topic aus Debug JSON Config ableiten
-        $Topic = $Debug['Config']['MQTTBaseTopic'] . '/' . $Debug['Config']['MQTTTopic'];
+        $Topic = $Debug['Config']['MQTTBaseTopic'] . '/' . $Debug['Config']['MQTTTopic']; // Topic aus Debug JSON Config ableiten
         $Payload = $Debug['LastPayload']; // Payload aus Debug JSON laden
-        // Daten an die Instanz senden (Datenfluss will noch nicht)
-        $intf->ReceiveData(self::BuildRequest($Topic, $Payload));
-        // Wurden alle Variablen aus Payload verarbeitet und in Symcon angelegt?
-        $this->assertSame(count($Payload), count(IPS_GetChildrenIDs($iid)));
+        $Payload['exposes'] = $Debug['Exposes']; // Exposes ergänzen
+        $intf->ReceiveData(self::BuildRequest($Topic, $Payload)); // Daten an die Instanz senden
+        return [$iid, $Payload];
     }
     private static function BuildRequest(string $Topic, array $Payload)
     {

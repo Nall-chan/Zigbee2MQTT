@@ -1151,7 +1151,7 @@ abstract class ModulBase extends \IPSModule
             } else {
                 $this->registerVariable($expose);
                 if (isset($expose['presets'])) {
-                    $variableType = $this->getVariableTypeFromProfile($expose['type'], $expose['property'], $expose['unit'] ?? '', $expose['step'] ?? null, null);
+                    $variableType = $this->getVariableTypeFromProfile($expose['type'], $expose['property'], $expose['unit'] ?? '', $expose['value_step'] ?? null, null);
                     $this->registerPresetVariables($expose['presets'], $expose['property'], $variableType, $expose);
                 }
             }
@@ -1466,6 +1466,7 @@ abstract class ModulBase extends \IPSModule
         // Exposes verarbeiten wenn vorhanden
         if (isset($payload['exposes'])) {
             $this->mapExposesToVariables($payload['exposes']);
+            unset($payload['exposes']);
         }
 
         // Variablentypen anhängen
@@ -2806,7 +2807,6 @@ abstract class ModulBase extends \IPSModule
      *       - In translations.json hinzugefügt falls nicht vorhanden
      *
      * @see \Zigbee2MQTT\ModulBase::isValueInLocaleJson()
-     * @see \Zigbee2MQTT\ModulBase::addValueToTranslationsJson()
      * @see \Zigbee2MQTT\ModulBase::RegisterProfileStringEx()
      * @see \IPSModule::SendDebug()
      * @see sort()
@@ -3391,7 +3391,7 @@ abstract class ModulBase extends \IPSModule
         $unit = $feature['unit'] ?? '';
         $ident = $property;     // Bereits validiert
         $label = ucfirst(str_replace('_', ' ', $property));
-        $step = isset($feature['step']) ? (float) $feature['step'] : 1.0;
+        $step = isset($feature['value_step']) ? (float) $feature['value_step'] : 1.0;
 
         // Bestimmen des Variablentyps basierend auf Typ, Feature und Einheit
         $variableType = $this->getVariableTypeFromProfile($type, $property, $unit, $step, $groupType);
