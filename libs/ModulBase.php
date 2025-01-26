@@ -20,7 +20,7 @@ require_once __DIR__ . '/ColorHelper.php';
  * @property bool $BUFFER_MQTT_SUSPENDED Zugriff auf den Buffer für laufende Migration
  * @property bool $BUFFER_PROCESSING_MIGRATION Zugriff auf den Buffer für MQTT Nachrichten nicht verarbeiten
  * @property string $lastPayload Zugriff auf den Buffer welcher das Letzte Payload enthält (für Download-Button)
- * @property string $missingTranslations Zugriff auf den Buffer welcher ein array von fehlenden Übersetzungen enthält (für Download-Button)
+ * @property array $missingTranslations Zugriff auf den Buffer welcher ein array von fehlenden Übersetzungen enthält (für Download-Button)
  */
 abstract class ModulBase extends \IPSModule
 {
@@ -365,6 +365,7 @@ abstract class ModulBase extends \IPSModule
         $this->BUFFER_PROCESSING_MIGRATION = false;
         $this->TransactionData = [];
         $this->lastPayload = [];
+        $this->missingTranslations = [];
 
         $this->createExposesDirectory();
 
@@ -545,8 +546,10 @@ abstract class ModulBase extends \IPSModule
         $this->SendDebug(__FUNCTION__, 'Aufgerufen für Ident: ' . $ident . ' mit Wert: ' . json_encode($value), 0);
 
         $handled = match (true) {
-            //Behandelt UpdateInfo
+            // Behandelt UpdateInfo
             $ident == 'UpdateInfo' => $this->UpdateDeviceInfo(),
+            // Behandelt ShowMissingTranslations
+            $ident == 'ShowMissingTranslations' => $this->ShowMissingTranslations(),
             // Behandelt Presets
             strpos($ident, 'presets') !== false => $this->handlePresetVariable($ident, $value),
             // Behandelt String-Variablen ohne Rückmeldung
@@ -780,7 +783,8 @@ abstract class ModulBase extends \IPSModule
 
         // Prüfe ob JSON existiert
         if (file_exists($jsonFile)) {
-            $DebugData['Exposes'] = json_decode(file_get_contents($jsonFile), true)['exposes'];
+            $JSON = json_decode(file_get_contents($jsonFile), true);
+            $DebugData['Exposes'] = $JSON['exposes'] ?? $JSON;
         } else {
             $DebugData['Exposes'] = [];
         }
@@ -801,7 +805,7 @@ abstract class ModulBase extends \IPSModule
                 $DebugData['Profile'][$var['VariableProfile']] = IPS_GetVariableProfile($var['VariableProfile']);
             }
         }
-
+        $DebugData['missingTranslations'] = $this->missingTranslations;
         return 'data:application/json;base64,' . base64_encode(json_encode($DebugData, JSON_PRETTY_PRINT));
     }
 
@@ -1193,6 +1197,19 @@ abstract class ModulBase extends \IPSModule
      */
     abstract protected function UpdateDeviceInfo(): bool;
 
+    protected function ShowMissingTranslations(): bool
+    {
+        $this->UpdateFormField('ShowMissingTranslations', 'visible', true);
+        $Values = [];
+        foreach ($this->missingTranslations as $KVP) {
+            $Values[] = [
+                'type' => array_key_first($KVP),
+                'value'=> $KVP[array_key_first($KVP)]
+            ];
+        }
+        $this->UpdateFormField('MissingTranslationsList', 'values', json_encode($Values));
+        return true;
+    }
     /**
      * SaveExposesToJson
      *
@@ -2344,7 +2361,7 @@ abstract class ModulBase extends \IPSModule
      * @return string Das formatierte Label
      *
      * @see \Zigbee2MQTT\ModulBase::isValueInLocaleJson()
-     * @see \Zigbee2MQTT\ModulBase::addValueToTranslationsJson()
+     * @see \Zigbee2MQTT\ModulBase::addValueToTranslationsBuffer()
      * @see \IPSModule::SendDebug()
      * @see str_replace()
      * @see str_ireplace()
@@ -2375,8 +2392,8 @@ abstract class ModulBase extends \IPSModule
         $this->SendDebug(__FUNCTION__, 'Converted Label: ' . $label, 0);
 
         // Prüfe, ob der Name in der locale.json vorhanden ist
-        // Füge den Namen zur translations.json hinzu
-        self::isValueInLocaleJson($label);
+        // Füge den Namen zum missingTranslations Buffer hinzu
+        $this->isValueInLocaleJson($label, 'lable');
         return $label;
     }
 
@@ -2804,7 +2821,7 @@ abstract class ModulBase extends \IPSModule
      * @note Die Werte werden automatisch:
      *       - Sortiert für konsistente Hash-Generierung
      *       - In lesbare Form konvertiert (z.B. manual -> Manual)
-     *       - In translations.json hinzugefügt falls nicht vorhanden
+     *       - In missingTranslations Buffer hinzufügen falls nicht vorhanden
      *
      * @see \Zigbee2MQTT\ModulBase::isValueInLocaleJson()
      * @see \Zigbee2MQTT\ModulBase::RegisterProfileStringEx()
@@ -2836,8 +2853,7 @@ abstract class ModulBase extends \IPSModule
         foreach ($expose['values'] as $value) {
             $readableValue = ucwords(str_replace('_', ' ', (string) $value));
             // Prüfe, ob der Wert in der locale.json vorhanden ist
-            // Füge den Wert zur translations.json hinzu
-            self::isValueInLocaleJson($readableValue);
+            $this->isValueInLocaleJson($readableValue, 'value');
             $profileValues[] = [(string) $value, $readableValue, '', 0x00FF00];
         }
 
@@ -3224,7 +3240,7 @@ abstract class ModulBase extends \IPSModule
      *@see substr()
      *@see json_decode()
      */
-    private static function isValueInLocaleJson(string $Text): bool
+    private function isValueInLocaleJson(string $Text, string $Type): bool
     {
         $translation = json_decode(file_get_contents(__DIR__ . '/locale_z2m.json'), true);
         $language = IPS_GetSystemLanguage();
@@ -3240,14 +3256,14 @@ abstract class ModulBase extends \IPSModule
                 }
             }
         }
-        self::addValueToTranslationsJson($Text);
+        $this->addValueToTranslationsBuffer($Text, $Type);
         return false;
     }
 
     /**
-     * addValueToTranslationsJson
+     * addValueToTranslationsBuffer
      *
-     * Fügt einen Wert zur translations.json hinzu, wenn er noch nicht vorhanden ist.
+     * Fügt einen Wert zum Missingtranslations Buffer hinzu, wenn er noch nicht vorhanden ist.
      * Gibt eine Liste an Begriffen, die noch in der locale.json ergänzt werden müssen.
      *
      * @param string $value Der hinzuzufügende Wert.
@@ -3260,19 +3276,14 @@ abstract class ModulBase extends \IPSModule
      * @see in_array()
      * @see file_put_contents()
      */
-    private static function addValueToTranslationsJson(string $value): void
+    private function addValueToTranslationsBuffer(string $value, string $type): void
     {
-        $jsonFile = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY . DIRECTORY_SEPARATOR . 'translations.json';
-        // Lade bestehende Übersetzungen
-        $translations = [];
-        if (file_exists($jsonFile)) {
-            $translations = json_decode(file_get_contents($jsonFile), true);
-        }
-
+        $translations = $this->missingTranslations;
+        $missingKVP = [$type => $value];
         // Füge den neuen Begriff hinzu, wenn er noch nicht existiert
-        if (!in_array($value, $translations)) {
-            $translations[] = $value;
-            file_put_contents($jsonFile, json_encode($translations, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        if (!in_array($missingKVP, $translations)) {
+            $translations[] = $missingKVP;
+            $this->missingTranslations = $translations;
         }
     }
 

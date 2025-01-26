@@ -3,6 +3,10 @@
         "de": {
             "Zigbee2MQTT Group": "Zigbee2MQTT Gruppe",
             "Change Group Id": "Gruppen-ID ändern",
+            "Show missing translations": "Zeige fehlende Übersetzungen",
+            "List of missing translations": "Liste der fehlenden Übersetzungen",
+            "Type": "Typ",
+            "Value": "Wert",
             "Expert Settings": "Experteneinstellungen",
             "Warning!": "Warnung!",
             "I understand": "Habe ich verstanden",

@@ -94,6 +94,9 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
         } else {
             $Form['elements'][1]['visible'] = false;
         }
+        if (count($this->missingTranslations)) {
+            $Form['elements'][2]['visible'] = true;
+        }
         return json_encode($Form);
     }
     /**

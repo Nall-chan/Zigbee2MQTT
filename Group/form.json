@@ -15,6 +15,12 @@
             "name": "GroupId",
             "caption": "Group Id",
             "enabled": false
+        },
+        {
+            "type": "Button",
+            "visible": false,
+            "caption": "Show missing translations",
+            "onClick": "IPS_RequestAction($id, 'ShowMissingTranslations', true);"
         }
     ],
     "actions": [
@@ -75,6 +81,44 @@
                     ]
                 }
             ]
+        },
+        {
+            "name": "ShowMissingTranslations",
+            "type": "PopupAlert",
+            "visible": false,
+            "popup": {
+                "closeCaption": "Close",
+                "items": [
+                    {
+                        "type": "Label",
+                        "bold": true,
+                        "caption": "List of missing translations"
+                    },
+                    {
+                        "name": "MissingTranslationsList",
+                        "type": "List",
+                        "delete": false,
+                        "add": false,
+                        "rowCount": 5,
+                        "sort": {
+                            "column": "value",
+                            "direction": "ascending"
+                        },
+                        "columns": [
+                            {
+                                "caption": "Type",
+                                "name": "type",
+                                "width": "200px"
+                            },
+                            {
+                                "caption": "Value",
+                                "name": "value",
+                                "width": "auto"
+                            }
+                        ]
+                    }
+                ]
+            }
         },
         {
             "caption": "Testcenter",
