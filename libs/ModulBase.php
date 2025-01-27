@@ -1983,19 +1983,31 @@ abstract class ModulBase extends \IPSModule
      * adjustValueByType
      *
      * Passt den Wert basierend auf dem Variablentyp an.
-     *
      * Diese Methode konvertiert den übergebenen Wert in den entsprechenden Typ der Variable.
+     * 
+     * Spezielle Behandlungen:
+     * - Bei child_lock: 'LOCK' wird zu true, 'UNLOCK' zu false konvertiert
+     * - Boolesche Werte: 'ON' wird zu true, 'OFF' zu false konvertiert
      *
-     * @param array $variableObject Ein Array von IPS_GetVariable()
-     * @param mixed $value Der Wert, der angepasst werden soll.
+     * @param array $variableObject Ein Array von IPS_GetVariable() mit folgenden Schlüsseln:
+     *                             - 'VariableType': int - Der Typ der Variable (0=Bool, 1=Int, 2=Float, 3=String)
+     *                             - 'VariableID': int - Die ID der Variable
+     * @param mixed $value Der Wert, der angepasst werden soll
      *
-     * @return mixed Der angepasste Wert basierend auf dem Variablentyp.
+     * @return mixed Der konvertierte Wert:
+     *               - bool für VARIABLETYPE_BOOLEAN (0)
+     *               - int für VARIABLETYPE_INTEGER (1)
+     *               - float für VARIABLETYPE_FLOAT (2)
+     *               - string für VARIABLETYPE_STRING (3)
+     *               - original $value bei unbekanntem Typ
      *
      * @see \IPSModule::SendDebug()
      * @see json_encode()
      * @see is_bool()
      * @see is_string()
      * @see strtoupper()
+     * @see IPS_GetObject()
+     * @see VARIABLETYPE_BOOLEAN
      */
     private function adjustValueByType(array $variableObject, mixed $value): mixed
     {
