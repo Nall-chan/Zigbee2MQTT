@@ -1678,20 +1678,34 @@ abstract class ModulBase extends \IPSModule
     /**
      * handleStandardVariable
      *
-     * Verarbeitet Standard-Variablenaktionen.
+     * Verarbeitet Standard-Variablenaktionen und sendet diese an das Zigbee-Gerät.
      *
      * Diese Methode wird aufgerufen, wenn eine Aktion für eine Standard-Variable angefordert wird.
      * Sie konvertiert den Wert bei Bedarf und sendet den entsprechenden Set-Befehl.
      *
-     * @param string $ident Der Identifikator der Standard-Variable.
-     * @param mixed $value Der Wert, der mit der Standard-Variablen-Aktionsanforderung verbunden ist.
+     * Spezielle Wertkonvertierungen:
+     * - child_lock: bool true/false wird zu 'LOCK'/'UNLOCK' konvertiert
+     * - Boolesche Werte: true/false wird zu 'ON'/'OFF' konvertiert
+     * - brightness: Prozentwert (0-100) wird in Gerätewert (0-254) konvertiert
      *
-     * @return bool Gibt true zurück, wenn die Aktion erfolgreich verarbeitet wurde, andernfalls false.
+     * @param string $ident Der Identifikator der Standard-Variable (z.B. 'state', 'brightness', 'child_lock')
+     * @param mixed $value Der zu setzende Wert:
+     *                    - bool für ON/OFF oder LOCK/UNLOCK
+     *                    - int für Helligkeitswerte (0-100)
+     *                    - mixed für andere Werte
+     *
+     * @return bool True wenn der Set-Befehl erfolgreich gesendet wurde, False bei Fehlern
+     *
+     * @example
+     * handleStandardVariable('state', true)      // Sendet: {"state": "ON"}
+     * handleStandardVariable('child_lock', true) // Sendet: {"child_lock": "LOCK"}
+     * handleStandardVariable('brightness', 50)   // Sendet: {"brightness": 127}
      *
      * @see \Zigbee2MQTT\ModulBase::getOrRegisterVariable()
      * @see \Zigbee2MQTT\ModulBase::normalizeValueToRange()
      * @see \Zigbee2MQTT\ModulBase::SendSetCommand()
      * @see \IPSModule::SendDebug()
+     * @see json_encode()
      * @see is_bool()
      */
     private function handleStandardVariable(string $ident, mixed $value): bool
@@ -1701,8 +1715,12 @@ abstract class ModulBase extends \IPSModule
             return false;
         }
 
-        // Konvertiere boolesche Werte zu "ON"/"OFF"
-        if (is_bool($value)) {
+        // Spezialfall child_lock: Konvertiere zu LOCK/UNLOCK
+        if ($ident === 'child_lock' && is_bool($value)) {
+            $value = $value ? 'LOCK' : 'UNLOCK';
+        }
+        // Standard: Konvertiere andere boolesche Werte zu ON/OFF
+        elseif (is_bool($value)) {
             $value = $value ? 'ON' : 'OFF';
         }
         // light-Brightness wird immer das Profil ~Intensity.100 haben
@@ -1979,34 +1997,58 @@ abstract class ModulBase extends \IPSModule
      * adjustValueByType
      *
      * Passt den Wert basierend auf dem Variablentyp an.
-     *
      * Diese Methode konvertiert den übergebenen Wert in den entsprechenden Typ der Variable.
+     * 
+     * Spezielle Behandlungen:
+     * - Bei child_lock: 'LOCK' wird zu true, 'UNLOCK' zu false konvertiert
+     * - Boolesche Werte: 'ON' wird zu true, 'OFF' zu false konvertiert
      *
-     * @param array $variableObject Ein Array von IPS_GetVariable()
-     * @param mixed $value Der Wert, der angepasst werden soll.
+     * @param array $variableObject Ein Array von IPS_GetVariable() mit folgenden Schlüsseln:
+     *                             - 'VariableType': int - Der Typ der Variable (0=Bool, 1=Int, 2=Float, 3=String)
+     *                             - 'VariableID': int - Die ID der Variable
+     * @param mixed $value Der Wert, der angepasst werden soll
      *
-     * @return mixed Der angepasste Wert basierend auf dem Variablentyp.
+     * @return mixed Der konvertierte Wert:
+     *               - bool für VARIABLETYPE_BOOLEAN (0)
+     *               - int für VARIABLETYPE_INTEGER (1)
+     *               - float für VARIABLETYPE_FLOAT (2)
+     *               - string für VARIABLETYPE_STRING (3)
+     *               - original $value bei unbekanntem Typ
      *
      * @see \IPSModule::SendDebug()
      * @see json_encode()
      * @see is_bool()
      * @see is_string()
      * @see strtoupper()
+     * @see IPS_GetObject()
+     * @see VARIABLETYPE_BOOLEAN
      */
     private function adjustValueByType(array $variableObject, mixed $value): mixed
     {
         $varType = $variableObject['VariableType'];
         $varID = $variableObject['VariableID'];
+        $ident = IPS_GetObject($varID)['ObjectIdent'];
 
         $this->SendDebug(__FUNCTION__, 'Variable ID: ' . $varID . ', Typ: ' . $varType . ', Ursprünglicher Wert: ' . json_encode($value), 0);
 
         switch ($varType) {
-            case 0: // Boolean
+            case 0:
                 if (is_bool($value)) {
                     $this->SendDebug(__FUNCTION__, 'Wert ist bereits bool: ' . json_encode($value), 0);
                     return $value;
                 }
                 if (is_string($value)) {
+                    // Spezialbehandlung für child_lock
+                    if ($ident === 'child_lock') {
+                        if (strtoupper($value) === 'LOCK') {
+                            $this->SendDebug(__FUNCTION__, 'Konvertiere "LOCK" zu true', 0);
+                            return true;
+                        } elseif (strtoupper($value) === 'UNLOCK') {
+                            $this->SendDebug(__FUNCTION__, 'Konvertiere "UNLOCK" zu false', 0);
+                            return false;
+                        }
+                    }
+                    // Standard ON/OFF Konvertierung
                     if (strtoupper($value) === 'ON') {
                         $this->SendDebug(__FUNCTION__, 'Konvertiere "ON" zu true', 0);
                         return true;
