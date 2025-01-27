@@ -1701,8 +1701,12 @@ abstract class ModulBase extends \IPSModule
             return false;
         }
 
-        // Konvertiere boolesche Werte zu "ON"/"OFF"
-        if (is_bool($value)) {
+        // Spezialfall child_lock: Konvertiere zu LOCK/UNLOCK
+        if ($ident === 'child_lock' && is_bool($value)) {
+            $value = $value ? 'LOCK' : 'UNLOCK';
+        }
+        // Standard: Konvertiere andere boolesche Werte zu ON/OFF
+        elseif (is_bool($value)) {
             $value = $value ? 'ON' : 'OFF';
         }
         // light-Brightness wird immer das Profil ~Intensity.100 haben
