@@ -3496,8 +3496,7 @@ abstract class ModulBase extends \IPSModule
                         // Bilde Sub-Properties
                         $subFeature['property'] = $property . '_' . $subFeature['property'];
                         // Rekursiver Aufruf mit einzelnem Feature
-                        /** @todo  aktuell deaktiviert */
-                        //$this->registerVariable($subFeature, $exposeType);
+                        $this->registerVariable($subFeature, $exposeType);
                     }
                 }
                 return;

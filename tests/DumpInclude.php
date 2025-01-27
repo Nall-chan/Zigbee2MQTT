@@ -73,7 +73,8 @@ class DumpInclude extends TestCase
         $Payload = $Debug['LastPayload']; // Payload aus Debug JSON laden
         $Payload['exposes'] = $Debug['Exposes']; // Exposes ergänzen
         $intf->ReceiveData(self::BuildRequest($Topic, $Payload)); // Daten an die Instanz senden
-        return [$iid, $Payload];
+        unset($Payload['exposes']);
+        return [$iid, $Debug];
     }
     private static function BuildRequest(string $Topic, array $Payload)
     {

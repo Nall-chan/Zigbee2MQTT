@@ -118,7 +118,7 @@
                         "type": "List",
                         "delete": false,
                         "add": false,
-                        "rowCount": 5,
+                        "rowCount": 8,
                         "sort": {
                             "column": "value",
                             "direction": "ascending"
@@ -127,12 +127,12 @@
                             {
                                 "caption": "Type",
                                 "name": "type",
-                                "width": "200px"
+                                "width": "150px"
                             },
                             {
                                 "caption": "Value",
                                 "name": "value",
-                                "width": "auto"
+                                "width": "300px"
                             }
                         ]
                     }
