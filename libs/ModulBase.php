@@ -256,7 +256,7 @@ abstract class ModulBase extends \IPSModule
         ['group_type' => '', 'feature' => 'child_lock', 'profile' => '~Lock', 'variableType' => VARIABLETYPE_BOOLEAN],
         ['group_type' => '', 'feature' => 'window_open', 'profile' => '~Window', 'variableType' => VARIABLETYPE_BOOLEAN],
         ['group_type' => '', 'feature' => 'valve', 'profile' => '~Valve', 'variableType' => VARIABLETYPE_INTEGER],
-        ['group_type' => '', 'feature' => 'window_detection', 'profile' =>'~Window', 'variableType' => VARIABLETYPE_BOOLEAN],
+        ['group_type' => '', 'feature' => 'window_detection', 'profile' => '~Window', 'variableType' => VARIABLETYPE_BOOLEAN],
         ['group_type' => 'light', 'feature' => 'color', 'profile' => '~HexColor', 'variableType' => VARIABLETYPE_INTEGER],
         ['group_type' => 'climate', 'feature' => 'occupied_heating_setpoint', 'profile' => '~Temperature.Room', 'variableType' => VARIABLETYPE_FLOAT]
     ];
@@ -1204,7 +1204,7 @@ abstract class ModulBase extends \IPSModule
         foreach ($this->missingTranslations as $KVP) {
             $Values[] = [
                 'type' => array_key_first($KVP),
-                'value'=> $KVP[array_key_first($KVP)]
+                'value' => $KVP[array_key_first($KVP)]
             ];
         }
         $this->UpdateFormField('MissingTranslationsList', 'values', json_encode($Values));
@@ -1998,7 +1998,7 @@ abstract class ModulBase extends \IPSModule
      *
      * Passt den Wert basierend auf dem Variablentyp an.
      * Diese Methode konvertiert den übergebenen Wert in den entsprechenden Typ der Variable.
-     * 
+     *
      * Spezielle Behandlungen:
      * - Bei child_lock: 'LOCK' wird zu true, 'UNLOCK' zu false konvertiert
      * - Boolesche Werte: 'ON' wird zu true, 'OFF' zu false konvertiert
