@@ -1203,7 +1203,7 @@ abstract class ModulBase extends \IPSModule
         $Values = [];
         foreach ($this->missingTranslations as $KVP) {
             $Values[] = [
-                'type' => array_key_first($KVP),
+                'type'  => array_key_first($KVP),
                 'value' => $KVP[array_key_first($KVP)]
             ];
         }
