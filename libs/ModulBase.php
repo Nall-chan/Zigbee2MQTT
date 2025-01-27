@@ -1678,20 +1678,34 @@ abstract class ModulBase extends \IPSModule
     /**
      * handleStandardVariable
      *
-     * Verarbeitet Standard-Variablenaktionen.
+     * Verarbeitet Standard-Variablenaktionen und sendet diese an das Zigbee-Gerät.
      *
      * Diese Methode wird aufgerufen, wenn eine Aktion für eine Standard-Variable angefordert wird.
      * Sie konvertiert den Wert bei Bedarf und sendet den entsprechenden Set-Befehl.
      *
-     * @param string $ident Der Identifikator der Standard-Variable.
-     * @param mixed $value Der Wert, der mit der Standard-Variablen-Aktionsanforderung verbunden ist.
+     * Spezielle Wertkonvertierungen:
+     * - child_lock: bool true/false wird zu 'LOCK'/'UNLOCK' konvertiert
+     * - Boolesche Werte: true/false wird zu 'ON'/'OFF' konvertiert
+     * - brightness: Prozentwert (0-100) wird in Gerätewert (0-254) konvertiert
      *
-     * @return bool Gibt true zurück, wenn die Aktion erfolgreich verarbeitet wurde, andernfalls false.
+     * @param string $ident Der Identifikator der Standard-Variable (z.B. 'state', 'brightness', 'child_lock')
+     * @param mixed $value Der zu setzende Wert:
+     *                    - bool für ON/OFF oder LOCK/UNLOCK
+     *                    - int für Helligkeitswerte (0-100)
+     *                    - mixed für andere Werte
+     *
+     * @return bool True wenn der Set-Befehl erfolgreich gesendet wurde, False bei Fehlern
+     *
+     * @example
+     * handleStandardVariable('state', true)      // Sendet: {"state": "ON"}
+     * handleStandardVariable('child_lock', true) // Sendet: {"child_lock": "LOCK"}
+     * handleStandardVariable('brightness', 50)   // Sendet: {"brightness": 127}
      *
      * @see \Zigbee2MQTT\ModulBase::getOrRegisterVariable()
      * @see \Zigbee2MQTT\ModulBase::normalizeValueToRange()
      * @see \Zigbee2MQTT\ModulBase::SendSetCommand()
      * @see \IPSModule::SendDebug()
+     * @see json_encode()
      * @see is_bool()
      */
     private function handleStandardVariable(string $ident, mixed $value): bool
