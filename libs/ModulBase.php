@@ -2001,16 +2001,28 @@ abstract class ModulBase extends \IPSModule
     {
         $varType = $variableObject['VariableType'];
         $varID = $variableObject['VariableID'];
+        $ident = IPS_GetObject($varID)['ObjectIdent'];
 
         $this->SendDebug(__FUNCTION__, 'Variable ID: ' . $varID . ', Typ: ' . $varType . ', Ursprünglicher Wert: ' . json_encode($value), 0);
 
         switch ($varType) {
-            case 0: // Boolean
+            case VARIABLETYPE_BOOLEAN:
                 if (is_bool($value)) {
                     $this->SendDebug(__FUNCTION__, 'Wert ist bereits bool: ' . json_encode($value), 0);
                     return $value;
                 }
                 if (is_string($value)) {
+                    // Spezialbehandlung für child_lock
+                    if ($ident === 'child_lock') {
+                        if (strtoupper($value) === 'LOCK') {
+                            $this->SendDebug(__FUNCTION__, 'Konvertiere "LOCK" zu true', 0);
+                            return true;
+                        } elseif (strtoupper($value) === 'UNLOCK') {
+                            $this->SendDebug(__FUNCTION__, 'Konvertiere "UNLOCK" zu false', 0);
+                            return false;
+                        }
+                    }
+                    // Standard ON/OFF Konvertierung
                     if (strtoupper($value) === 'ON') {
                         $this->SendDebug(__FUNCTION__, 'Konvertiere "ON" zu true', 0);
                         return true;
