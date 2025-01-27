@@ -2032,7 +2032,7 @@ abstract class ModulBase extends \IPSModule
         $this->SendDebug(__FUNCTION__, 'Variable ID: ' . $varID . ', Typ: ' . $varType . ', Ursprünglicher Wert: ' . json_encode($value), 0);
 
         switch ($varType) {
-            case VARIABLETYPE_BOOLEAN:
+            case 0:
                 if (is_bool($value)) {
                     $this->SendDebug(__FUNCTION__, 'Wert ist bereits bool: ' . json_encode($value), 0);
                     return $value;
