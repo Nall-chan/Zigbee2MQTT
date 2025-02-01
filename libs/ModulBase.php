@@ -20,7 +20,7 @@ require_once __DIR__ . '/ColorHelper.php';
  * @property bool $BUFFER_MQTT_SUSPENDED Zugriff auf den Buffer für laufende Migration
  * @property bool $BUFFER_PROCESSING_MIGRATION Zugriff auf den Buffer für MQTT Nachrichten nicht verarbeiten
  * @property string $lastPayload Zugriff auf den Buffer welcher das Letzte Payload enthält (für Download-Button)
- * @property string $missingTranslations Zugriff auf den Buffer welcher ein array von fehlenden Übersetzungen enthält (für Download-Button)
+ * @property array $missingTranslations Zugriff auf den Buffer welcher ein array von fehlenden Übersetzungen enthält (für Download-Button)
  */
 abstract class ModulBase extends \IPSModule
 {
@@ -256,7 +256,7 @@ abstract class ModulBase extends \IPSModule
         ['group_type' => '', 'feature' => 'child_lock', 'profile' => '~Lock', 'variableType' => VARIABLETYPE_BOOLEAN],
         ['group_type' => '', 'feature' => 'window_open', 'profile' => '~Window', 'variableType' => VARIABLETYPE_BOOLEAN],
         ['group_type' => '', 'feature' => 'valve', 'profile' => '~Valve', 'variableType' => VARIABLETYPE_INTEGER],
-        ['group_type' => '', 'feature' => 'window_detection', 'profile' =>'~Window', 'variableType' => VARIABLETYPE_BOOLEAN],
+        ['group_type' => '', 'feature' => 'window_detection', 'profile' => '~Window', 'variableType' => VARIABLETYPE_BOOLEAN],
         ['group_type' => 'light', 'feature' => 'color', 'profile' => '~HexColor', 'variableType' => VARIABLETYPE_INTEGER],
         ['group_type' => 'climate', 'feature' => 'occupied_heating_setpoint', 'profile' => '~Temperature.Room', 'variableType' => VARIABLETYPE_FLOAT]
     ];
@@ -365,6 +365,7 @@ abstract class ModulBase extends \IPSModule
         $this->BUFFER_PROCESSING_MIGRATION = false;
         $this->TransactionData = [];
         $this->lastPayload = [];
+        $this->missingTranslations = [];
 
         $this->createExposesDirectory();
 
@@ -545,8 +546,10 @@ abstract class ModulBase extends \IPSModule
         $this->SendDebug(__FUNCTION__, 'Aufgerufen für Ident: ' . $ident . ' mit Wert: ' . json_encode($value), 0);
 
         $handled = match (true) {
-            //Behandelt UpdateInfo
+            // Behandelt UpdateInfo
             $ident == 'UpdateInfo' => $this->UpdateDeviceInfo(),
+            // Behandelt ShowMissingTranslations
+            $ident == 'ShowMissingTranslations' => $this->ShowMissingTranslations(),
             // Behandelt Presets
             strpos($ident, 'presets') !== false => $this->handlePresetVariable($ident, $value),
             // Behandelt String-Variablen ohne Rückmeldung
@@ -780,7 +783,8 @@ abstract class ModulBase extends \IPSModule
 
         // Prüfe ob JSON existiert
         if (file_exists($jsonFile)) {
-            $DebugData['Exposes'] = json_decode(file_get_contents($jsonFile), true)['exposes'];
+            $JSON = json_decode(file_get_contents($jsonFile), true);
+            $DebugData['Exposes'] = $JSON['exposes'] ?? $JSON;
         } else {
             $DebugData['Exposes'] = [];
         }
@@ -801,7 +805,7 @@ abstract class ModulBase extends \IPSModule
                 $DebugData['Profile'][$var['VariableProfile']] = IPS_GetVariableProfile($var['VariableProfile']);
             }
         }
-
+        $DebugData['missingTranslations'] = $this->missingTranslations;
         return 'data:application/json;base64,' . base64_encode(json_encode($DebugData, JSON_PRETTY_PRINT));
     }
 
@@ -1151,7 +1155,7 @@ abstract class ModulBase extends \IPSModule
             } else {
                 $this->registerVariable($expose);
                 if (isset($expose['presets'])) {
-                    $variableType = $this->getVariableTypeFromProfile($expose['type'], $expose['property'], $expose['unit'] ?? '', $expose['step'] ?? null, null);
+                    $variableType = $this->getVariableTypeFromProfile($expose['type'], $expose['property'], $expose['unit'] ?? '', $expose['value_step'] ?? null, null);
                     $this->registerPresetVariables($expose['presets'], $expose['property'], $variableType, $expose);
                 }
             }
@@ -1193,6 +1197,19 @@ abstract class ModulBase extends \IPSModule
      */
     abstract protected function UpdateDeviceInfo(): bool;
 
+    protected function ShowMissingTranslations(): bool
+    {
+        $this->UpdateFormField('ShowMissingTranslations', 'visible', true);
+        $Values = [];
+        foreach ($this->missingTranslations as $KVP) {
+            $Values[] = [
+                'type'  => array_key_first($KVP),
+                'value' => $KVP[array_key_first($KVP)]
+            ];
+        }
+        $this->UpdateFormField('MissingTranslationsList', 'values', json_encode($Values));
+        return true;
+    }
     /**
      * SaveExposesToJson
      *
@@ -1466,6 +1483,7 @@ abstract class ModulBase extends \IPSModule
         // Exposes verarbeiten wenn vorhanden
         if (isset($payload['exposes'])) {
             $this->mapExposesToVariables($payload['exposes']);
+            unset($payload['exposes']);
         }
 
         // Variablentypen anhängen
@@ -1660,20 +1678,34 @@ abstract class ModulBase extends \IPSModule
     /**
      * handleStandardVariable
      *
-     * Verarbeitet Standard-Variablenaktionen.
+     * Verarbeitet Standard-Variablenaktionen und sendet diese an das Zigbee-Gerät.
      *
      * Diese Methode wird aufgerufen, wenn eine Aktion für eine Standard-Variable angefordert wird.
      * Sie konvertiert den Wert bei Bedarf und sendet den entsprechenden Set-Befehl.
      *
-     * @param string $ident Der Identifikator der Standard-Variable.
-     * @param mixed $value Der Wert, der mit der Standard-Variablen-Aktionsanforderung verbunden ist.
+     * Spezielle Wertkonvertierungen:
+     * - child_lock: bool true/false wird zu 'LOCK'/'UNLOCK' konvertiert
+     * - Boolesche Werte: true/false wird zu 'ON'/'OFF' konvertiert
+     * - brightness: Prozentwert (0-100) wird in Gerätewert (0-254) konvertiert
      *
-     * @return bool Gibt true zurück, wenn die Aktion erfolgreich verarbeitet wurde, andernfalls false.
+     * @param string $ident Der Identifikator der Standard-Variable (z.B. 'state', 'brightness', 'child_lock')
+     * @param mixed $value Der zu setzende Wert:
+     *                    - bool für ON/OFF oder LOCK/UNLOCK
+     *                    - int für Helligkeitswerte (0-100)
+     *                    - mixed für andere Werte
+     *
+     * @return bool True wenn der Set-Befehl erfolgreich gesendet wurde, False bei Fehlern
+     *
+     * @example
+     * handleStandardVariable('state', true)      // Sendet: {"state": "ON"}
+     * handleStandardVariable('child_lock', true) // Sendet: {"child_lock": "LOCK"}
+     * handleStandardVariable('brightness', 50)   // Sendet: {"brightness": 127}
      *
      * @see \Zigbee2MQTT\ModulBase::getOrRegisterVariable()
      * @see \Zigbee2MQTT\ModulBase::normalizeValueToRange()
      * @see \Zigbee2MQTT\ModulBase::SendSetCommand()
      * @see \IPSModule::SendDebug()
+     * @see json_encode()
      * @see is_bool()
      */
     private function handleStandardVariable(string $ident, mixed $value): bool
@@ -1683,8 +1715,12 @@ abstract class ModulBase extends \IPSModule
             return false;
         }
 
-        // Konvertiere boolesche Werte zu "ON"/"OFF"
-        if (is_bool($value)) {
+        // Spezialfall child_lock: Konvertiere zu LOCK/UNLOCK
+        if ($ident === 'child_lock' && is_bool($value)) {
+            $value = $value ? 'LOCK' : 'UNLOCK';
+        }
+        // Standard: Konvertiere andere boolesche Werte zu ON/OFF
+        elseif (is_bool($value)) {
             $value = $value ? 'ON' : 'OFF';
         }
         // light-Brightness wird immer das Profil ~Intensity.100 haben
@@ -1961,34 +1997,58 @@ abstract class ModulBase extends \IPSModule
      * adjustValueByType
      *
      * Passt den Wert basierend auf dem Variablentyp an.
-     *
      * Diese Methode konvertiert den übergebenen Wert in den entsprechenden Typ der Variable.
      *
-     * @param array $variableObject Ein Array von IPS_GetVariable()
-     * @param mixed $value Der Wert, der angepasst werden soll.
+     * Spezielle Behandlungen:
+     * - Bei child_lock: 'LOCK' wird zu true, 'UNLOCK' zu false konvertiert
+     * - Boolesche Werte: 'ON' wird zu true, 'OFF' zu false konvertiert
      *
-     * @return mixed Der angepasste Wert basierend auf dem Variablentyp.
+     * @param array $variableObject Ein Array von IPS_GetVariable() mit folgenden Schlüsseln:
+     *                             - 'VariableType': int - Der Typ der Variable (0=Bool, 1=Int, 2=Float, 3=String)
+     *                             - 'VariableID': int - Die ID der Variable
+     * @param mixed $value Der Wert, der angepasst werden soll
+     *
+     * @return mixed Der konvertierte Wert:
+     *               - bool für VARIABLETYPE_BOOLEAN (0)
+     *               - int für VARIABLETYPE_INTEGER (1)
+     *               - float für VARIABLETYPE_FLOAT (2)
+     *               - string für VARIABLETYPE_STRING (3)
+     *               - original $value bei unbekanntem Typ
      *
      * @see \IPSModule::SendDebug()
      * @see json_encode()
      * @see is_bool()
      * @see is_string()
      * @see strtoupper()
+     * @see IPS_GetObject()
+     * @see VARIABLETYPE_BOOLEAN
      */
     private function adjustValueByType(array $variableObject, mixed $value): mixed
     {
         $varType = $variableObject['VariableType'];
         $varID = $variableObject['VariableID'];
+        $ident = IPS_GetObject($varID)['ObjectIdent'];
 
         $this->SendDebug(__FUNCTION__, 'Variable ID: ' . $varID . ', Typ: ' . $varType . ', Ursprünglicher Wert: ' . json_encode($value), 0);
 
         switch ($varType) {
-            case 0: // Boolean
+            case 0:
                 if (is_bool($value)) {
                     $this->SendDebug(__FUNCTION__, 'Wert ist bereits bool: ' . json_encode($value), 0);
                     return $value;
                 }
                 if (is_string($value)) {
+                    // Spezialbehandlung für child_lock
+                    if ($ident === 'child_lock') {
+                        if (strtoupper($value) === 'LOCK') {
+                            $this->SendDebug(__FUNCTION__, 'Konvertiere "LOCK" zu true', 0);
+                            return true;
+                        } elseif (strtoupper($value) === 'UNLOCK') {
+                            $this->SendDebug(__FUNCTION__, 'Konvertiere "UNLOCK" zu false', 0);
+                            return false;
+                        }
+                    }
+                    // Standard ON/OFF Konvertierung
                     if (strtoupper($value) === 'ON') {
                         $this->SendDebug(__FUNCTION__, 'Konvertiere "ON" zu true', 0);
                         return true;
@@ -2343,7 +2403,7 @@ abstract class ModulBase extends \IPSModule
      * @return string Das formatierte Label
      *
      * @see \Zigbee2MQTT\ModulBase::isValueInLocaleJson()
-     * @see \Zigbee2MQTT\ModulBase::addValueToTranslationsJson()
+     * @see \Zigbee2MQTT\ModulBase::addValueToTranslationsBuffer()
      * @see \IPSModule::SendDebug()
      * @see str_replace()
      * @see str_ireplace()
@@ -2374,8 +2434,8 @@ abstract class ModulBase extends \IPSModule
         $this->SendDebug(__FUNCTION__, 'Converted Label: ' . $label, 0);
 
         // Prüfe, ob der Name in der locale.json vorhanden ist
-        // Füge den Namen zur translations.json hinzu
-        self::isValueInLocaleJson($label);
+        // Füge den Namen zum missingTranslations Buffer hinzu
+        $this->isValueInLocaleJson($label, 'lable');
         return $label;
     }
 
@@ -2803,10 +2863,9 @@ abstract class ModulBase extends \IPSModule
      * @note Die Werte werden automatisch:
      *       - Sortiert für konsistente Hash-Generierung
      *       - In lesbare Form konvertiert (z.B. manual -> Manual)
-     *       - In translations.json hinzugefügt falls nicht vorhanden
+     *       - In missingTranslations Buffer hinzufügen falls nicht vorhanden
      *
      * @see \Zigbee2MQTT\ModulBase::isValueInLocaleJson()
-     * @see \Zigbee2MQTT\ModulBase::addValueToTranslationsJson()
      * @see \Zigbee2MQTT\ModulBase::RegisterProfileStringEx()
      * @see \IPSModule::SendDebug()
      * @see sort()
@@ -2836,8 +2895,7 @@ abstract class ModulBase extends \IPSModule
         foreach ($expose['values'] as $value) {
             $readableValue = ucwords(str_replace('_', ' ', (string) $value));
             // Prüfe, ob der Wert in der locale.json vorhanden ist
-            // Füge den Wert zur translations.json hinzu
-            self::isValueInLocaleJson($readableValue);
+            $this->isValueInLocaleJson($readableValue, 'value');
             $profileValues[] = [(string) $value, $readableValue, '', 0x00FF00];
         }
 
@@ -3224,7 +3282,7 @@ abstract class ModulBase extends \IPSModule
      *@see substr()
      *@see json_decode()
      */
-    private static function isValueInLocaleJson(string $Text): bool
+    private function isValueInLocaleJson(string $Text, string $Type): bool
     {
         $translation = json_decode(file_get_contents(__DIR__ . '/locale_z2m.json'), true);
         $language = IPS_GetSystemLanguage();
@@ -3240,14 +3298,14 @@ abstract class ModulBase extends \IPSModule
                 }
             }
         }
-        self::addValueToTranslationsJson($Text);
+        $this->addValueToTranslationsBuffer($Text, $Type);
         return false;
     }
 
     /**
-     * addValueToTranslationsJson
+     * addValueToTranslationsBuffer
      *
-     * Fügt einen Wert zur translations.json hinzu, wenn er noch nicht vorhanden ist.
+     * Fügt einen Wert zum Missingtranslations Buffer hinzu, wenn er noch nicht vorhanden ist.
      * Gibt eine Liste an Begriffen, die noch in der locale.json ergänzt werden müssen.
      *
      * @param string $value Der hinzuzufügende Wert.
@@ -3260,19 +3318,14 @@ abstract class ModulBase extends \IPSModule
      * @see in_array()
      * @see file_put_contents()
      */
-    private static function addValueToTranslationsJson(string $value): void
+    private function addValueToTranslationsBuffer(string $value, string $type): void
     {
-        $jsonFile = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY . DIRECTORY_SEPARATOR . 'translations.json';
-        // Lade bestehende Übersetzungen
-        $translations = [];
-        if (file_exists($jsonFile)) {
-            $translations = json_decode(file_get_contents($jsonFile), true);
-        }
-
+        $translations = $this->missingTranslations;
+        $missingKVP = [$type => $value];
         // Füge den neuen Begriff hinzu, wenn er noch nicht existiert
-        if (!in_array($value, $translations)) {
-            $translations[] = $value;
-            file_put_contents($jsonFile, json_encode($translations, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        if (!in_array($missingKVP, $translations)) {
+            $translations[] = $missingKVP;
+            $this->missingTranslations = $translations;
         }
     }
 
@@ -3391,7 +3444,7 @@ abstract class ModulBase extends \IPSModule
         $unit = $feature['unit'] ?? '';
         $ident = $property;     // Bereits validiert
         $label = ucfirst(str_replace('_', ' ', $property));
-        $step = isset($feature['step']) ? (float) $feature['step'] : 1.0;
+        $step = isset($feature['value_step']) ? (float) $feature['value_step'] : 1.0;
 
         // Bestimmen des Variablentyps basierend auf Typ, Feature und Einheit
         $variableType = $this->getVariableTypeFromProfile($type, $property, $unit, $step, $groupType);
@@ -3443,8 +3496,7 @@ abstract class ModulBase extends \IPSModule
                         // Bilde Sub-Properties
                         $subFeature['property'] = $property . '_' . $subFeature['property'];
                         // Rekursiver Aufruf mit einzelnem Feature
-                        /** @todo  aktuell deaktiviert */
-                        //$this->registerVariable($subFeature, $exposeType);
+                        $this->registerVariable($subFeature, $exposeType);
                     }
                 }
                 return;

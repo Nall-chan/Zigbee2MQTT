@@ -70,6 +70,20 @@ class Zigbee2MQTTGroup extends \Zigbee2MQTT\ModulBase
     }
 
     /**
+     * GetConfigurationForm
+     *
+     * @return string
+     */
+    public function GetConfigurationForm()
+    {
+        $Form = json_decode(file_get_contents(__DIR__ . '/form.json'), true);
+        if (count($this->missingTranslations)) {
+            $Form['elements'][3]['visible'] = true;
+        }
+        return json_encode($Form);
+    }
+
+    /**
      * RequestAction
      *
      * @param  string $ident
