@@ -9,11 +9,6 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
     /** @var mixed $ExtensionTopic Topic für den ReceiveFilter*/
     protected static $ExtensionTopic = 'getDeviceInfo/';
 
-    /**
-     * Create
-     *
-     * @return void
-     */
     public function Create()
     {
         //Never delete this line!
@@ -90,7 +85,7 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
         if ($Model) {
             $ModelUrl = str_replace([' ', '/'], '_', $Model);
             $Form['elements'][1]['caption'] = $this->Translate('Link to device information: ') .
-            'https://www.zigbee2mqtt.io/devices/' . rawurlencode($ModelUrl) . '.html';
+                'https://www.zigbee2mqtt.io/devices/' . rawurlencode($ModelUrl) . '.html';
         } else {
             $Form['elements'][1]['visible'] = false;
         }
@@ -136,7 +131,6 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
         if (!count($Result)) {
             trigger_error($this->Translate('Device not found. Check topic.'), E_USER_NOTICE);
             return false;
-
         }
         if (!isset($Result['ieeeAddr'])) {
             $this->LogMessage($this->Translate('IEEE-Address missing.'), KL_WARNING);
@@ -164,8 +158,8 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
             $this->WriteAttributeString(parent::ATTRIBUTE_EXPOSES, json_encode($exposes));
         }
 
-    $this->mapExposesToVariables($Result['exposes']);
-    return true;
+        $this->mapExposesToVariables($Result['exposes']);
+        return true;
     }
 
     private function UpdateDeviceIcon(string $Model): void
