@@ -158,22 +158,14 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
             }
         }
 
-        // Exposes enthalten?
-        if (!isset($Result['exposes'])) {
-            return false;
+        // Exposes verarbeiten
+        if (isset($Result['definition']['exposes']) || isset($Result['exposes'])) {
+            $exposes = isset($Result['definition']['exposes']) ? $Result['definition']['exposes'] : $Result['exposes'];
+            $this->WriteAttributeString(parent::ATTRIBUTE_EXPOSES, json_encode($exposes));
         }
 
-        // JSON-Datei speichern
-        $SaveResult = $this->SaveExposesToJson([
-            'symconId'  => $this->InstanceID,
-            'ieeeAddr'  => $Result['ieeeAddr'],
-            'model'     => $Result['model'],
-            'exposes'   => $Result['exposes']
-        ]);
-
-        $this->mapExposesToVariables($Result['exposes']);
-        return $SaveResult;
-
+    $this->mapExposesToVariables($Result['exposes']);
+    return true;
     }
 
     private function UpdateDeviceIcon(string $Model): void

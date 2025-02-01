@@ -124,7 +124,7 @@ class Zigbee2MQTTGroup extends \Zigbee2MQTT\ModulBase
         }
         unset($Result['foundGroup']);
         // Aufruf der Methode aus der ModulBase-Klasse
-        $SaveResult = $this->SaveExposesToJson($Result);
+        $SaveResult = $this->WriteAttributeString(self::ATTRIBUTE_EXPOSES, json_encode($Result));
         $this->mapExposesToVariables($Result);
         return $SaveResult;
     }

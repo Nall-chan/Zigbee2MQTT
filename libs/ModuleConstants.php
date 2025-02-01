@@ -45,4 +45,6 @@ trait Constants
     protected const GUID_MODULE_DISCOVERY = '{7D2AD94C-6CD2-4B32-8B23-3F21EFC30DAC}';
     /** @var string GUID des Module Zigbee2MQTT Gruppe */
     protected const GUID_MODULE_GROUP = '{11BF3773-E940-469B-9DD7-FB9ACD7199A2}';
+    /** @var string summary of ATTRIBUTE_EXPOSES */
+    protected const ATTRIBUTE_EXPOSES = 'Exposes';
 }
