@@ -556,6 +556,8 @@ abstract class ModulBase extends \IPSModule
             in_array($ident, self::$stringVariablesNoResponse) => $this->handleStringVariableNoResponse($ident, (string) $value),
             // Behandelt Farbvariablen
             strpos($ident, 'color') === 0 => $this->handleColorVariable($ident, $value),
+            // Behandelt Weekly_Schedule
+            strpos($ident, 'Weekly_Schedule_') === 0 => $this->handleWeeklyScheduleVariable($ident, $value),
             // Behandelt Status-Variablen
             preg_match(self::STATE_PATTERN['SYMCON'], $ident) => $this->handleStateVariable($ident, $value),
             // Behandelt Standard-Variablen
@@ -1589,22 +1591,33 @@ abstract class ModulBase extends \IPSModule
      */
     private function processVariable(string $key, mixed $value): void
     {
-        // Wenn Value ein Array ist und einen 'composite' Key enthält
-        if (is_array($value) && isset($value['composite'])) {
-            foreach ($value['composite'] as $compositeKey => $compositeValue) {
-                $this->processVariable($compositeKey, $compositeValue);
-            }
-            return;
-        }
+        $this->SendDebug(__FUNCTION__ . ' :: Start', 'Key: ' . $key . ', Value: ' . json_encode($value), 0);
+
+        // Key in Kleinbuchstaben für Vergleich
 
         $lowerKey = strtolower($key);
         $ident = $key;
 
-        // Prüfe existierende Variable
-        $variableID = @$this->GetIDForIdent($ident);
-        if ($variableID !== false) {
-            $this->SendDebug(__FUNCTION__, 'Existierende Variable gefunden: ' . $ident, 0);
-            $this->SetValue($ident, $value);
+        // Generische Behandlung von Array-Werten als potenzielle Composite-Properties
+        if (is_array($value) && !isset($value['composite'])) {
+            $this->SendDebug(__FUNCTION__ . ' :: Array', 'Verarbeite Array für: ' . $ident, 0);
+
+            // Feature-Teil: Behalte Original-Case des ursprünglichen Keys bei, aber wandle in Weekly_Schedule Format um
+            $feature = implode('_', array_map('ucfirst', explode('_', $ident))); // z.B. "weekly_schedule" -> "Weekly_Schedule"
+
+            foreach ($value as $subKey => $subValue) {
+                // Composite-Ident: Weekly_Schedule_[subKey]
+                $compositeIdent = $feature . '_' . $subKey;
+                $variableID = @$this->GetIDForIdent($compositeIdent);
+
+                if ($variableID !== false) {
+                    $this->SendDebug(__FUNCTION__ . ' :: Composite', 'Verarbeite: ' . $compositeIdent, 0);
+                    $this->SetValue($compositeIdent, $subValue);
+                } else {
+                    // Debug ausgeben
+                    $this->SendDebug(__FUNCTION__ . ' :: Composite', 'Suche Variable: ' . $compositeIdent, 0);
+                }
+            }
             return;
         }
 
@@ -1991,6 +2004,72 @@ abstract class ModulBase extends \IPSModule
             return true;
         }
         return false;
+    }
+
+    /**
+     * Verarbeitet Änderungen an Weekly Schedule Variablen
+     *
+     * Diese Methode verarbeitet Wertänderungen für Weekly Schedule Variablen und sendet sie an das Gerät.
+     * Der Ident wird aufgeteilt und in das korrekte Payload-Format für das Gerät umgewandelt.
+     *
+     * @param string $ident Der Identifier der Variable (Format: "Weekly_Schedule_[weekday]")
+     * @param mixed $value Der neue Wert für den Schedule-Eintrag
+     *
+     * @return bool True wenn der Befehl erfolgreich gesendet wurde, false bei Fehler
+     *
+     * @example handleWeeklyScheduleVariable("Weekly_Schedule_friday", "00:00/15")
+     *
+     * @see SendSetCommand() Zum Senden des formatierten Payloads
+     */
+    private function handleWeeklyScheduleVariable(string $ident, mixed $value): bool
+    {
+        // Extrahiere den Wochentag
+        $day = substr($ident, strlen('Weekly_Schedule_'));
+
+        // Erstelle korrektes Payload
+        $payload = [
+            'weekly_schedule' => [
+                $day => $value
+            ]
+        ];
+
+        // Sende Daten
+        return $this->SendSetCommand($payload);
+    }
+
+    /**
+     * Verarbeitet zusammengesetzte (Composite) Expose-Features
+     *
+     * Diese Methode verarbeitet Features, die aus mehreren Unterelementen bestehen.
+     * Beispiel: Weekly_Schedule mit den Unterelementen monday, tuesday, etc.
+     *
+     * @param array $feature Das zu verarbeitende Feature-Array mit den Unterelementen
+     * @param string|null $exposeType Der Expose-Typ (optional)
+     * @return void
+     *
+     * @see registerVariable() Wird für jedes Unter-Feature aufgerufen
+     */
+    private function handleCompositePayload($feature, $exposeType = null): void {
+        if (!isset($feature['features'])) {
+            return;
+        }
+
+        // Parent property aufbereiten
+        $parentProperty = $feature['property'] ?? '';
+        if ($parentProperty !== 'color') {
+            $propertyParts = explode('_', $parentProperty);
+            $propertyParts = array_map('ucfirst', $propertyParts);
+            $parentProperty = implode('_', $propertyParts);
+        }
+
+        // Verarbeite jedes Sub-Feature
+        foreach ($feature['features'] as $subFeature) {
+            // Erstelle zusammengesetzten Identifier mit Parent-Property
+            $subFeature['property'] = $parentProperty . '_' . $subFeature['property'];
+
+            // Rekursiver Aufruf mit einzelnem Feature
+            $this->registerVariable($subFeature, $exposeType);
+        }
     }
 
     /**
@@ -3490,15 +3569,8 @@ abstract class ModulBase extends \IPSModule
                     return;
                 }
 
-                // Neue Feature-Verarbeitung
-                if (isset($feature['features'])) {
-                    foreach ($feature['features'] as $subFeature) {
-                        // Bilde Sub-Properties
-                        $subFeature['property'] = $property . '_' . $subFeature['property'];
-                        // Rekursiver Aufruf mit einzelnem Feature
-                        $this->registerVariable($subFeature, $exposeType);
-                    }
-                }
+                // Composite-Payload Verarbeitung
+                $this->handleCompositePayload($feature, $exposeType);
                 return;
 
             default:
