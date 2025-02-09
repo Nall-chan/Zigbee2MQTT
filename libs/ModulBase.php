@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Zigbee2MQTT;
 
+require_once __DIR__ . '/AttributeArrayHelper.php';
 require_once __DIR__ . '/BufferHelper.php';
 require_once __DIR__ . '/SemaphoreHelper.php';
 require_once __DIR__ . '/VariableProfileHelper.php';
@@ -24,12 +25,13 @@ require_once __DIR__ . '/ColorHelper.php';
  */
 abstract class ModulBase extends \IPSModule
 {
+    use AttributeArrayHelper;
     use BufferHelper;
     use Semaphore;
     use ColorHelper;
     use VariableProfileHelper;
     use SendData;
-    private const MINIMAL_MODUL_VERSION = 5.0;
+    private const MINIMAL_MODUL_VERSION = 5.1;
 
     /**
      * @var array STATE_PATTERN
@@ -348,7 +350,7 @@ abstract class ModulBase extends \IPSModule
      *
      * @see \IPSModule::RegisterPropertyString()
      * @see \IPSModule::RegisterAttributeFloat()
-     * @see \Zigbee2MQTT\ModulBase::createExposesDirectory()
+     * @see \IPSModule::RegisterAttributeArray()
      * @see \Zigbee2MQTT\ModulBase::RegisterProfileBoolean()
      */
     public function Create()
@@ -358,6 +360,7 @@ abstract class ModulBase extends \IPSModule
 
         $this->RegisterPropertyString(self::MQTT_BASE_TOPIC, '');
         $this->RegisterPropertyString(self::MQTT_TOPIC, '');
+        $this->RegisterAttributeArray(self::ATTRIBUTE_EXPOSES, []);
         $this->RegisterAttributeFloat(self::ATTRIBUTE_MODUL_VERSION, 5.0);
 
         /** Init Buffers */
@@ -367,7 +370,9 @@ abstract class ModulBase extends \IPSModule
         $this->lastPayload = [];
         $this->missingTranslations = [];
 
-        $this->createExposesDirectory();
+        /** @todo cleanup old directory
+         * $this->createExposesDirectory();
+         */
 
         // Statische Profile
         $this->RegisterProfileBooleanEx(
@@ -385,43 +390,6 @@ abstract class ModulBase extends \IPSModule
     }
 
     /**
-     * Destroy
-     *
-     * Diese Methode wird aufgerufen, wenn die Instanz gelöscht,
-     * oder Symcon beendet wird.
-     *
-     * Sie sorgt dafür, dass die zugehörige .json-Datei entfernt wird.
-     *
-     * Achtung: Methoden vom ipsmodule:: sind hier nicht mehr verfügbar!
-     * Darum muss hier IPS_LogMessage benutzt werden.
-     * Entsprechend ist auch kein Translate mehr verfügbar!
-     *
-     * @see \IPSModule::Destroy()
-     * @see IPS_InstanceExists()
-     * @see IPS_LogMessage()
-     *
-     * @return void
-     */
-    public function Destroy()
-    {
-        // Nur wenn Instanz gelöscht wurde.
-        if (!IPS_InstanceExists($this->InstanceID)) {
-            // Vollständiger Pfad zur JSON-Datei
-            $jsonFile = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY . DIRECTORY_SEPARATOR . $this->InstanceID . '.json';
-            // Überprüfung und Löschung der Datei
-            if (is_file($jsonFile)) {
-                if (unlink($jsonFile)) {
-                    // us
-                    IPS_LogMessage(__CLASS__, 'File successfully deleted: ' . $jsonFile);
-                } else {
-                    IPS_LogMessage(__CLASS__, 'Error on delete file: ' . $jsonFile);
-                }
-            }
-        }
-        parent::Destroy();
-    }
-
-    /**
      * ApplyChanges
      *
      * Wird aufgerufen bei übernehmen der Modulkonfiguration
@@ -431,7 +399,7 @@ abstract class ModulBase extends \IPSModule
      * - Liest MQTT Basis- und Geräte-Topic
      * - Setzt Filter für eingehende MQTT-Nachrichten
      * - Aktualisiert Instanz-Status (aktiv/inaktiv)
-     * - Prüft und aktualisiert Geräteinformationen (deviceID.json)
+     * - Prüft und aktualisiert Geräteinformationen (expose attribute)
      *
      * Bedingungen für Aktivierung:
      * - Basis-Topic und MQTT-Topic müssen gesetzt sein
@@ -446,7 +414,6 @@ abstract class ModulBase extends \IPSModule
      * @see \IPSModule::HasActiveParent()
      * @see \IPSModule::GetStatus()
      * @see \IPSModule::SetStatus()
-     * @see \Zigbee2MQTT\ModulBase::checkAndCreateJsonFile()
      * @see IPS_GetKernelRunlevel()
      */
     public function ApplyChanges()
@@ -493,7 +460,7 @@ abstract class ModulBase extends \IPSModule
                 }
                 if (($this->HasActiveParent()) && (IPS_GetKernelRunlevel() == KR_READY)) {
                     $this->LogMessage('FM_CONNECT', KL_NOTIFY);
-                    $this->checkAndCreateJsonFile();
+                    $this->checkExposeAttribute();
                 }
                 break;
             case IM_CHANGESTATUS:
@@ -502,7 +469,7 @@ abstract class ModulBase extends \IPSModule
                     $this->BUFFER_MQTT_SUSPENDED = false;
                     // Nur ein UpdateDeviceInfo wenn Parent aktiv und System bereit
                     if (($this->HasActiveParent()) && (IPS_GetKernelRunlevel() == KR_READY)) {
-                        $this->checkAndCreateJsonFile();
+                        $this->checkExposeAttribute();
                     }
                 }
                 return;
@@ -666,6 +633,21 @@ abstract class ModulBase extends \IPSModule
         $this->BUFFER_MQTT_SUSPENDED = true;
         $this->BUFFER_PROCESSING_MIGRATION = true;
 
+        // Move Exposes from file to attribute
+        $jsonFile = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY . DIRECTORY_SEPARATOR . $this->InstanceID . '.json';
+        if (file_exists($jsonFile)) {
+            $exposeData = @file_get_contents($jsonFile);
+            $data = json_decode($exposeData, true);
+            if (isset($data['exposes'])) { //device
+                $exposes = $data['exposes'];
+            } else { //group
+                $exposes = $data;
+            }
+            $this->LogMessage(__FUNCTION__ . ' : Convert ExposeFile to attribute', KL_NOTIFY);
+            $j->attributes->{self::ATTRIBUTE_EXPOSES} = json_encode($exposes);
+            @unlink($jsonFile);
+        }
+
         // 1) Suche alle Kinder-Objekte dieser Instanz
         // 2) Prüfe, ob ihr Ident z. B. mit "Z2M_" beginnt
         // 3) Bilde den neuen Ident (snake_case) und setze ihn
@@ -779,15 +761,7 @@ abstract class ModulBase extends \IPSModule
             $DebugData['ModelUrl'] = 'https://www.zigbee2mqtt.io/devices/' . rawurlencode($ModelUrl) . '.html';
         }
         $DebugData['Config'] = json_decode(IPS_GetConfiguration($this->InstanceID), true);
-        $jsonFile = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY . DIRECTORY_SEPARATOR . $this->InstanceID . '.json';
-
-        // Prüfe ob JSON existiert
-        if (file_exists($jsonFile)) {
-            $JSON = json_decode(file_get_contents($jsonFile), true);
-            $DebugData['Exposes'] = $JSON['exposes'] ?? $JSON;
-        } else {
-            $DebugData['Exposes'] = [];
-        }
+        $DebugData['Exposes'] = $this->ReadAttributeArray(self::ATTRIBUTE_EXPOSES);
         $DebugData['LastPayload'] = $this->lastPayload;
         $DebugData['Childs'] = [];
         $DebugData['Profile'] = [];
@@ -1209,68 +1183,6 @@ abstract class ModulBase extends \IPSModule
         }
         $this->UpdateFormField('MissingTranslationsList', 'values', json_encode($Values));
         return true;
-    }
-    /**
-     * SaveExposesToJson
-     *
-     * Speichert die Exposes in einer JSON-Datei.
-     *
-     * Die JSON-Datei wird im Format "InstanzID.json" im Verzeichnis "Zigbee2MQTTExposes" gespeichert
-     * und enthält die Expose-Informationen des Zigbee-Geräts.
-     *
-     * @param  array $Result
-     * @return bool
-     *
-     * @see \Zigbee2MQTT\ModulBase::createExposesDirectory()
-     * @see \IPSModule::LogMessage()
-     * @see json_encode()
-     * @see file_put_contents()
-     * @see IPS_GetKernelDir()
-     */
-    protected function SaveExposesToJson(array $Result): bool
-    {
-        // JSON-Daten mit Pretty-Print erstellen
-        $jsonData = json_encode($Result, JSON_PRETTY_PRINT);
-        if ($jsonData === false) {
-            $this->LogMessage($this->Translate('JSON encoding error: ') . json_last_error_msg(), KL_ERROR);
-            return false;
-        }
-
-        $this->createExposesDirectory();
-
-        // Definieren des Verzeichnisnamens
-        $jsonFile = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY . DIRECTORY_SEPARATOR . $this->InstanceID . '.json';
-
-        // Schreiben der JSON-Daten in die Datei
-        if (file_put_contents($jsonFile, $jsonData) === false) {
-            $this->LogMessage($this->Translate('Error writing JSON file.'), KL_ERROR);
-            return false;
-        }
-        return true;
-    }
-
-    /**
-     * createExposesDirectory
-     *
-     * @return void
-     *
-     * @throws \Exception Error on create Expose Directory
-     *
-     * @see is_dir()
-     * @see mkdir()
-     * @see IPS_GetKernelDir()
-     */
-    private function createExposesDirectory(): void
-    {
-        // Vollständigen Pfad zum Verzeichnis erstellen
-        $ExposeDirectory = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY;
-
-        // Verzeichnis erstellen wenn nicht vorhanden
-        if (!is_dir($ExposeDirectory)) {
-            if (!mkdir($ExposeDirectory)) {
-                throw new \Exception($this->Translate('Error on create Expose Directory'));
-            }
-        }
     }
 
     /**
@@ -3118,47 +3030,24 @@ abstract class ModulBase extends \IPSModule
         return $profileName;
     }
 
-    /**
-     * checkAndCreateJsonFile
-     *
-     * Prüft und erstellt eine JSON-Datei für die Zigbee-Geräteinformationen.
-     *
-     * Diese Methode führt folgende Schritte aus:
-     * 1. Prüft ob das MQTT-Topic gesetzt ist
-     * 2. Überprüft das Vorhandensein der JSON-Datei im Zigbee2MQTTExposes Verzeichnis
-     * 3. Überprüft auf aktiven IO-Parent
-     * 4. Ruft UpdateDeviceInfo auf um Geräteinformationen zu aktualisieren
-     *
-     * @return void
-     *
-     * @see \Zigbee2MQTT\ModulBase::UpdateDeviceInfo()
-     * @see \IPSModule::ReadPropertyString()
-     * @see \IPSModule::SendDebug()
-     * @see \IPSModule::HasActiveParent()
-     * @see IPS_GetKernelDir()
-     * @see IPS_GetKernelRunlevel()
-     * @see file_exists()
-     *
-     */
-    private function checkAndCreateJsonFile(): void
+    private function checkExposeAttribute(): void
     {
         $mqttTopic = $this->ReadPropertyString(self::MQTT_TOPIC);
 
         // Erst prüfen ob MQTTTopic gesetzt ist
         if (empty($mqttTopic)) {
-            $this->SendDebug(__FUNCTION__, 'MQTTTopic nicht gesetzt, überspringe JSON Prüfung', 0);
+            $this->SendDebug(__FUNCTION__, 'MQTTTopic nicht gesetzt, überspringe Attribut Prüfung', 0);
             return;
         }
 
-        $jsonFile = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY . DIRECTORY_SEPARATOR . $this->InstanceID . '.json';
-
-        // Prüfe ob JSON existiert
-        if (file_exists($jsonFile)) {
+        // Prüfe ob Expose-Attribute existiert und Daten enthält
+        $exposes = $this->ReadAttributeArray(self::ATTRIBUTE_EXPOSES);
+        if (count($exposes)) {
             return;
         }
-        $this->SendDebug(__FUNCTION__, 'JSON-Datei nicht gefunden für Instance: ' . $this->InstanceID, 0);
 
-        // Nur fortfahren wenn Parent aktiv
+        $this->SendDebug(__FUNCTION__, 'Expose-Attribute nicht gefunden für Instance: ' . $this->InstanceID, 0);
+
         if (!$this->HasActiveParent()) {
             $this->SendDebug(__FUNCTION__, 'Parent nicht aktiv, überspringe UpdateDeviceInfo', 0);
             return;
@@ -3167,11 +3056,11 @@ abstract class ModulBase extends \IPSModule
         if (IPS_GetKernelRunlevel() != KR_READY) {
             return;
         }
+
         $this->SendDebug(__FUNCTION__, 'Starte UpdateDeviceInfo für Topic: ' . $mqttTopic, 0);
         if (!$this->UpdateDeviceInfo()) {
             $this->SendDebug(__FUNCTION__, 'UpdateDeviceInfo fehlgeschlagen', 0);
         }
-
     }
 
     /**
@@ -3222,40 +3111,35 @@ abstract class ModulBase extends \IPSModule
      */
     private function getKnownVariables(): array
     {
-        $jsonFile = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY . DIRECTORY_SEPARATOR . $this->InstanceID . '.json';
-
-        $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, 'Verarbeite Datei: ' . $jsonFile, 0);
-        if (!file_exists($jsonFile)) {
-            $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, 'JSON-Datei nicht gefunden: ' . $jsonFile, 0);
-            if (!isset($data['exposes'])) {
-                return [];
-            }
-        }
-
-        $jsonData = @file_get_contents($jsonFile);
-        if (!$jsonData) {
-            return [];
-        }
-
-        $data = json_decode($jsonData, true);
-        if (json_last_error() !== JSON_ERROR_NONE || !isset($data['exposes'])) {
-            $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, 'Fehler beim Dekodieren der JSON-Datei oder fehlende "exposes" in Datei: ' . $jsonFile . '. Fehler: ' . json_last_error_msg(), 0);
-        }
-
-        if (!isset($data['exposes'])) {
+        $data = $this->ReadAttributeArray(self::ATTRIBUTE_EXPOSES);
+        if (!count($data)) {
+            $this->SendDebug(__FUNCTION__, 'Fehlende exposes oder features.', 0);
             return [];
         }
 
         $features = array_map(function ($expose)
         {
             return isset($expose['features']) ? $expose['features'] : [$expose];
-        }, $data['exposes']);
+        }, $data);
 
         $features = array_merge(...$features);
 
+        // Icons und unerwünschte Properties filtern
         $filteredFeatures = array_filter($features, function ($feature)
         {
-            return isset($feature['property']);
+            // Icon Properties und andere unerwünschte Einträge ignorieren
+            if (isset($feature['property'])) {
+                if ($feature['property'] === 'icon') {
+                    $this->SendDebug(__FUNCTION__, 'Icon-Property übersprungen: ' . json_encode($feature), 0);
+                    return false;
+                }
+                if (strpos($feature['property'], 'Icon') !== false) {
+                    $this->SendDebug(__FUNCTION__, 'Icon im Namen gefunden - übersprungen: ' . json_encode($feature), 0);
+                    return false;
+                }
+                return true;
+            }
+            return false;
         });
 
         $knownVariables = [];
