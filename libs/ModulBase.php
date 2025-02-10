@@ -725,50 +725,32 @@ abstract class ModulBase extends \IPSModule
     /**
      * SendSetCommand
      *
-     * Sendet einen Set-Befehl an das Gerät über MQTT. Unterstützt sowohl einfache als auch
-     * verschachtelte (composite) Payloads.
+     * Sendet einen Set-Befehl an das Gerät über MQTT
      *
-     * @param array $Payload Array mit Schlüssel-Wert-Paaren für das Gerät
-     *                      Unterstützt auch composite Keys (z.B. 'weekly_schedule__friday')
+     * Diese Methode generiert das MQTT-Topic für den Set-Befehl basierend auf der Konfiguration
+     * und sendet das übergebene Array über SendData an das Gerät.
+     *
+     * @param array $Payload Array mit Schlüssel-Wert-Paaren, das an das Gerät gesendet werden soll
      *
      * @return bool True wenn die Daten versendet werden konnten, sonst false
      *
-     * Beispiele:
-     * ```php
-     * // Einfaches Payload
-     * $this->SendSetCommand(['state' => 'ON']);
-     *
-     * // Composite Payload
-     * $this->SendSetCommand(['weekly_schedule__friday' => '00:00/7']);
-     * // wird umgewandelt in: {'weekly_schedule': {'friday': '00:00/7'}}
-     * ```
-     *
-     * @throws Exception Bei ungültigem MQTT-Topic oder Payload
+     * @throws \Exception Bei Fehlern während des Sendens
      *
      * @see \IPSModule::ReadPropertyString()
      * @see \IPSModule::SendDebug()
      * @see \Zigbee2MQTT\ModulBase::SendData()
-     * @see \Zigbee2MQTT\ModulBase::buildNestedPayload()
+     * @see json_encode()
      */
     public function SendSetCommand(array $Payload): bool
     {
-        // Prüfen ob Payload umgewandelt werden muss
-        $finalPayload = $Payload;
-        foreach ($Payload as $key => $value) {
-            if (strpos($key, '__') !== false) {
-                $finalPayload = $this->buildNestedPayload($key, $value);
-                break;
-            }
-        }
-
         // MQTT-Topic für den Set-Befehl generieren
         $Topic = '/' . $this->ReadPropertyString(self::MQTT_TOPIC) . '/set';
 
         // Debug-Ausgabe des zu sendenden Payloads
-        $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__ . ' :: zu sendendes Payload: ', json_encode($finalPayload), 0);
+        $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__ . ' :: zu sendendes Payload: ', json_encode($Payload), 0);
 
-        // Sende die Daten an das Gerät über die bestehende SendData Funktion
-        return $this->SendData($Topic, $finalPayload, 0);
+        // Sende die Daten an das Gerät
+        return $this->SendData($Topic, $Payload, 0);
     }
 
     /**
@@ -1464,36 +1446,36 @@ abstract class ModulBase extends \IPSModule
         return false;
     }
 
-/**
- * Verarbeitet die empfangenen MQTT-Payload-Daten
- *
- * @param array $payload Array mit den MQTT-Nachrichtendaten
- *                      Unterstützt sowohl Array [] als auch Object {} Payload-Formate
- *
- * @return void
- *
- * Beispiele:
- * ```php
- * // Array Payload
- * $payload = [0 => 'value', 'temperature' => 21.5];
- * $this->processPayload($payload);
- *
- * // Object Payload mit Composite-Struktur
- * $payload = [
- *     'weekly_schedule' => [
- *         'monday' => '00:00/7'
- *     ]
- * ];
- * $this->processPayload($payload);
- * ```
- *
- * @internal Diese Methode wird von ReceiveData aufgerufen
- *
- * @see \Zigbee2MQTT\ModulBase::ReceiveData()
- * @see \Zigbee2MQTT\ModulBase::mapExposesToVariables()
- * @see \Zigbee2MQTT\ModulBase::AppendVariableTypes()
- * @see \Zigbee2MQTT\ModulBase::processSpecialVariable()
- * @see \Zigbee2MQTT\ModulBase::processVariable()
+    /**
+     * Verarbeitet die empfangenen MQTT-Payload-Daten
+     *
+     * @param array $payload Array mit den MQTT-Nachrichtendaten
+     *                      Unterstützt sowohl Array [] als auch Object {} Payload-Formate
+     *
+     * @return void
+     *
+     * Beispiele:
+     * ```php
+     * // Array Payload
+     * $payload = [0 => 'value', 'temperature' => 21.5];
+     * $this->processPayload($payload);
+     *
+     * // Object Payload mit Composite-Struktur
+     * $payload = [
+     *     'weekly_schedule' => [
+     *         'monday' => '00:00/7'
+     *     ]
+     * ];
+     * $this->processPayload($payload);
+     * ```
+     *
+     * @internal Diese Methode wird von ReceiveData aufgerufen
+     *
+     * @see \Zigbee2MQTT\ModulBase::ReceiveData()
+     * @see \Zigbee2MQTT\ModulBase::mapExposesToVariables()
+     * @see \Zigbee2MQTT\ModulBase::AppendVariableTypes()
+     * @see \Zigbee2MQTT\ModulBase::processSpecialVariable()
+     * @see \Zigbee2MQTT\ModulBase::processVariable()
      * @see \IPSModule::SendDebug()
      * @see strpos()
      * @see is_array()
@@ -1513,7 +1495,7 @@ abstract class ModulBase extends \IPSModule
         // Variablentypen anhängen
         $payloadWithTypes = $this->AppendVariableTypes($flattenedPayload);
 
-        // Payload verarbeiten
+        // Payload-Daten verarbeiten
         foreach ($payloadWithTypes as $key => $value) {
             if ($key === 0 || strpos($key, '_type') !== false) {
                 continue;
@@ -1812,6 +1794,10 @@ abstract class ModulBase extends \IPSModule
 
         // Erstelle das Payload
         $payload = [$ident => $value];
+
+        // Konvertiere composite payload falls nötig
+        $payload = $this->convertCompositePayload($payload);
+
         $this->SendDebug(__FUNCTION__, 'Sende payload: ' . json_encode($payload), 0);
 
         // Sende den Set-Befehl
@@ -2494,7 +2480,10 @@ abstract class ModulBase extends \IPSModule
         // Liste von Abkürzungen die in Großbuchstaben bleiben sollen
         $upperCaseWords = ['HS', 'RGB', 'XY', 'HSV', 'HSL', 'LED'];
 
-        // Ersetze Unterstriche durch Leerzeichen
+        // Erst doppelte Unterstriche durch ein einzelnes Leerzeichen ersetzen
+        $label = str_replace('__', ' ', $label);
+
+        // Ersetze einzelne Unterstriche durch Leerzeichen
         $label = str_replace('_', ' ', $label);
 
         // Konvertiere jeden Wortanfang in Großbuchstaben
@@ -2752,12 +2741,18 @@ abstract class ModulBase extends \IPSModule
             $this->SendDebug(__FUNCTION__, 'FLOAT_UNITS content: ' . json_encode(self::FLOAT_UNITS), 0);
 
             if (in_array($unitTrimmed, self::FLOAT_UNITS, true)) {
+                // Wenn unit in FLOAT_UNITS und step eine Ganzzahl ist -> integer
+                if ($value_step != 1.0 && fmod($value_step, 1) === 0.0) {
+                    $this->SendDebug(__FUNCTION__, 'Unit in FLOAT_UNITS but step is integer, returning integer', 0);
+                    return 'integer';
+                }
+                // Sonst float
                 return 'float';
             }
         }
 
-        // Zusätzliche Prüfung basierend auf value_step
-        if (fmod($value_step, 1) !== 0.0) {
+        // Wenn unit nicht in FLOAT_UNITS, aber step eine Dezimalzahl
+        if ($value_step != 1.0 && fmod($value_step, 1) !== 0.0) {
             $this->SendDebug(__FUNCTION__, 'Value step is not an integer, returning float', 0);
             return 'float';
         }
@@ -4028,5 +4023,17 @@ abstract class ModulBase extends \IPSModule
         $current[$parts[count($parts) - 1]] = $value;
 
         return $result;
+    }
+
+    private function convertCompositePayload(array $Payload): array
+    {
+        $finalPayload = $Payload;
+        foreach ($Payload as $key => $value) {
+            if (strpos($key, '__') !== false) {
+                $finalPayload = $this->buildNestedPayload($key, $value);
+                break;
+            }
+        }
+        return $finalPayload;
     }
 }
