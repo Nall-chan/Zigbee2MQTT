@@ -279,18 +279,21 @@ abstract class ModulBase extends \IPSModule
      *   - ident?: string Optional: Benutzerdefinierter Identifier
      */
     protected static $specialVariables = [
-        'last_seen'          => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Last Seen', 'profile' => '~UnixTimestamp'],
-        'color_mode'         => ['type' => VARIABLETYPE_STRING, 'name' => 'Color Mode', 'profile' => ''],
-        'update'             => ['type' => VARIABLETYPE_STRING, 'name' => 'Firmware Update Status', 'profile' => ''],
-        'device_temperature' => ['type' => VARIABLETYPE_FLOAT, 'name' => 'Device Temperature', 'profile' => '~Temperature'],
-        'brightness'         => ['type' => VARIABLETYPE_INTEGER, 'ident' => 'brightness', 'profile' => '~Intensity.100'],
-        'brightness_l1'      => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l1', 'profile' => '~Intensity.100'],
-        'brightness_l2'      => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l2', 'profile' => '~Intensity.100'],
-        'voltage'            => ['type' => VARIABLETYPE_FLOAT, 'ident' => 'voltage', 'profile' => '~Volt'],
-        'calibration_time'   => ['type' => VARIABLETYPE_FLOAT],
-        'countdown'          => ['type' => VARIABLETYPE_INTEGER],
-        'countdown_l1'       => ['type' => VARIABLETYPE_INTEGER],
-        'countdown_l2'       => ['type' => VARIABLETYPE_INTEGER],
+        'last_seen'                 => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Last Seen', 'profile' => '~UnixTimestamp'],
+        'color_mode'                => ['type' => VARIABLETYPE_STRING, 'name' => 'Color Mode', 'profile' => ''],
+        'update'                    => ['type' => VARIABLETYPE_STRING, 'name' => 'Firmware Update Status', 'profile' => ''],
+        'device_temperature'        => ['type' => VARIABLETYPE_FLOAT, 'name' => 'Device Temperature', 'profile' => '~Temperature'],
+        'brightness'                => ['type' => VARIABLETYPE_INTEGER, 'ident' => 'brightness', 'profile' => '~Intensity.100'],
+        'brightness_l1'             => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l1', 'profile' => '~Intensity.100'],
+        'brightness_l2'             => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l2', 'profile' => '~Intensity.100'],
+        'voltage'                   => ['type' => VARIABLETYPE_FLOAT, 'ident' => 'voltage', 'profile' => '~Volt'],
+        'calibration_time'          => ['type' => VARIABLETYPE_FLOAT],
+        'countdown'                 => ['type' => VARIABLETYPE_INTEGER],
+        'countdown_l1'              => ['type' => VARIABLETYPE_INTEGER],
+        'countdown_l2'              => ['type' => VARIABLETYPE_INTEGER],
+        'update__installed_version' => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Installed Version', 'profile' => ''],
+        'update__latest_version'    => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Latest Version', 'profile' => ''],
+        'update__state'             => ['type' => VARIABLETYPE_STRING, 'name' => 'Update State', 'profile' => '']
     ];
 
     /**
@@ -899,13 +902,6 @@ abstract class ModulBase extends \IPSModule
 
         // Array Spezialbehandlung für
         if (is_array($value)) {
-            // update Arrays
-            if (strtolower($ident) === 'update') {
-                $this->SendDebug(__FUNCTION__, 'Update Array empfangen', 0);
-                $jsonValue = json_encode($value, JSON_PRETTY_PRINT);
-                parent::SetValue($ident, $jsonValue);
-                return;
-            }
             // Color-Arrays
             if (strtolower($ident) === 'color') {
                 $this->handleColorVariable($ident, $value);
@@ -1186,6 +1182,100 @@ abstract class ModulBase extends \IPSModule
     }
 
     /**
+     * Wandelt ein verschachteltes Array in ein eindimensionales Array mit zusammengesetzten Schlüsseln um
+     *
+     * @param array  $payload Das zu verarbeitende Array mit verschachtelter Struktur
+     * @param string $prefix  Optional, Prefix für die zusammengesetzten Schlüssel
+     *
+     * @return array Ein eindimensionales Array mit Schlüsseln in der Form 'parent__child'
+     *
+     * Beispiele:
+     * ```php
+     * // Verschachteltes Array
+     * $input = [
+     *     'weekly_schedule' => [
+     *         'monday' => '00:00/7'
+     *     ]
+     * ];
+     * $result = $this->flattenPayload($input);
+     * // Ergebnis: ['weekly_schedule__monday' => '00:00/7']
+     * ```
+     *
+     * @internal Wird von processPayload verwendet um verschachtelte Strukturen zu verarbeiten
+     *
+     * @see \Zigbee2MQTT\ModulBase::processPayload()
+     */
+    protected function flattenPayload(array $payload, string $prefix = ''): array
+    {
+        $result = [];
+
+        foreach ($payload as $key => $value) {
+            $newKey = $prefix ? $prefix . '__' . $key : $key;
+
+            // Spezialbehandlung für color-Properties
+            if ($key === 'color' && is_array($value)) {
+                // Übernehme die color-Properties direkt ins color-Array
+                $result['color'] = $value;
+                continue;
+            }
+
+            // Update-Properties zusammenfassen
+            if ($key === 'update' && is_array($value)) {
+                foreach ($value as $updateKey => $updateValue) {
+                    $result['update__' . $updateKey] = $updateValue;
+                }
+                continue;
+            }
+
+            if (is_array($value)) {
+                $result = array_merge($result, $this->flattenPayload($value, $newKey));
+            } else {
+                $result[$newKey] = $value;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Wandelt einen zusammengesetzten Identifikator in eine verschachtelte Array-Struktur um
+     *
+     * @param string $ident Der zusammengesetzte Identifikator (z.B. 'weekly_schedule__friday')
+     * @param mixed $value Der Wert, der gesetzt werden soll
+     *
+     * @return array Das verschachtelte Array
+     *
+     * Beispiel:
+     * ```php
+     * $ident = 'weekly_schedule__friday';
+     * $value = '00:00/7';
+     * $result = $this->buildNestedPayload($ident, $value);
+     * // Ergebnis: ['weekly_schedule' => ['friday' => '00:00/7']]
+     * ```
+     *
+     * @internal Diese Methode wird von SendSetCommand verwendet
+     *
+     * @see \Zigbee2MQTT\ModulBase::SendSetCommand()
+     */
+    protected function buildNestedPayload(string $ident, $value): array
+    {
+        $parts = explode('__', $ident);
+        $result = [];
+        $current = &$result;
+
+        // Alle Teile außer dem letzten durchgehen
+        for ($i = 0; $i < count($parts) - 1; $i++) {
+            $current[$parts[$i]] = [];
+            $current = &$current[$parts[$i]];
+        }
+
+        // Letzten Wert setzen
+        $current[$parts[count($parts) - 1]] = $value;
+
+        return $result;
+    }
+
+    /**
      * convertToSnakeCase
      *
      * Diese Hilfsfunktion entfernt das Prefix "Z2M_" und
@@ -1363,19 +1453,26 @@ abstract class ModulBase extends \IPSModule
     }
 
     /**
-     * processPayload
-     *
      * Verarbeitet die empfangenen MQTT-Payload-Daten
      *
      * @param array $payload Array mit den MQTT-Nachrichtendaten
+     *                      Unterstützt sowohl Array [] als auch Object {} Payload-Formate
      *
-     * @return string Leerer String
+     * @return void
      *
-     * Beispiel:
+     * Beispiele:
      * ```php
-     * // Verarbeitung einer MQTT-Nachricht
-     * $messageData = ['temperature' => 21.5];
-     * $result = $this->processPayload($messageData);
+     * // Array Payload
+     * $payload = [0 => 'value', 'temperature' => 21.5];
+     * $this->processPayload($payload);
+     *
+     * // Object Payload mit Composite-Struktur
+     * $payload = [
+     *     'weekly_schedule' => [
+     *         'monday' => '00:00/7'
+     *     ]
+     * ];
+     * $this->processPayload($payload);
      * ```
      *
      * @internal Diese Methode wird von ReceiveData aufgerufen
@@ -1398,34 +1495,23 @@ abstract class ModulBase extends \IPSModule
             unset($payload['exposes']);
         }
 
+        // Verschachtelte Strukturen flach machen
+        $flattenedPayload = $this->flattenPayload($payload);
+
         // Variablentypen anhängen
-        $payloadWithTypes = $this->AppendVariableTypes($payload);
+        $payloadWithTypes = $this->AppendVariableTypes($flattenedPayload);
 
         // Payload-Daten verarbeiten
         foreach ($payloadWithTypes as $key => $value) {
-
-            /**
-             * Fatal error: Uncaught TypeError: strpos(): Argument #1 ($haystack) must be of type string, int given in ModulBase.php:1247
-             * Stack trace:
-             * #0 C:\ProgramData\Symcon\modules\Zigbee2MQTT\libs\ModulBase.php(1247): strpos(0, '_type')
-             */
-            if ($key === 0) { // Beim Update kommen manchmal 0 als Key, aus welchem Payload auch immer. Muss ja ein [] Payload und kein {} Payload sein.
-                continue;
-            }
-            // Typ-Informationen überspringen
-            if (strpos($key, '_type') !== false) {
+            if ($key === 0 || strpos($key, '_type') !== false) {
                 continue;
             }
 
             $this->SendDebug(__FUNCTION__, sprintf('Verarbeite: Key=%s, Value=%s', $key, is_array($value) ? json_encode($value) : (string) $value), 0);
 
-            // Sonderfälle prüfen und verarbeiten
-            if ($this->processSpecialVariable($key, $value)) {
-                continue;
+            if (!$this->processSpecialVariable($key, $value)) {
+                $this->processVariable($key, $value);
             }
-
-            // Allgemeine Variablen verarbeiten
-            $this->processVariable($key, $value);
         }
     }
 
@@ -1501,6 +1587,12 @@ abstract class ModulBase extends \IPSModule
      */
     private function processVariable(string $key, mixed $value): void
     {
+        // Wenn Value ein Array ist und color im Key vorkommt, spezielle Behandlung
+        if (is_array($value) && strpos($key, 'color') === 0) {
+            $this->handleColorVariable($key, $value);
+            return;
+        }
+
         // Wenn Value ein Array ist und einen 'composite' Key enthält
         if (is_array($value) && isset($value['composite'])) {
             foreach ($value['composite'] as $compositeKey => $compositeValue) {
@@ -1544,6 +1636,12 @@ abstract class ModulBase extends \IPSModule
         $variableID = $this->getOrRegisterVariable($ident, $variableProps);
         if ($variableID) {
             $this->SetValue($ident, $value);
+        }
+
+        // Zusätzlich: Preset-Variable aktualisieren wenn vorhanden
+        $presetIdent = $ident . '_presets';
+        if (@$this->GetIDForIdent($presetIdent) !== false) {
+            $this->SetValue($presetIdent, $value);
         }
     }
 
@@ -1646,6 +1744,10 @@ abstract class ModulBase extends \IPSModule
 
         // Erstelle das Payload
         $payload = [$ident => $value];
+
+        // Konvertiere composite payload falls nötig
+        $payload = $this->convertCompositePayload($payload);
+
         $this->SendDebug(__FUNCTION__, 'Sende payload: ' . json_encode($payload), 0);
 
         // Sende den Set-Befehl
@@ -2328,7 +2430,10 @@ abstract class ModulBase extends \IPSModule
         // Liste von Abkürzungen die in Großbuchstaben bleiben sollen
         $upperCaseWords = ['HS', 'RGB', 'XY', 'HSV', 'HSL', 'LED'];
 
-        // Ersetze Unterstriche durch Leerzeichen
+        // Erst doppelte Unterstriche durch ein einzelnes Leerzeichen ersetzen
+        $label = str_replace('__', ' ', $label);
+
+        // Ersetze einzelne Unterstriche durch Leerzeichen
         $label = str_replace('_', ' ', $label);
 
         // Konvertiere jeden Wortanfang in Großbuchstaben
@@ -2586,12 +2691,18 @@ abstract class ModulBase extends \IPSModule
             $this->SendDebug(__FUNCTION__, 'FLOAT_UNITS content: ' . json_encode(self::FLOAT_UNITS), 0);
 
             if (in_array($unitTrimmed, self::FLOAT_UNITS, true)) {
+                // Wenn unit in FLOAT_UNITS und step eine Ganzzahl ist -> integer
+                if ($value_step != 1.0 && fmod($value_step, 1) === 0.0) {
+                    $this->SendDebug(__FUNCTION__, 'Unit in FLOAT_UNITS but step is integer, returning integer', 0);
+                    return 'integer';
+                }
+                // Sonst float
                 return 'float';
             }
         }
 
-        // Zusätzliche Prüfung basierend auf value_step
-        if (fmod($value_step, 1) !== 0.0) {
+        // Wenn unit nicht in FLOAT_UNITS, aber step eine Dezimalzahl
+        if ($value_step != 1.0 && fmod($value_step, 1) !== 0.0) {
             $this->SendDebug(__FUNCTION__, 'Value step is not an integer, returning float', 0);
             return 'float';
         }
@@ -3111,7 +3222,7 @@ abstract class ModulBase extends \IPSModule
      */
     private function getKnownVariables(): array
     {
-        $data = $this->ReadAttributeArray(self::ATTRIBUTE_EXPOSES);
+        $data = array_values($this->ReadAttributeArray(self::ATTRIBUTE_EXPOSES));
         if (!count($data)) {
             $this->SendDebug(__FUNCTION__, 'Fehlende exposes oder features.', 0);
             return [];
@@ -3216,24 +3327,45 @@ abstract class ModulBase extends \IPSModule
     /**
      * registerVariable
      *
-     * Registriert eine Variable basierend auf den Feature-Informationen.
-     * Unterstützt sowohl einzelne als auch zusammengesetzte (composite) Variablen.
-     * Bei composite-Variablen werden Sub-Features rekursiv registriert.
-     * Verarbeitet automatisch:
-     * - Farbtemperatur (color_temp) mit zusätzlicher Kelvin-Variable
-     * - Composite-Variablen mit Sub-Features
-     * - Preset-Variablen
-     * - Access-Flags für schreibbare Variablen
+     * Registriert eine Variable basierend auf den Feature-Informationen
      *
-     * @param array|string $feature Feature-Information oder Feature-ID
-     *                             Bei array werden zusätzliche Eigenschaften wie 'type', 'property', 'unit' erwartet
-     *                             Bei composite werden 'features' als Sub-Feature-Array erwartet
-     *                             Optional: 'presets', 'access', 'color_mode'
-     * @param string|null $exposeType Optionaler Expose-Typ zur Überschreibung des Feature-Typs
+     * @param array|string $feature Feature-Information als Array oder Feature-ID als String
+     *                             Array-Format:
+     *                             - 'property': (string) Identifikator der Variable
+     *                             - 'type': (string) Datentyp (numeric, binary, enum, etc.)
+     *                             - 'unit': (string, optional) Einheit der Variable
+     *                             - 'value_step': (float, optional) Schrittweite für numerische Werte
+     *                             - 'features': (array, optional) Sub-Features für composite Variablen
+     *                             - 'presets': (array, optional) Voreingestellte Werte
+     *                             - 'access': (int, optional) Zugriffsrechte (0b001=read, 0b010=write, 0b100=notify)
+     *                             - 'color_mode': (bool, optional) Für Farbvariablen
+     * @param string|null $exposeType Optional, überschreibt den Feature-Typ
      *
      * @return void
      *
-     * @throws Exception Wenn ungültige Feature-Informationen übergeben werden
+     * @throws Exception Bei ungültigen Feature-Informationen
+     *
+     * Beispiele:
+     * ```php
+     * // Einfache Variable
+     * $this->registerVariable(['property' => 'state', 'type' => 'binary']);
+     *
+     * // Composite Variable (z.B. weekly_schedule)
+     * $this->registerVariable([
+     *     'property' => 'weekly_schedule',
+     *     'type' => 'composite',
+     *     'features' => [
+     *         ['property' => 'monday', 'type' => 'string']
+     *     ]
+     * ]);
+     *
+     * // Variable mit Presets
+     * $this->registerVariable([
+     *     'property' => 'mode',
+     *     'type' => 'enum',
+     *     'presets' => ['auto', 'manual']
+     * ]);
+     * ```
      *
      * @see \Zigbee2MQTT\ModulBase::getStateConfiguration()
      * @see \Zigbee2MQTT\ModulBase::convertLabelToName()
@@ -3378,7 +3510,7 @@ abstract class ModulBase extends \IPSModule
                 if (isset($feature['features'])) {
                     foreach ($feature['features'] as $subFeature) {
                         // Bilde Sub-Properties
-                        $subFeature['property'] = $property . '_' . $subFeature['property'];
+                        $subFeature['property'] = $property . '__' . $subFeature['property'];
                         // Rekursiver Aufruf mit einzelnem Feature
                         $this->registerVariable($subFeature, $exposeType);
                     }
@@ -3775,5 +3907,17 @@ abstract class ModulBase extends \IPSModule
 
         $this->SendDebug(__FUNCTION__, 'State mapping profile created for: ' . $ProfileName, 0);
         return $ProfileName;
+    }
+
+    private function convertCompositePayload(array $Payload): array
+    {
+        $finalPayload = $Payload;
+        foreach ($Payload as $key => $value) {
+            if (strpos($key, '__') !== false) {
+                $finalPayload = $this->buildNestedPayload($key, $value);
+                break;
+            }
+        }
+        return $finalPayload;
     }
 }
