@@ -1956,11 +1956,17 @@ abstract class ModulBase extends \IPSModule
         $this->SendDebug(__FUNCTION__, 'Aktion über presets erfolgt, Weiterleitung zur eigentlichen Variable: ' . $mainIdent, 0);
         $this->SendDebug(__FUNCTION__, 'Aktion über presets erfolgt, Schreibe zur PresetVariable Variable: ' . $ident, 0);
 
-        // Setze den Wert der Hauptvariable
+        // Setze den Wert der Hauptvariable und der Preset-Variable
         $this->SetValue($mainIdent, $value);
         $this->SetValue($ident, $value);
 
-        $payload = [$mainIdent => $value];
+        // Erstelle das Payload - Berücksichtige composite Strukturen
+        if (strpos($mainIdent, '__') !== false) {
+            $payload = $this->buildNestedPayload($mainIdent, $value);
+        } else {
+            $payload = [$mainIdent => $value];
+        }
+
         if (!$this->SendSetCommand($payload)) {
             return false;
         }
@@ -3511,6 +3517,23 @@ abstract class ModulBase extends \IPSModule
                     foreach ($feature['features'] as $subFeature) {
                         // Bilde Sub-Properties
                         $subFeature['property'] = $property . '__' . $subFeature['property'];
+
+                        // Preset-Handling für Sub-Features
+                        if (isset($subFeature['presets'])) {
+                            $variableType = $this->getVariableTypeFromProfile(
+                                $subFeature['type'] ?? 'numeric',
+                                $subFeature['property'],
+                                $subFeature['unit'] ?? '',
+                                $subFeature['value_step'] ?? 1.0
+                            );
+                            $this->registerPresetVariables(
+                                $subFeature['presets'],
+                                $subFeature['property'],
+                                $variableType,
+                                $subFeature
+                            );
+                        }
+
                         // Rekursiver Aufruf mit einzelnem Feature
                         $this->registerVariable($subFeature, $exposeType);
                     }
@@ -3636,29 +3659,60 @@ abstract class ModulBase extends \IPSModule
      * @see \IPSModule::RegisterVariableInteger()
      * @see \IPSModule::EnableAction()
      */
-    private function registerPresetVariables(array $presets, string $label, string $variableType, array $feature): void
+    private function registerPresetVariables(array $presets, string $property, string $variableType, array $feature): void
     {
-        // Während Migration keine Variablen erstellen
-        if ($this->BUFFER_PROCESSING_MIGRATION) {
-            return;
+        $this->SendDebug(__FUNCTION__, 'Registriere Preset-Variablen für: ' . $property, 0);
+
+        // Analysiere Preset-Werte um den korrekten Typ zu bestimmen
+        $isStringPreset = false;
+        foreach ($presets as $preset) {
+            if (is_string($preset['value']) && !is_numeric($preset['value'])) {
+                $isStringPreset = true;
+                break;
+            }
         }
 
-        $this->SendDebug(__FUNCTION__, 'Registering preset variables for: ' . $label, 0);
-        $profileName = $this->registerPresetProfile($presets, $label, $variableType, $feature);
+        // Bestimme den Variablentyp und erstelle das entsprechende Profil
+        $profileName = 'Z2M.' . strtolower($property) . '.presets';
+        $presetIdent = $property . '_presets';
 
-        // Variable registrieren
-        $ident = ($feature['property']) . '_presets';
-        $this->SendDebug(__FUNCTION__, 'Preset ident: ' . $ident, 0);
-        $label = $feature['name'] . ' Presets';
-        $formattedLabel = $this->convertLabelToName($label);
+        // Name über convertLabelToName formatieren
+        $formattedLabel = $this->convertLabelToName($property);
 
-        // Variable erstellen/aktualisieren
-        if ($variableType === 'float') {
-            $this->RegisterVariableFloat($ident, $this->Translate($formattedLabel), $profileName);
+        if ($isStringPreset) {
+            // String-Profil für Text-basierte Presets
+            $associations = [];
+            foreach ($presets as $preset) {
+                $associations[] = [
+                    $preset['value'],                           // Wert
+                    $this->Translate($preset['name']),          // Name
+                    '',                                         // Icon
+                    -1                                          // Farbe
+                ];
+            }
+            $this->RegisterProfileStringEx($profileName, '', '', '', $associations);
+            // Formatierter Name wird hier verwendet
+            $this->RegisterVariableString($presetIdent, $this->Translate($formattedLabel . ' Presets'), $profileName);
         } else {
-            $this->RegisterVariableInteger($ident, $this->Translate($formattedLabel), $profileName);
+            // Integer-Profil für numerische Presets
+            $associations = [];
+            foreach ($presets as $index => $preset) {
+                $associations[] = [
+                    intval($preset['value']),                   // Wert
+                    $this->Translate($preset['name']),          // Name
+                    '',                                         // Icon
+                    -1                                          // Farbe
+                ];
+            }
+            $this->RegisterProfileIntegerEx($profileName, '', '', '', $associations);
+            // Formatierter Name wird hier verwendet
+            $this->RegisterVariableInteger($presetIdent, $this->Translate($formattedLabel . ' Presets'), $profileName);
         }
-        $this->EnableAction($ident);
+
+        // Aktiviere Aktion wenn beschreibbar
+        if (isset($feature['access']) && ($feature['access'] & 0b010) != 0) {
+            $this->EnableAction($presetIdent);
+        }
     }
 
     /**
