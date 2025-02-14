@@ -1993,7 +1993,7 @@ abstract class ModulBase extends \IPSModule
      * die keine Rückmeldung von Zigbee2MQTT erfordert. Sie sendet den entsprechenden Set-Befehl
      * und aktualisiert die Variable direkt, wenn der Set-Befehl erfolgreich gesendet wurde.
      *
-     * @param string $ident Der Identifikator der String-Variable.
+     * @param string $ident Der Identifikator der String-Variablen.
      * @param string $value Der Wert, der mit der String-Variablen-Aktionsanforderung verbunden ist.
      *
      * @return bool Gibt true zurück wenn der Set-Befehl abgesetzt wurde, sonder false.
@@ -2435,12 +2435,11 @@ abstract class ModulBase extends \IPSModule
     {
         // Liste von Abkürzungen die in Großbuchstaben bleiben sollen
         $upperCaseWords = ['HS', 'RGB', 'XY', 'HSV', 'HSL', 'LED'];
+        $this->SendDebug(__FUNCTION__, 'Initial Label: ' . $label, 0);
 
-        // Erst doppelte Unterstriche durch ein einzelnes Leerzeichen ersetzen
-        $label = str_replace('__', ' ', $label);
-
-        // Ersetze einzelne Unterstriche durch Leerzeichen
-        $label = str_replace('_', ' ', $label);
+        // Alle Unterstriche (egal ob einfach oder mehrfach) durch ein einzelnes Leerzeichen ersetzen
+        $label = preg_replace('/_+/', ' ', $label);
+        $this->SendDebug(__FUNCTION__, 'After replacing underscores with spaces: ' . $label, 0);
 
         // Konvertiere jeden Wortanfang in Großbuchstaben
         $label = ucwords($label);
@@ -2548,11 +2547,6 @@ abstract class ModulBase extends \IPSModule
                 }
             }
             return '~Switch';
-        }
-
-        $standardProfile = $this->getStandardProfile($type, $property);
-        if (self::isValidStandardProfile($standardProfile)) {
-            return $standardProfile;
         }
 
         // Typ-spezifisches Profil erstellen
@@ -3402,20 +3396,20 @@ abstract class ModulBase extends \IPSModule
             return;
         }
 
-        $featureId = is_array($feature) ? $feature['property'] : $feature;
+        $featureProperty = is_array($feature) ? $feature['property'] : $feature;
 
         // Frühe Validierung der Property
-        if (empty($featureId)) {
+        if (empty($featureProperty)) {
             $this->SendDebug(__FUNCTION__, 'Error: Empty property/identifier provided', 0);
             return;
         }
 
-        $this->SendDebug(__FUNCTION__ . ' Registriere Variable für Property: ', $featureId, 0);
+        $this->SendDebug(__FUNCTION__ . ' Registriere Variable für Property: ', $featureProperty, 0);
 
         // Übergebe das komplette Feature-Array für Access-Check
-        $stateConfig = $this->getStateConfiguration($featureId, is_array($feature) ? $feature : null);
+        $stateConfig = $this->getStateConfiguration($featureProperty, is_array($feature) ? $feature : null);
         if ($stateConfig !== null) {
-            $formattedLabel = $this->convertLabelToName($featureId);
+            $formattedLabel = $this->convertLabelToName($featureProperty);
 
             // Registriere Variable basierend auf dataType
             switch ($stateConfig['dataType']) {
@@ -3440,7 +3434,7 @@ abstract class ModulBase extends \IPSModule
 
             if (isset($stateConfig['enableAction']) && $stateConfig['enableAction']) {
                 $this->EnableAction($stateConfig['ident']);
-                $this->SendDebug(__FUNCTION__, 'Enabled action for ' . $featureId . ' (writable state)', 0);
+                $this->SendDebug(__FUNCTION__, 'Enabled action for ' . $featureProperty . ' (writable state)', 0);
             }
             return;
         }
@@ -3462,17 +3456,15 @@ abstract class ModulBase extends \IPSModule
         $this->SendDebug(__FUNCTION__ . ' :: Registering Feature', json_encode($feature), 0);
 
         $type = $feature['type'];
-        $property = $featureId; // Bereits validiert
+        $property = $featureProperty; // Bereits validiert
         $unit = $feature['unit'] ?? '';
-        $ident = $property;     // Bereits validiert
-        $label = ucfirst(str_replace('_', ' ', $property));
         $step = isset($feature['value_step']) ? (float) $feature['value_step'] : 1.0;
 
         // Bestimmen des Variablentyps basierend auf Typ, Feature und Einheit
         $variableType = $this->getVariableTypeFromProfile($type, $property, $unit, $step, $groupType);
 
         // Überprüfen, ob ein Standardprofil verwendet werden soll
-        $profileName = $this->getStandardProfile($type, $property, $groupType); /** @todo getStandardProfile wird aber unten in registerVariableProfile auch aufgerufen */
+        $profileName = $this->getStandardProfile($type, $property, $groupType);
 
         // Profil vor der Variablenerstellung erstellen, falls kein Standardprofil verwendet wird
         if ($profileName === '') {
@@ -3483,28 +3475,28 @@ abstract class ModulBase extends \IPSModule
 
         switch ($variableType) {
             case 'bool':
-                $this->SendDebug(__FUNCTION__, 'Registering Boolean Variable: ' . $ident, 0);
-                $this->RegisterVariableBoolean($ident, $this->Translate($this->convertLabelToName($label)), $profileName);
+                $this->SendDebug(__FUNCTION__, 'Registering Boolean Variable: ' . $property, 0);
+                $this->RegisterVariableBoolean($property, $this->Translate($this->convertLabelToName($property)), $profileName);
                 break;
             case 'int':
-                $this->SendDebug(__FUNCTION__, 'Registering Integer Variable: ' . $ident, 0);
-                $this->RegisterVariableInteger($ident, $this->Translate($this->convertLabelToName($label)), $profileName);
+                $this->SendDebug(__FUNCTION__, 'Registering Integer Variable: ' . $property, 0);
+                $this->RegisterVariableInteger($property, $this->Translate($this->convertLabelToName($property)), $profileName);
                 break;
             case 'float':
-                $this->SendDebug(__FUNCTION__, 'Registering Float Variable: ' . $ident, 0);
-                $this->RegisterVariableFloat($ident, $this->Translate($this->convertLabelToName($label)), $profileName);
+                $this->SendDebug(__FUNCTION__, 'Registering Float Variable: ' . $property, 0);
+                $this->RegisterVariableFloat($property, $this->Translate($this->convertLabelToName($property)), $profileName);
                 break;
             case 'string':
-                $this->SendDebug(__FUNCTION__, 'Registering String Variable: ' . $ident, 0);
-                $this->RegisterVariableString($ident, $this->Translate($this->convertLabelToName($label)), $profileName);
+                $this->SendDebug(__FUNCTION__, 'Registering String Variable: ' . $property, 0);
+                $this->RegisterVariableString($property, $this->Translate($this->convertLabelToName($property)), $profileName);
                 break;
             case 'text':
-                $this->SendDebug(__FUNCTION__, 'Registering Text Variable: ' . $ident, 0);
-                $this->RegisterVariableString($ident, $this->Translate($this->convertLabelToName($label))); // Kein Profilname übergeben
+                $this->SendDebug(__FUNCTION__, 'Registering Text Variable: ' . $property, 0);
+                $this->RegisterVariableString($property, $this->Translate($this->convertLabelToName($property))); // Kein Profilname übergeben
                 break;
                 // Zusätzliche Registrierung für 'composite' Farb-Variablen
             case 'composite':
-                $this->SendDebug(__FUNCTION__, 'Registering Composite Variable: ' . $ident, 0);
+                $this->SendDebug(__FUNCTION__, 'Registering Composite Variable: ' . $property, 0);
 
                 // Bestehende Color-Variable Logik beibehalten
                 if (isset($feature['color_mode'])) {
@@ -3512,11 +3504,12 @@ abstract class ModulBase extends \IPSModule
                     return;
                 }
 
-                // Neue Feature-Verarbeitung
+                // Feature-Verarbeitung
                 if (isset($feature['features'])) {
                     foreach ($feature['features'] as $subFeature) {
                         // Bilde Sub-Properties
-                        $subFeature['property'] = $property . '__' . $subFeature['property'];
+                        $subProperty = $subFeature['property'];
+                        $subFeature['property'] = $property . '__' . $subProperty;
 
                         // Preset-Handling für Sub-Features
                         if (isset($subFeature['presets'])) {
@@ -3546,12 +3539,12 @@ abstract class ModulBase extends \IPSModule
         }
 
         if (isset($feature['access']) && ($feature['access'] & 0b010) != 0) {
-            $this->EnableAction($ident);
-            $this->SendDebug(__FUNCTION__, 'Set EnableAction for ident: ' . $ident . ' to: true', 0);
+            $this->EnableAction($property);
+            $this->SendDebug(__FUNCTION__, 'Set EnableAction for ident: ' . $property . ' to: true', 0);
         }
         // Zusätzliche Registrierung der color_temp_kelvin Variable, wenn color_temp registriert wird
-        if ($ident === 'color_temp') {
-            $kelvinIdent = $ident . '_kelvin';
+        if ($property === 'color_temp') {
+            $kelvinIdent = $property . '_kelvin';
             $this->RegisterVariableInteger($kelvinIdent, $this->Translate('Color Temperature Kelvin'), '~TWColor');
             $variableId = $this->GetIDForIdent($kelvinIdent);
             $this->EnableAction($kelvinIdent);
