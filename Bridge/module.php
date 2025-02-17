@@ -799,11 +799,16 @@ class Zigbee2MQTTBridge extends IPSModule
     {
         $Topic = '/bridge/request/device/ota_update/check';
         $Payload = ['id'=>$DeviceName];
-        $Result = $this->SendData($Topic, $Payload);
-        if (isset($Result['status'])) {
-            return $Result['status'] == 'ok';
+        $Result = $this->SendData($Topic, $Payload, 10000);
+        if (isset($Result['error'])) {
+            trigger_error($Result['error'], E_USER_NOTICE);
+            return false;
         }
-        return false;
+        if (!isset($Result['status']) && ($Result['status'] != 'ok')) {
+            trigger_error('unknown error', E_USER_NOTICE);
+            return false;
+        }
+        return $Result['data']['updateAvailable'];
     }
 
     /**
@@ -815,14 +820,19 @@ class Zigbee2MQTTBridge extends IPSModule
      * @return bool
      *
      * @uses Zigbee2MQTTBridge::SendData()
+     * @uses trigger_error()
+     * @uses isset()
      */
     public function PerformOTAUpdate(string $DeviceName)
     {
         $Topic = '/bridge/request/device/ota_update/update';
         $Payload = ['id'=>$DeviceName];
         $Result = $this->SendData($Topic, $Payload);
-        if ($Result) { //todo check the Response
-            return true;
+        if (isset($Result['error'])) {
+            trigger_error($Result['error'], E_USER_NOTICE);
+        }
+        if (isset($Result['status'])) {
+            return $Result['status'] == 'ok';
         }
         return false;
     }

@@ -6,19 +6,22 @@ Dokumentation:
         - Neue Aktionen
         - Keine missing exposes Debugs mehr nötig
     ✅ Installationsanleitung überarbeiten
+
+Features 5.0:    
     ✅ Discovery Modul erstellen
     ✅ Anleitung Discovery, Konfigurator und Bridge fehlen noch.
     ✅ Konfigurator soll mehr Meldungen an den User ausgeben -> Parent fehlt/inaktiv, Bridge Instanz bzw Erweiterung fehlt.
     ✅ Bridge Instanz sollte beim Klicken auf dem Button der Erweiterung-Installation eine Rückmeldung im Fehlerfall geben.
+    ✅ Geräte und Gruppen Instanzen erhalten einen Support ExpansionPanel:
+        ✅ Fehlende Übersetzungen anzeigen (Buffer).
+        ✅ Download eines JSON Archives mit dem letzten Payload, der expose JSON und der vorhandenen Variablen inkl. Profile der Instanz.
+    🟨 Composite Variablen ergänzen.
+    🟨 Dokumentation vor Release noch einmal überarbeiten mit den letzten Änderungen und Screenshots.
     
 Features 5.x:
-    🟨 Composite Variablen ergänzen.
     🟨 OTA Update Variablen zerlegen (optional?).
     🟨 OTA Updates über Bridge Instanz prüfen, darstellen, anbieten?
     🟨 Oder eigene OTA Instanz?
-    ✅ Geräte und Gruppen Instanzen erhalten einen Support ExpansionPanel:
-        🟨 Fehlende Übersetzungen anzeigen (Buffer).
-        ✅ Download eines JSON Archives mit dem letzten Payload, der expose JSON und der vorhandenen Variablen inkl. Profile der Instanz.
     🟨 Testfunktionen ergänzen das expose JSON und Payloads mit phpunit getestet werden können.
     🟩 Diverse Code Optimierungen laut @Burki24
     🟨 Instanz sollte sich alle erstellen Profile merken, und beim löschen aufräumen

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Zigbee2MQTT;
 
+require_once __DIR__ . '/AttributeArrayHelper.php';
 require_once __DIR__ . '/BufferHelper.php';
 require_once __DIR__ . '/SemaphoreHelper.php';
 require_once __DIR__ . '/VariableProfileHelper.php';
@@ -24,12 +25,13 @@ require_once __DIR__ . '/ColorHelper.php';
  */
 abstract class ModulBase extends \IPSModule
 {
+    use AttributeArrayHelper;
     use BufferHelper;
     use Semaphore;
     use ColorHelper;
     use VariableProfileHelper;
     use SendData;
-    private const MINIMAL_MODUL_VERSION = 5.0;
+    private const MINIMAL_MODUL_VERSION = 5.1;
 
     /**
      * @var array STATE_PATTERN
@@ -277,18 +279,21 @@ abstract class ModulBase extends \IPSModule
      *   - ident?: string Optional: Benutzerdefinierter Identifier
      */
     protected static $specialVariables = [
-        'last_seen'          => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Last Seen', 'profile' => '~UnixTimestamp'],
-        'color_mode'         => ['type' => VARIABLETYPE_STRING, 'name' => 'Color Mode', 'profile' => ''],
-        'update'             => ['type' => VARIABLETYPE_STRING, 'name' => 'Firmware Update Status', 'profile' => ''],
-        'device_temperature' => ['type' => VARIABLETYPE_FLOAT, 'name' => 'Device Temperature', 'profile' => '~Temperature'],
-        'brightness'         => ['type' => VARIABLETYPE_INTEGER, 'ident' => 'brightness', 'profile' => '~Intensity.100'],
-        'brightness_l1'      => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l1', 'profile' => '~Intensity.100'],
-        'brightness_l2'      => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l2', 'profile' => '~Intensity.100'],
-        'voltage'            => ['type' => VARIABLETYPE_FLOAT, 'ident' => 'voltage', 'profile' => '~Volt'],
-        'calibration_time'   => ['type' => VARIABLETYPE_FLOAT],
-        'countdown'          => ['type' => VARIABLETYPE_INTEGER],
-        'countdown_l1'       => ['type' => VARIABLETYPE_INTEGER],
-        'countdown_l2'       => ['type' => VARIABLETYPE_INTEGER],
+        'last_seen'                 => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Last Seen', 'profile' => '~UnixTimestamp'],
+        'color_mode'                => ['type' => VARIABLETYPE_STRING, 'name' => 'Color Mode', 'profile' => ''],
+        'update'                    => ['type' => VARIABLETYPE_STRING, 'name' => 'Firmware Update Status', 'profile' => ''],
+        'device_temperature'        => ['type' => VARIABLETYPE_FLOAT, 'name' => 'Device Temperature', 'profile' => '~Temperature'],
+        'brightness'                => ['type' => VARIABLETYPE_INTEGER, 'ident' => 'brightness', 'profile' => '~Intensity.100'],
+        'brightness_l1'             => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l1', 'profile' => '~Intensity.100'],
+        'brightness_l2'             => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l2', 'profile' => '~Intensity.100'],
+        'voltage'                   => ['type' => VARIABLETYPE_FLOAT, 'ident' => 'voltage', 'profile' => '~Volt'],
+        'calibration_time'          => ['type' => VARIABLETYPE_FLOAT],
+        'countdown'                 => ['type' => VARIABLETYPE_INTEGER],
+        'countdown_l1'              => ['type' => VARIABLETYPE_INTEGER],
+        'countdown_l2'              => ['type' => VARIABLETYPE_INTEGER],
+        'update__installed_version' => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Installed Version', 'profile' => ''],
+        'update__latest_version'    => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Latest Version', 'profile' => ''],
+        'update__state'             => ['type' => VARIABLETYPE_STRING, 'name' => 'Update State', 'profile' => '']
     ];
 
     /**
@@ -348,7 +353,7 @@ abstract class ModulBase extends \IPSModule
      *
      * @see \IPSModule::RegisterPropertyString()
      * @see \IPSModule::RegisterAttributeFloat()
-     * @see \Zigbee2MQTT\ModulBase::createExposesDirectory()
+     * @see \IPSModule::RegisterAttributeArray()
      * @see \Zigbee2MQTT\ModulBase::RegisterProfileBoolean()
      */
     public function Create()
@@ -358,6 +363,7 @@ abstract class ModulBase extends \IPSModule
 
         $this->RegisterPropertyString(self::MQTT_BASE_TOPIC, '');
         $this->RegisterPropertyString(self::MQTT_TOPIC, '');
+        $this->RegisterAttributeArray(self::ATTRIBUTE_EXPOSES, []);
         $this->RegisterAttributeFloat(self::ATTRIBUTE_MODUL_VERSION, 5.0);
 
         /** Init Buffers */
@@ -367,7 +373,9 @@ abstract class ModulBase extends \IPSModule
         $this->lastPayload = [];
         $this->missingTranslations = [];
 
-        $this->createExposesDirectory();
+        /** @todo cleanup old directory
+         * $this->createExposesDirectory();
+         */
 
         // Statische Profile
         $this->RegisterProfileBooleanEx(
@@ -385,43 +393,6 @@ abstract class ModulBase extends \IPSModule
     }
 
     /**
-     * Destroy
-     *
-     * Diese Methode wird aufgerufen, wenn die Instanz gelöscht,
-     * oder Symcon beendet wird.
-     *
-     * Sie sorgt dafür, dass die zugehörige .json-Datei entfernt wird.
-     *
-     * Achtung: Methoden vom ipsmodule:: sind hier nicht mehr verfügbar!
-     * Darum muss hier IPS_LogMessage benutzt werden.
-     * Entsprechend ist auch kein Translate mehr verfügbar!
-     *
-     * @see \IPSModule::Destroy()
-     * @see IPS_InstanceExists()
-     * @see IPS_LogMessage()
-     *
-     * @return void
-     */
-    public function Destroy()
-    {
-        // Nur wenn Instanz gelöscht wurde.
-        if (!IPS_InstanceExists($this->InstanceID)) {
-            // Vollständiger Pfad zur JSON-Datei
-            $jsonFile = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY . DIRECTORY_SEPARATOR . $this->InstanceID . '.json';
-            // Überprüfung und Löschung der Datei
-            if (is_file($jsonFile)) {
-                if (unlink($jsonFile)) {
-                    // us
-                    IPS_LogMessage(__CLASS__, 'File successfully deleted: ' . $jsonFile);
-                } else {
-                    IPS_LogMessage(__CLASS__, 'Error on delete file: ' . $jsonFile);
-                }
-            }
-        }
-        parent::Destroy();
-    }
-
-    /**
      * ApplyChanges
      *
      * Wird aufgerufen bei übernehmen der Modulkonfiguration
@@ -431,7 +402,7 @@ abstract class ModulBase extends \IPSModule
      * - Liest MQTT Basis- und Geräte-Topic
      * - Setzt Filter für eingehende MQTT-Nachrichten
      * - Aktualisiert Instanz-Status (aktiv/inaktiv)
-     * - Prüft und aktualisiert Geräteinformationen (deviceID.json)
+     * - Prüft und aktualisiert Geräteinformationen (expose attribute)
      *
      * Bedingungen für Aktivierung:
      * - Basis-Topic und MQTT-Topic müssen gesetzt sein
@@ -446,7 +417,6 @@ abstract class ModulBase extends \IPSModule
      * @see \IPSModule::HasActiveParent()
      * @see \IPSModule::GetStatus()
      * @see \IPSModule::SetStatus()
-     * @see \Zigbee2MQTT\ModulBase::checkAndCreateJsonFile()
      * @see IPS_GetKernelRunlevel()
      */
     public function ApplyChanges()
@@ -493,7 +463,7 @@ abstract class ModulBase extends \IPSModule
                 }
                 if (($this->HasActiveParent()) && (IPS_GetKernelRunlevel() == KR_READY)) {
                     $this->LogMessage('FM_CONNECT', KL_NOTIFY);
-                    $this->checkAndCreateJsonFile();
+                    $this->checkExposeAttribute();
                 }
                 break;
             case IM_CHANGESTATUS:
@@ -502,7 +472,7 @@ abstract class ModulBase extends \IPSModule
                     $this->BUFFER_MQTT_SUSPENDED = false;
                     // Nur ein UpdateDeviceInfo wenn Parent aktiv und System bereit
                     if (($this->HasActiveParent()) && (IPS_GetKernelRunlevel() == KR_READY)) {
-                        $this->checkAndCreateJsonFile();
+                        $this->checkExposeAttribute();
                     }
                 }
                 return;
@@ -666,6 +636,21 @@ abstract class ModulBase extends \IPSModule
         $this->BUFFER_MQTT_SUSPENDED = true;
         $this->BUFFER_PROCESSING_MIGRATION = true;
 
+        // Move Exposes from file to attribute
+        $jsonFile = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY . DIRECTORY_SEPARATOR . $this->InstanceID . '.json';
+        if (file_exists($jsonFile)) {
+            $exposeData = @file_get_contents($jsonFile);
+            $data = json_decode($exposeData, true);
+            if (isset($data['exposes'])) { //device
+                $exposes = $data['exposes'];
+            } else { //group
+                $exposes = $data;
+            }
+            $this->LogMessage(__FUNCTION__ . ' : Convert ExposeFile to attribute', KL_NOTIFY);
+            $j->attributes->{self::ATTRIBUTE_EXPOSES} = json_encode($exposes);
+            @unlink($jsonFile);
+        }
+
         // 1) Suche alle Kinder-Objekte dieser Instanz
         // 2) Prüfe, ob ihr Ident z. B. mit "Z2M_" beginnt
         // 3) Bilde den neuen Ident (snake_case) und setze ihn
@@ -779,15 +764,7 @@ abstract class ModulBase extends \IPSModule
             $DebugData['ModelUrl'] = 'https://www.zigbee2mqtt.io/devices/' . rawurlencode($ModelUrl) . '.html';
         }
         $DebugData['Config'] = json_decode(IPS_GetConfiguration($this->InstanceID), true);
-        $jsonFile = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY . DIRECTORY_SEPARATOR . $this->InstanceID . '.json';
-
-        // Prüfe ob JSON existiert
-        if (file_exists($jsonFile)) {
-            $JSON = json_decode(file_get_contents($jsonFile), true);
-            $DebugData['Exposes'] = $JSON['exposes'] ?? $JSON;
-        } else {
-            $DebugData['Exposes'] = [];
-        }
+        $DebugData['Exposes'] = $this->ReadAttributeArray(self::ATTRIBUTE_EXPOSES);
         $DebugData['LastPayload'] = $this->lastPayload;
         $DebugData['Childs'] = [];
         $DebugData['Profile'] = [];
@@ -925,13 +902,6 @@ abstract class ModulBase extends \IPSModule
 
         // Array Spezialbehandlung für
         if (is_array($value)) {
-            // update Arrays
-            if (strtolower($ident) === 'update') {
-                $this->SendDebug(__FUNCTION__, 'Update Array empfangen', 0);
-                $jsonValue = json_encode($value, JSON_PRETTY_PRINT);
-                parent::SetValue($ident, $jsonValue);
-                return;
-            }
             // Color-Arrays
             if (strtolower($ident) === 'color') {
                 $this->handleColorVariable($ident, $value);
@@ -1210,67 +1180,99 @@ abstract class ModulBase extends \IPSModule
         $this->UpdateFormField('MissingTranslationsList', 'values', json_encode($Values));
         return true;
     }
+
     /**
-     * SaveExposesToJson
+     * Wandelt ein verschachteltes Array in ein eindimensionales Array mit zusammengesetzten Schlüsseln um
      *
-     * Speichert die Exposes in einer JSON-Datei.
+     * @param array  $payload Das zu verarbeitende Array mit verschachtelter Struktur
+     * @param string $prefix  Optional, Prefix für die zusammengesetzten Schlüssel
      *
-     * Die JSON-Datei wird im Format "InstanzID.json" im Verzeichnis "Zigbee2MQTTExposes" gespeichert
-     * und enthält die Expose-Informationen des Zigbee-Geräts.
+     * @return array Ein eindimensionales Array mit Schlüsseln in der Form 'parent__child'
      *
-     * @param  array $Result
-     * @return bool
+     * Beispiele:
+     * ```php
+     * // Verschachteltes Array
+     * $input = [
+     *     'weekly_schedule' => [
+     *         'monday' => '00:00/7'
+     *     ]
+     * ];
+     * $result = $this->flattenPayload($input);
+     * // Ergebnis: ['weekly_schedule__monday' => '00:00/7']
+     * ```
      *
-     * @see \Zigbee2MQTT\ModulBase::createExposesDirectory()
-     * @see \IPSModule::LogMessage()
-     * @see json_encode()
-     * @see file_put_contents()
-     * @see IPS_GetKernelDir()
+     * @internal Wird von processPayload verwendet um verschachtelte Strukturen zu verarbeiten
+     *
+     * @see \Zigbee2MQTT\ModulBase::processPayload()
      */
-    protected function SaveExposesToJson(array $Result): bool
+    protected function flattenPayload(array $payload, string $prefix = ''): array
     {
-        // JSON-Daten mit Pretty-Print erstellen
-        $jsonData = json_encode($Result, JSON_PRETTY_PRINT);
-        if ($jsonData === false) {
-            $this->LogMessage($this->Translate('JSON encoding error: ') . json_last_error_msg(), KL_ERROR);
-            return false;
+        $result = [];
+
+        foreach ($payload as $key => $value) {
+            $newKey = $prefix ? $prefix . '__' . $key : $key;
+
+            // Spezialbehandlung für color-Properties
+            if ($key === 'color' && is_array($value)) {
+                // Übernehme die color-Properties direkt ins color-Array
+                $result['color'] = $value;
+                continue;
+            }
+
+            // Update-Properties zusammenfassen
+            if ($key === 'update' && is_array($value)) {
+                foreach ($value as $updateKey => $updateValue) {
+                    $result['update__' . $updateKey] = $updateValue;
+                }
+                continue;
+            }
+
+            if (is_array($value)) {
+                $result = array_merge($result, $this->flattenPayload($value, $newKey));
+            } else {
+                $result[$newKey] = $value;
+            }
         }
 
-        $this->createExposesDirectory();
-
-        // Definieren des Verzeichnisnamens
-        $jsonFile = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY . DIRECTORY_SEPARATOR . $this->InstanceID . '.json';
-
-        // Schreiben der JSON-Daten in die Datei
-        if (file_put_contents($jsonFile, $jsonData) === false) {
-            $this->LogMessage($this->Translate('Error writing JSON file.'), KL_ERROR);
-            return false;
-        }
-        return true;
+        return $result;
     }
 
     /**
-     * createExposesDirectory
+     * Wandelt einen zusammengesetzten Identifikator in eine verschachtelte Array-Struktur um
      *
-     * @return void
+     * @param string $ident Der zusammengesetzte Identifikator (z.B. 'weekly_schedule__friday')
+     * @param mixed $value Der Wert, der gesetzt werden soll
      *
-     * @throws \Exception Error on create Expose Directory
+     * @return array Das verschachtelte Array
      *
-     * @see is_dir()
-     * @see mkdir()
-     * @see IPS_GetKernelDir()
+     * Beispiel:
+     * ```php
+     * $ident = 'weekly_schedule__friday';
+     * $value = '00:00/7';
+     * $result = $this->buildNestedPayload($ident, $value);
+     * // Ergebnis: ['weekly_schedule' => ['friday' => '00:00/7']]
+     * ```
+     *
+     * @internal Diese Methode wird von SendSetCommand verwendet
+     *
+     * @see \Zigbee2MQTT\ModulBase::SendSetCommand()
      */
-    private function createExposesDirectory(): void
+    protected function buildNestedPayload(string $ident, $value): array
     {
-        // Vollständigen Pfad zum Verzeichnis erstellen
-        $ExposeDirectory = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY;
+        $parts = explode('__', $ident);
+        $result = [];
+        $current = &$result;
 
-        // Verzeichnis erstellen wenn nicht vorhanden
-        if (!is_dir($ExposeDirectory)) {
-            if (!mkdir($ExposeDirectory)) {
-                throw new \Exception($this->Translate('Error on create Expose Directory'));
-            }
+        // Alle Teile außer dem letzten durchgehen
+        for ($i = 0; $i < count($parts) - 1; $i++) {
+            $current[$parts[$i]] = [];
+            $current = &$current[$parts[$i]];
         }
+
+        // Letzten Wert setzen
+        $current[$parts[count($parts) - 1]] = $value;
+
+        return $result;
     }
 
     /**
@@ -1451,19 +1453,26 @@ abstract class ModulBase extends \IPSModule
     }
 
     /**
-     * processPayload
-     *
      * Verarbeitet die empfangenen MQTT-Payload-Daten
      *
      * @param array $payload Array mit den MQTT-Nachrichtendaten
+     *                      Unterstützt sowohl Array [] als auch Object {} Payload-Formate
      *
-     * @return string Leerer String
+     * @return void
      *
-     * Beispiel:
+     * Beispiele:
      * ```php
-     * // Verarbeitung einer MQTT-Nachricht
-     * $messageData = ['temperature' => 21.5];
-     * $result = $this->processPayload($messageData);
+     * // Array Payload
+     * $payload = [0 => 'value', 'temperature' => 21.5];
+     * $this->processPayload($payload);
+     *
+     * // Object Payload mit Composite-Struktur
+     * $payload = [
+     *     'weekly_schedule' => [
+     *         'monday' => '00:00/7'
+     *     ]
+     * ];
+     * $this->processPayload($payload);
      * ```
      *
      * @internal Diese Methode wird von ReceiveData aufgerufen
@@ -1486,34 +1495,23 @@ abstract class ModulBase extends \IPSModule
             unset($payload['exposes']);
         }
 
+        // Verschachtelte Strukturen flach machen
+        $flattenedPayload = $this->flattenPayload($payload);
+
         // Variablentypen anhängen
-        $payloadWithTypes = $this->AppendVariableTypes($payload);
+        $payloadWithTypes = $this->AppendVariableTypes($flattenedPayload);
 
         // Payload-Daten verarbeiten
         foreach ($payloadWithTypes as $key => $value) {
-
-            /**
-             * Fatal error: Uncaught TypeError: strpos(): Argument #1 ($haystack) must be of type string, int given in ModulBase.php:1247
-             * Stack trace:
-             * #0 C:\ProgramData\Symcon\modules\Zigbee2MQTT\libs\ModulBase.php(1247): strpos(0, '_type')
-             */
-            if ($key === 0) { // Beim Update kommen manchmal 0 als Key, aus welchem Payload auch immer. Muss ja ein [] Payload und kein {} Payload sein.
-                continue;
-            }
-            // Typ-Informationen überspringen
-            if (strpos($key, '_type') !== false) {
+            if ($key === 0 || strpos($key, '_type') !== false) {
                 continue;
             }
 
             $this->SendDebug(__FUNCTION__, sprintf('Verarbeite: Key=%s, Value=%s', $key, is_array($value) ? json_encode($value) : (string) $value), 0);
 
-            // Sonderfälle prüfen und verarbeiten
-            if ($this->processSpecialVariable($key, $value)) {
-                continue;
+            if (!$this->processSpecialVariable($key, $value)) {
+                $this->processVariable($key, $value);
             }
-
-            // Allgemeine Variablen verarbeiten
-            $this->processVariable($key, $value);
         }
     }
 
@@ -1589,6 +1587,12 @@ abstract class ModulBase extends \IPSModule
      */
     private function processVariable(string $key, mixed $value): void
     {
+        // Wenn Value ein Array ist und color im Key vorkommt, spezielle Behandlung
+        if (is_array($value) && strpos($key, 'color') === 0) {
+            $this->handleColorVariable($key, $value);
+            return;
+        }
+
         // Wenn Value ein Array ist und einen 'composite' Key enthält
         if (is_array($value) && isset($value['composite'])) {
             foreach ($value['composite'] as $compositeKey => $compositeValue) {
@@ -1632,6 +1636,12 @@ abstract class ModulBase extends \IPSModule
         $variableID = $this->getOrRegisterVariable($ident, $variableProps);
         if ($variableID) {
             $this->SetValue($ident, $value);
+        }
+
+        // Zusätzlich: Preset-Variable aktualisieren wenn vorhanden
+        $presetIdent = $ident . '_presets';
+        if (@$this->GetIDForIdent($presetIdent) !== false) {
+            $this->SetValue($presetIdent, $value);
         }
     }
 
@@ -1734,6 +1744,10 @@ abstract class ModulBase extends \IPSModule
 
         // Erstelle das Payload
         $payload = [$ident => $value];
+
+        // Konvertiere composite payload falls nötig
+        $payload = $this->convertCompositePayload($payload);
+
         $this->SendDebug(__FUNCTION__, 'Sende payload: ' . json_encode($payload), 0);
 
         // Sende den Set-Befehl
@@ -1942,11 +1956,17 @@ abstract class ModulBase extends \IPSModule
         $this->SendDebug(__FUNCTION__, 'Aktion über presets erfolgt, Weiterleitung zur eigentlichen Variable: ' . $mainIdent, 0);
         $this->SendDebug(__FUNCTION__, 'Aktion über presets erfolgt, Schreibe zur PresetVariable Variable: ' . $ident, 0);
 
-        // Setze den Wert der Hauptvariable
+        // Setze den Wert der Hauptvariable und der Preset-Variable
         $this->SetValue($mainIdent, $value);
         $this->SetValue($ident, $value);
 
-        $payload = [$mainIdent => $value];
+        // Erstelle das Payload - Berücksichtige composite Strukturen
+        if (strpos($mainIdent, '__') !== false) {
+            $payload = $this->buildNestedPayload($mainIdent, $value);
+        } else {
+            $payload = [$mainIdent => $value];
+        }
+
         if (!$this->SendSetCommand($payload)) {
             return false;
         }
@@ -1973,7 +1993,7 @@ abstract class ModulBase extends \IPSModule
      * die keine Rückmeldung von Zigbee2MQTT erfordert. Sie sendet den entsprechenden Set-Befehl
      * und aktualisiert die Variable direkt, wenn der Set-Befehl erfolgreich gesendet wurde.
      *
-     * @param string $ident Der Identifikator der String-Variable.
+     * @param string $ident Der Identifikator der String-Variablen.
      * @param string $value Der Wert, der mit der String-Variablen-Aktionsanforderung verbunden ist.
      *
      * @return bool Gibt true zurück wenn der Set-Befehl abgesetzt wurde, sonder false.
@@ -2415,9 +2435,11 @@ abstract class ModulBase extends \IPSModule
     {
         // Liste von Abkürzungen die in Großbuchstaben bleiben sollen
         $upperCaseWords = ['HS', 'RGB', 'XY', 'HSV', 'HSL', 'LED'];
+        $this->SendDebug(__FUNCTION__, 'Initial Label: ' . $label, 0);
 
-        // Ersetze Unterstriche durch Leerzeichen
-        $label = str_replace('_', ' ', $label);
+        // Alle Unterstriche (egal ob einfach oder mehrfach) durch ein einzelnes Leerzeichen ersetzen
+        $label = preg_replace('/_+/', ' ', $label);
+        $this->SendDebug(__FUNCTION__, 'After replacing underscores with spaces: ' . $label, 0);
 
         // Konvertiere jeden Wortanfang in Großbuchstaben
         $label = ucwords($label);
@@ -2525,11 +2547,6 @@ abstract class ModulBase extends \IPSModule
                 }
             }
             return '~Switch';
-        }
-
-        $standardProfile = $this->getStandardProfile($type, $property);
-        if (self::isValidStandardProfile($standardProfile)) {
-            return $standardProfile;
         }
 
         // Typ-spezifisches Profil erstellen
@@ -2674,12 +2691,18 @@ abstract class ModulBase extends \IPSModule
             $this->SendDebug(__FUNCTION__, 'FLOAT_UNITS content: ' . json_encode(self::FLOAT_UNITS), 0);
 
             if (in_array($unitTrimmed, self::FLOAT_UNITS, true)) {
+                // Wenn unit in FLOAT_UNITS und step eine Ganzzahl ist -> integer
+                if ($value_step != 1.0 && fmod($value_step, 1) === 0.0) {
+                    $this->SendDebug(__FUNCTION__, 'Unit in FLOAT_UNITS but step is integer, returning integer', 0);
+                    return 'integer';
+                }
+                // Sonst float
                 return 'float';
             }
         }
 
-        // Zusätzliche Prüfung basierend auf value_step
-        if (fmod($value_step, 1) !== 0.0) {
+        // Wenn unit nicht in FLOAT_UNITS, aber step eine Dezimalzahl
+        if ($value_step != 1.0 && fmod($value_step, 1) !== 0.0) {
             $this->SendDebug(__FUNCTION__, 'Value step is not an integer, returning float', 0);
             return 'float';
         }
@@ -3118,47 +3141,24 @@ abstract class ModulBase extends \IPSModule
         return $profileName;
     }
 
-    /**
-     * checkAndCreateJsonFile
-     *
-     * Prüft und erstellt eine JSON-Datei für die Zigbee-Geräteinformationen.
-     *
-     * Diese Methode führt folgende Schritte aus:
-     * 1. Prüft ob das MQTT-Topic gesetzt ist
-     * 2. Überprüft das Vorhandensein der JSON-Datei im Zigbee2MQTTExposes Verzeichnis
-     * 3. Überprüft auf aktiven IO-Parent
-     * 4. Ruft UpdateDeviceInfo auf um Geräteinformationen zu aktualisieren
-     *
-     * @return void
-     *
-     * @see \Zigbee2MQTT\ModulBase::UpdateDeviceInfo()
-     * @see \IPSModule::ReadPropertyString()
-     * @see \IPSModule::SendDebug()
-     * @see \IPSModule::HasActiveParent()
-     * @see IPS_GetKernelDir()
-     * @see IPS_GetKernelRunlevel()
-     * @see file_exists()
-     *
-     */
-    private function checkAndCreateJsonFile(): void
+    private function checkExposeAttribute(): void
     {
         $mqttTopic = $this->ReadPropertyString(self::MQTT_TOPIC);
 
         // Erst prüfen ob MQTTTopic gesetzt ist
         if (empty($mqttTopic)) {
-            $this->SendDebug(__FUNCTION__, 'MQTTTopic nicht gesetzt, überspringe JSON Prüfung', 0);
+            $this->SendDebug(__FUNCTION__, 'MQTTTopic nicht gesetzt, überspringe Attribut Prüfung', 0);
             return;
         }
 
-        $jsonFile = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY . DIRECTORY_SEPARATOR . $this->InstanceID . '.json';
-
-        // Prüfe ob JSON existiert
-        if (file_exists($jsonFile)) {
+        // Prüfe ob Expose-Attribute existiert und Daten enthält
+        $exposes = $this->ReadAttributeArray(self::ATTRIBUTE_EXPOSES);
+        if (count($exposes)) {
             return;
         }
-        $this->SendDebug(__FUNCTION__, 'JSON-Datei nicht gefunden für Instance: ' . $this->InstanceID, 0);
 
-        // Nur fortfahren wenn Parent aktiv
+        $this->SendDebug(__FUNCTION__, 'Expose-Attribute nicht gefunden für Instance: ' . $this->InstanceID, 0);
+
         if (!$this->HasActiveParent()) {
             $this->SendDebug(__FUNCTION__, 'Parent nicht aktiv, überspringe UpdateDeviceInfo', 0);
             return;
@@ -3167,11 +3167,11 @@ abstract class ModulBase extends \IPSModule
         if (IPS_GetKernelRunlevel() != KR_READY) {
             return;
         }
+
         $this->SendDebug(__FUNCTION__, 'Starte UpdateDeviceInfo für Topic: ' . $mqttTopic, 0);
         if (!$this->UpdateDeviceInfo()) {
             $this->SendDebug(__FUNCTION__, 'UpdateDeviceInfo fehlgeschlagen', 0);
         }
-
     }
 
     /**
@@ -3222,40 +3222,35 @@ abstract class ModulBase extends \IPSModule
      */
     private function getKnownVariables(): array
     {
-        $jsonFile = IPS_GetKernelDir() . self::EXPOSES_DIRECTORY . DIRECTORY_SEPARATOR . $this->InstanceID . '.json';
-
-        $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, 'Verarbeite Datei: ' . $jsonFile, 0);
-        if (!file_exists($jsonFile)) {
-            $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, 'JSON-Datei nicht gefunden: ' . $jsonFile, 0);
-            if (!isset($data['exposes'])) {
-                return [];
-            }
-        }
-
-        $jsonData = @file_get_contents($jsonFile);
-        if (!$jsonData) {
-            return [];
-        }
-
-        $data = json_decode($jsonData, true);
-        if (json_last_error() !== JSON_ERROR_NONE || !isset($data['exposes'])) {
-            $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__, 'Fehler beim Dekodieren der JSON-Datei oder fehlende "exposes" in Datei: ' . $jsonFile . '. Fehler: ' . json_last_error_msg(), 0);
-        }
-
-        if (!isset($data['exposes'])) {
+        $data = array_values($this->ReadAttributeArray(self::ATTRIBUTE_EXPOSES));
+        if (!count($data)) {
+            $this->SendDebug(__FUNCTION__, 'Fehlende exposes oder features.', 0);
             return [];
         }
 
         $features = array_map(function ($expose)
         {
             return isset($expose['features']) ? $expose['features'] : [$expose];
-        }, $data['exposes']);
+        }, $data);
 
         $features = array_merge(...$features);
 
+        // Icons und unerwünschte Properties filtern
         $filteredFeatures = array_filter($features, function ($feature)
         {
-            return isset($feature['property']);
+            // Icon Properties und andere unerwünschte Einträge ignorieren
+            if (isset($feature['property'])) {
+                if ($feature['property'] === 'icon') {
+                    $this->SendDebug(__FUNCTION__, 'Icon-Property übersprungen: ' . json_encode($feature), 0);
+                    return false;
+                }
+                if (strpos($feature['property'], 'Icon') !== false) {
+                    $this->SendDebug(__FUNCTION__, 'Icon im Namen gefunden - übersprungen: ' . json_encode($feature), 0);
+                    return false;
+                }
+                return true;
+            }
+            return false;
         });
 
         $knownVariables = [];
@@ -3332,24 +3327,45 @@ abstract class ModulBase extends \IPSModule
     /**
      * registerVariable
      *
-     * Registriert eine Variable basierend auf den Feature-Informationen.
-     * Unterstützt sowohl einzelne als auch zusammengesetzte (composite) Variablen.
-     * Bei composite-Variablen werden Sub-Features rekursiv registriert.
-     * Verarbeitet automatisch:
-     * - Farbtemperatur (color_temp) mit zusätzlicher Kelvin-Variable
-     * - Composite-Variablen mit Sub-Features
-     * - Preset-Variablen
-     * - Access-Flags für schreibbare Variablen
+     * Registriert eine Variable basierend auf den Feature-Informationen
      *
-     * @param array|string $feature Feature-Information oder Feature-ID
-     *                             Bei array werden zusätzliche Eigenschaften wie 'type', 'property', 'unit' erwartet
-     *                             Bei composite werden 'features' als Sub-Feature-Array erwartet
-     *                             Optional: 'presets', 'access', 'color_mode'
-     * @param string|null $exposeType Optionaler Expose-Typ zur Überschreibung des Feature-Typs
+     * @param array|string $feature Feature-Information als Array oder Feature-ID als String
+     *                             Array-Format:
+     *                             - 'property': (string) Identifikator der Variable
+     *                             - 'type': (string) Datentyp (numeric, binary, enum, etc.)
+     *                             - 'unit': (string, optional) Einheit der Variable
+     *                             - 'value_step': (float, optional) Schrittweite für numerische Werte
+     *                             - 'features': (array, optional) Sub-Features für composite Variablen
+     *                             - 'presets': (array, optional) Voreingestellte Werte
+     *                             - 'access': (int, optional) Zugriffsrechte (0b001=read, 0b010=write, 0b100=notify)
+     *                             - 'color_mode': (bool, optional) Für Farbvariablen
+     * @param string|null $exposeType Optional, überschreibt den Feature-Typ
      *
      * @return void
      *
-     * @throws Exception Wenn ungültige Feature-Informationen übergeben werden
+     * @throws Exception Bei ungültigen Feature-Informationen
+     *
+     * Beispiele:
+     * ```php
+     * // Einfache Variable
+     * $this->registerVariable(['property' => 'state', 'type' => 'binary']);
+     *
+     * // Composite Variable (z.B. weekly_schedule)
+     * $this->registerVariable([
+     *     'property' => 'weekly_schedule',
+     *     'type' => 'composite',
+     *     'features' => [
+     *         ['property' => 'monday', 'type' => 'string']
+     *     ]
+     * ]);
+     *
+     * // Variable mit Presets
+     * $this->registerVariable([
+     *     'property' => 'mode',
+     *     'type' => 'enum',
+     *     'presets' => ['auto', 'manual']
+     * ]);
+     * ```
      *
      * @see \Zigbee2MQTT\ModulBase::getStateConfiguration()
      * @see \Zigbee2MQTT\ModulBase::convertLabelToName()
@@ -3380,20 +3396,20 @@ abstract class ModulBase extends \IPSModule
             return;
         }
 
-        $featureId = is_array($feature) ? $feature['property'] : $feature;
+        $featureProperty = is_array($feature) ? $feature['property'] : $feature;
 
         // Frühe Validierung der Property
-        if (empty($featureId)) {
+        if (empty($featureProperty)) {
             $this->SendDebug(__FUNCTION__, 'Error: Empty property/identifier provided', 0);
             return;
         }
 
-        $this->SendDebug(__FUNCTION__ . ' Registriere Variable für Property: ', $featureId, 0);
+        $this->SendDebug(__FUNCTION__ . ' Registriere Variable für Property: ', $featureProperty, 0);
 
         // Übergebe das komplette Feature-Array für Access-Check
-        $stateConfig = $this->getStateConfiguration($featureId, is_array($feature) ? $feature : null);
+        $stateConfig = $this->getStateConfiguration($featureProperty, is_array($feature) ? $feature : null);
         if ($stateConfig !== null) {
-            $formattedLabel = $this->convertLabelToName($featureId);
+            $formattedLabel = $this->convertLabelToName($featureProperty);
 
             // Registriere Variable basierend auf dataType
             switch ($stateConfig['dataType']) {
@@ -3418,7 +3434,7 @@ abstract class ModulBase extends \IPSModule
 
             if (isset($stateConfig['enableAction']) && $stateConfig['enableAction']) {
                 $this->EnableAction($stateConfig['ident']);
-                $this->SendDebug(__FUNCTION__, 'Enabled action for ' . $featureId . ' (writable state)', 0);
+                $this->SendDebug(__FUNCTION__, 'Enabled action for ' . $featureProperty . ' (writable state)', 0);
             }
             return;
         }
@@ -3440,17 +3456,15 @@ abstract class ModulBase extends \IPSModule
         $this->SendDebug(__FUNCTION__ . ' :: Registering Feature', json_encode($feature), 0);
 
         $type = $feature['type'];
-        $property = $featureId; // Bereits validiert
+        $property = $featureProperty; // Bereits validiert
         $unit = $feature['unit'] ?? '';
-        $ident = $property;     // Bereits validiert
-        $label = ucfirst(str_replace('_', ' ', $property));
         $step = isset($feature['value_step']) ? (float) $feature['value_step'] : 1.0;
 
         // Bestimmen des Variablentyps basierend auf Typ, Feature und Einheit
         $variableType = $this->getVariableTypeFromProfile($type, $property, $unit, $step, $groupType);
 
         // Überprüfen, ob ein Standardprofil verwendet werden soll
-        $profileName = $this->getStandardProfile($type, $property, $groupType); /** @todo getStandardProfile wird aber unten in registerVariableProfile auch aufgerufen */
+        $profileName = $this->getStandardProfile($type, $property, $groupType);
 
         // Profil vor der Variablenerstellung erstellen, falls kein Standardprofil verwendet wird
         if ($profileName === '') {
@@ -3461,28 +3475,28 @@ abstract class ModulBase extends \IPSModule
 
         switch ($variableType) {
             case 'bool':
-                $this->SendDebug(__FUNCTION__, 'Registering Boolean Variable: ' . $ident, 0);
-                $this->RegisterVariableBoolean($ident, $this->Translate($this->convertLabelToName($label)), $profileName);
+                $this->SendDebug(__FUNCTION__, 'Registering Boolean Variable: ' . $property, 0);
+                $this->RegisterVariableBoolean($property, $this->Translate($this->convertLabelToName($property)), $profileName);
                 break;
             case 'int':
-                $this->SendDebug(__FUNCTION__, 'Registering Integer Variable: ' . $ident, 0);
-                $this->RegisterVariableInteger($ident, $this->Translate($this->convertLabelToName($label)), $profileName);
+                $this->SendDebug(__FUNCTION__, 'Registering Integer Variable: ' . $property, 0);
+                $this->RegisterVariableInteger($property, $this->Translate($this->convertLabelToName($property)), $profileName);
                 break;
             case 'float':
-                $this->SendDebug(__FUNCTION__, 'Registering Float Variable: ' . $ident, 0);
-                $this->RegisterVariableFloat($ident, $this->Translate($this->convertLabelToName($label)), $profileName);
+                $this->SendDebug(__FUNCTION__, 'Registering Float Variable: ' . $property, 0);
+                $this->RegisterVariableFloat($property, $this->Translate($this->convertLabelToName($property)), $profileName);
                 break;
             case 'string':
-                $this->SendDebug(__FUNCTION__, 'Registering String Variable: ' . $ident, 0);
-                $this->RegisterVariableString($ident, $this->Translate($this->convertLabelToName($label)), $profileName);
+                $this->SendDebug(__FUNCTION__, 'Registering String Variable: ' . $property, 0);
+                $this->RegisterVariableString($property, $this->Translate($this->convertLabelToName($property)), $profileName);
                 break;
             case 'text':
-                $this->SendDebug(__FUNCTION__, 'Registering Text Variable: ' . $ident, 0);
-                $this->RegisterVariableString($ident, $this->Translate($this->convertLabelToName($label))); // Kein Profilname übergeben
+                $this->SendDebug(__FUNCTION__, 'Registering Text Variable: ' . $property, 0);
+                $this->RegisterVariableString($property, $this->Translate($this->convertLabelToName($property))); // Kein Profilname übergeben
                 break;
                 // Zusätzliche Registrierung für 'composite' Farb-Variablen
             case 'composite':
-                $this->SendDebug(__FUNCTION__, 'Registering Composite Variable: ' . $ident, 0);
+                $this->SendDebug(__FUNCTION__, 'Registering Composite Variable: ' . $property, 0);
 
                 // Bestehende Color-Variable Logik beibehalten
                 if (isset($feature['color_mode'])) {
@@ -3490,11 +3504,29 @@ abstract class ModulBase extends \IPSModule
                     return;
                 }
 
-                // Neue Feature-Verarbeitung
+                // Feature-Verarbeitung
                 if (isset($feature['features'])) {
                     foreach ($feature['features'] as $subFeature) {
                         // Bilde Sub-Properties
-                        $subFeature['property'] = $property . '_' . $subFeature['property'];
+                        $subProperty = $subFeature['property'];
+                        $subFeature['property'] = $property . '__' . $subProperty;
+
+                        // Preset-Handling für Sub-Features
+                        if (isset($subFeature['presets'])) {
+                            $variableType = $this->getVariableTypeFromProfile(
+                                $subFeature['type'] ?? 'numeric',
+                                $subFeature['property'],
+                                $subFeature['unit'] ?? '',
+                                $subFeature['value_step'] ?? 1.0
+                            );
+                            $this->registerPresetVariables(
+                                $subFeature['presets'],
+                                $subFeature['property'],
+                                $variableType,
+                                $subFeature
+                            );
+                        }
+
                         // Rekursiver Aufruf mit einzelnem Feature
                         $this->registerVariable($subFeature, $exposeType);
                     }
@@ -3507,12 +3539,12 @@ abstract class ModulBase extends \IPSModule
         }
 
         if (isset($feature['access']) && ($feature['access'] & 0b010) != 0) {
-            $this->EnableAction($ident);
-            $this->SendDebug(__FUNCTION__, 'Set EnableAction for ident: ' . $ident . ' to: true', 0);
+            $this->EnableAction($property);
+            $this->SendDebug(__FUNCTION__, 'Set EnableAction for ident: ' . $property . ' to: true', 0);
         }
         // Zusätzliche Registrierung der color_temp_kelvin Variable, wenn color_temp registriert wird
-        if ($ident === 'color_temp') {
-            $kelvinIdent = $ident . '_kelvin';
+        if ($property === 'color_temp') {
+            $kelvinIdent = $property . '_kelvin';
             $this->RegisterVariableInteger($kelvinIdent, $this->Translate('Color Temperature Kelvin'), '~TWColor');
             $variableId = $this->GetIDForIdent($kelvinIdent);
             $this->EnableAction($kelvinIdent);
@@ -3620,29 +3652,60 @@ abstract class ModulBase extends \IPSModule
      * @see \IPSModule::RegisterVariableInteger()
      * @see \IPSModule::EnableAction()
      */
-    private function registerPresetVariables(array $presets, string $label, string $variableType, array $feature): void
+    private function registerPresetVariables(array $presets, string $property, string $variableType, array $feature): void
     {
-        // Während Migration keine Variablen erstellen
-        if ($this->BUFFER_PROCESSING_MIGRATION) {
-            return;
+        $this->SendDebug(__FUNCTION__, 'Registriere Preset-Variablen für: ' . $property, 0);
+
+        // Analysiere Preset-Werte um den korrekten Typ zu bestimmen
+        $isStringPreset = false;
+        foreach ($presets as $preset) {
+            if (is_string($preset['value']) && !is_numeric($preset['value'])) {
+                $isStringPreset = true;
+                break;
+            }
         }
 
-        $this->SendDebug(__FUNCTION__, 'Registering preset variables for: ' . $label, 0);
-        $profileName = $this->registerPresetProfile($presets, $label, $variableType, $feature);
+        // Bestimme den Variablentyp und erstelle das entsprechende Profil
+        $profileName = 'Z2M.' . strtolower($property) . '.presets';
+        $presetIdent = $property . '_presets';
 
-        // Variable registrieren
-        $ident = ($feature['property']) . '_presets';
-        $this->SendDebug(__FUNCTION__, 'Preset ident: ' . $ident, 0);
-        $label = $feature['name'] . ' Presets';
-        $formattedLabel = $this->convertLabelToName($label);
+        // Name über convertLabelToName formatieren
+        $formattedLabel = $this->convertLabelToName($property);
 
-        // Variable erstellen/aktualisieren
-        if ($variableType === 'float') {
-            $this->RegisterVariableFloat($ident, $this->Translate($formattedLabel), $profileName);
+        if ($isStringPreset) {
+            // String-Profil für Text-basierte Presets
+            $associations = [];
+            foreach ($presets as $preset) {
+                $associations[] = [
+                    $preset['value'],                           // Wert
+                    $this->Translate($preset['name']),          // Name
+                    '',                                         // Icon
+                    -1                                          // Farbe
+                ];
+            }
+            $this->RegisterProfileStringEx($profileName, '', '', '', $associations);
+            // Formatierter Name wird hier verwendet
+            $this->RegisterVariableString($presetIdent, $this->Translate($formattedLabel . ' Presets'), $profileName);
         } else {
-            $this->RegisterVariableInteger($ident, $this->Translate($formattedLabel), $profileName);
+            // Integer-Profil für numerische Presets
+            $associations = [];
+            foreach ($presets as $index => $preset) {
+                $associations[] = [
+                    intval($preset['value']),                   // Wert
+                    $this->Translate($preset['name']),          // Name
+                    '',                                         // Icon
+                    -1                                          // Farbe
+                ];
+            }
+            $this->RegisterProfileIntegerEx($profileName, '', '', '', $associations);
+            // Formatierter Name wird hier verwendet
+            $this->RegisterVariableInteger($presetIdent, $this->Translate($formattedLabel . ' Presets'), $profileName);
         }
-        $this->EnableAction($ident);
+
+        // Aktiviere Aktion wenn beschreibbar
+        if (isset($feature['access']) && ($feature['access'] & 0b010) != 0) {
+            $this->EnableAction($presetIdent);
+        }
     }
 
     /**
@@ -3891,5 +3954,17 @@ abstract class ModulBase extends \IPSModule
 
         $this->SendDebug(__FUNCTION__, 'State mapping profile created for: ' . $ProfileName, 0);
         return $ProfileName;
+    }
+
+    private function convertCompositePayload(array $Payload): array
+    {
+        $finalPayload = $Payload;
+        foreach ($Payload as $key => $value) {
+            if (strpos($key, '__') !== false) {
+                $finalPayload = $this->buildNestedPayload($key, $value);
+                break;
+            }
+        }
+        return $finalPayload;
     }
 }
