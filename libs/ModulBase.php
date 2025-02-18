@@ -333,6 +333,45 @@ abstract class ModulBase extends \IPSModule
         'effect',
     ];
 
+    /**
+     * @var array<string,array{values: array<int,string>}> $presetDefinitions
+     *
+     * Definiert vordefinierte Presets mit festen Wertzuordnungen
+     *
+     * Struktur:
+     * [
+     *   'PresetName' => [
+     *     'values' => [
+     *       Wert => 'Bezeichnung'
+     *     ]
+     *   ]
+     * ]
+     */
+    protected static $presetDefinitions = [
+        'level_config__current_level_startup' => [
+            'values' => [
+                0   => 'Minimum',    // Minimaler Wert
+                255 => 'Previous'    // Vorheriger Wert
+            ]
+        ]
+    ];
+
+    /**
+     * @var array ONOFF_VARIABLES
+     * Definiert Variablen die ON/OFF statt true/false erwarten
+     *
+     * Typische Anwendungsfälle:
+     * - 'state': Allgemeiner Schaltzustand (z.B. für Lampen)
+     * - 'power': Ein/Aus-Schalter für Geräte
+     * - 'led': LED-Steuerung
+     */
+    protected const ONOFF_VARIABLES = [
+        'state',
+        'power',
+        'led',
+        'indicator_mode'
+    ];
+
     // Kernfunktionen
 
     /**
@@ -517,26 +556,58 @@ abstract class ModulBase extends \IPSModule
 
         $handled = match (true) {
             // Behandelt UpdateInfo
-            $ident == 'UpdateInfo' => $this->UpdateDeviceInfo(),
+            $ident == 'UpdateInfo' => function() {
+                $this->SendDebug(__FUNCTION__, 'Verarbeite UpdateInfo', 0);
+                return $this->UpdateDeviceInfo();
+            },
             // Behandelt ShowMissingTranslations
-            $ident == 'ShowMissingTranslations' => $this->ShowMissingTranslations(),
-            // Behandelt Presets
-            strpos($ident, 'presets') !== false => $this->handlePresetVariable($ident, $value),
-            // Behandelt String-Variablen ohne Rückmeldung
-            in_array($ident, self::$stringVariablesNoResponse) => $this->handleStringVariableNoResponse($ident, (string) $value),
-            // Behandelt Farbvariablen
-            strpos($ident, 'color') === 0 => $this->handleColorVariable($ident, $value),
-            // Behandelt Status-Variablen
-            preg_match(self::STATE_PATTERN['SYMCON'], $ident) => $this->handleStateVariable($ident, $value),
-            // Behandelt Standard-Variablen
-            default => $this->handleStandardVariable($ident, $value),
-        };
-        // Debug-Ausgabe bei fehlerhafter oder fehlender Aktion
-        if ($handled === false) {
-            $this->SendDebug(__FUNCTION__, 'Fehler beim verarbeiten der Aktion: ' . $ident, 0);
-        }
-    }
+            $ident == 'ShowMissingTranslations' => function() {
+                $this->SendDebug(__FUNCTION__, 'Verarbeite ShowMissingTranslations', 0);
+                return $this->ShowMissingTranslations();
+            },
 
+            // Behandelt Composite Keys (z.B. color_options__execute_if_off)
+            strpos($ident, '__') !== false => function() use ($ident, $value) {
+                $this->SendDebug(__FUNCTION__, 'Verarbeite Composite Key: ' . $ident, 0);
+                $payload = $this->buildNestedPayload($ident, $value);
+                return $this->SendSetCommand($payload);
+            },
+            // Behandelt Presets
+            strpos($ident, 'presets') !== false => function() use ($ident, $value) {
+                $this->SendDebug(__FUNCTION__, 'Verarbeite Preset: ' . $ident, 0);
+                return $this->handlePresetVariable($ident, $value);
+            },
+            // Behandelt String-Variablen ohne Rückmeldung
+            in_array($ident, self::$stringVariablesNoResponse) => function() use ($ident, $value) {
+                $this->SendDebug(__FUNCTION__, 'Verarbeite String ohne Rückmeldung: ' . $ident, 0);
+                return $this->handleStringVariableNoResponse($ident, (string) $value);
+            },
+            // Behandelt Farbvariablen (exakte Namen prüfen)
+            in_array($ident, ['color', 'color_hs', 'color_rgb']) => function() use ($ident, $value) {
+                $this->SendDebug(__FUNCTION__, 'Verarbeite Farbvariable: ' . $ident, 0);
+                return $this->handleColorVariable($ident, $value);
+            },
+            // Behandelt Status-Variablen
+            preg_match(self::STATE_PATTERN['SYMCON'], $ident) => function() use ($ident, $value) {
+                $this->SendDebug(__FUNCTION__, 'Verarbeite Status-Variable: ' . $ident, 0);
+                return $this->handleStateVariable($ident, $value);
+            },
+            // Behandelt Standard-Variablen
+            default => function() use ($ident, $value) {
+                $this->SendDebug(__FUNCTION__, 'Verarbeite Standard-Variable: ' . $ident, 0);
+                return $this->handleStandardVariable($ident, $value);
+            },
+        };
+
+        $result = $handled();
+
+        if ($result === false) {
+            $this->SendDebug(__FUNCTION__, 'Fehler beim Verarbeiten der Aktion: ' . $ident . ' (Rückgabewert false)', 0);
+        } else {
+            $this->SendDebug(__FUNCTION__, 'Aktion erfolgreich verarbeitet: ' . $ident, 0);
+        }
+
+    }
     /**
      * ReceiveData
      *
@@ -1587,6 +1658,17 @@ abstract class ModulBase extends \IPSModule
      */
     private function processVariable(string $key, mixed $value): void
     {
+        // Neue Prüfung für composite keys
+        if (strpos($key, '__') !== false) {
+            // Für composite keys direkt eine Boolean Variable registrieren
+            if (!@$this->GetIDForIdent($key)) {
+                $this->RegisterVariableBoolean($key, $this->Translate($this->convertLabelToName($key)), '~Switch');
+                $this->EnableAction($key);
+            }
+            $this->SetValue($key, $value);
+            return;
+        }
+
         // Wenn Value ein Array ist und color im Key vorkommt, spezielle Behandlung
         if (is_array($value) && strpos($key, 'color') === 0) {
             $this->handleColorVariable($key, $value);
@@ -1733,6 +1815,14 @@ abstract class ModulBase extends \IPSModule
         elseif (is_bool($value)) {
             $value = $value ? 'ON' : 'OFF';
         }
+
+        // Prüfe auf composite key vor der brightness Prüfung
+        if (strpos($ident, '__') !== false) {
+            $payload = $this->buildNestedPayload($ident, $value);
+            $this->SendDebug(__FUNCTION__, 'Sende composite payload: ' . json_encode($payload), 0);
+            return $this->SendSetCommand($payload);
+        }
+
         // light-Brightness wird immer das Profil ~Intensity.100 haben
         if ($ident === 'brightness') {
             // Konvertiere Prozentwert (0-100) in Gerätewert
@@ -1742,15 +1832,11 @@ abstract class ModulBase extends \IPSModule
             return true;
         }
 
-        // Erstelle das Payload
+        // Erstelle das Standard-Payload
         $payload = [$ident => $value];
-
-        // Konvertiere composite payload falls nötig
-        $payload = $this->convertCompositePayload($payload);
 
         $this->SendDebug(__FUNCTION__, 'Sende payload: ' . json_encode($payload), 0);
 
-        // Sende den Set-Befehl
         return $this->SendSetCommand($payload);
     }
 
@@ -3111,20 +3197,34 @@ abstract class ModulBase extends \IPSModule
 
         $profileName .= '_Presets';
 
-        // Füge die Presets zum Profil hinzu
-        $associations = [];
-        foreach ($presets as $preset) {
-            // Preset-Wert an den Variablentyp anpassen
-            $presetValue = ($variableType === 'float') ? (float) $preset['value'] : (int) $preset['value'];
-            $presetName = $this->Translate(ucwords(str_replace('_', ' ', $preset['name'])));
-            $this->SendDebug(__FUNCTION__, sprintf('Adding preset: %s with value %s', $presetName, $presetValue), 0);
-            $associations[] = [
-                $presetValue,
-                $presetName,
-                '',
-                -1
-            ];
+        // Prüfen ob vordefinierte Presets existieren
+        $property = $feature['property'] ?? '';
+        if (isset(self::$presetDefinitions[$property])) {
+            $this->SendDebug(__FUNCTION__, 'Using predefined presets for: ' . $property, 0);
+            $associations = [];
+            foreach (self::$presetDefinitions[$property]['values'] as $value => $name) {
+                $associations[] = [
+                    $value,
+                    $this->Translate($name),
+                    '',
+                    -1
+                ];
+            }
+        } else {
+            // Dynamische Presets verwenden
+            $associations = [];
+            foreach ($presets as $preset) {
+                // Preset-Wert an den Variablentyp anpassen
 
+                $presetValue = ($variableType === 'float') ? (float) $preset['value'] : (int) $preset['value'];
+                $presetName = $this->Translate(ucwords(str_replace('_', ' ', $preset['name'])));
+                $associations[] = [
+                    $presetValue,
+                    $presetName,
+                    '',
+                    -1
+                ];
+            }
         }
 
         // Neues Profil anlegen
@@ -3656,49 +3756,19 @@ abstract class ModulBase extends \IPSModule
     {
         $this->SendDebug(__FUNCTION__, 'Registriere Preset-Variablen für: ' . $property, 0);
 
-        // Analysiere Preset-Werte um den korrekten Typ zu bestimmen
-        $isStringPreset = false;
-        foreach ($presets as $preset) {
-            if (is_string($preset['value']) && !is_numeric($preset['value'])) {
-                $isStringPreset = true;
-                break;
-            }
-        }
-
-        // Bestimme den Variablentyp und erstelle das entsprechende Profil
-        $profileName = 'Z2M.' . strtolower($property) . '.presets';
+        // Hole ident für Preset-Variable
         $presetIdent = $property . '_presets';
 
-        // Name über convertLabelToName formatieren
+        // Name formatieren
         $formattedLabel = $this->convertLabelToName($property);
 
-        if ($isStringPreset) {
-            // String-Profil für Text-basierte Presets
-            $associations = [];
-            foreach ($presets as $preset) {
-                $associations[] = [
-                    $preset['value'],                           // Wert
-                    $this->Translate($preset['name']),          // Name
-                    '',                                         // Icon
-                    -1                                          // Farbe
-                ];
-            }
-            $this->RegisterProfileStringEx($profileName, '', '', '', $associations);
-            // Formatierter Name wird hier verwendet
-            $this->RegisterVariableString($presetIdent, $this->Translate($formattedLabel . ' Presets'), $profileName);
+        // Profil registrieren
+        $profileName = $this->registerPresetProfile($presets, $formattedLabel, $variableType, $feature);
+
+        // Variable anhand Typ registrieren
+        if ($variableType === 'float') {
+            $this->RegisterVariableFloat($presetIdent, $this->Translate($formattedLabel . ' Presets'), $profileName);
         } else {
-            // Integer-Profil für numerische Presets
-            $associations = [];
-            foreach ($presets as $index => $preset) {
-                $associations[] = [
-                    intval($preset['value']),                   // Wert
-                    $this->Translate($preset['name']),          // Name
-                    '',                                         // Icon
-                    -1                                          // Farbe
-                ];
-            }
-            $this->RegisterProfileIntegerEx($profileName, '', '', '', $associations);
-            // Formatierter Name wird hier verwendet
             $this->RegisterVariableInteger($presetIdent, $this->Translate($formattedLabel . ' Presets'), $profileName);
         }
 
@@ -3961,8 +4031,23 @@ abstract class ModulBase extends \IPSModule
         $finalPayload = $Payload;
         foreach ($Payload as $key => $value) {
             if (strpos($key, '__') !== false) {
-                $finalPayload = $this->buildNestedPayload($key, $value);
-                break;
+                // Trenne den composite key in seine Bestandteile
+                $parts = explode('__', $key);
+
+                // Erstelle verschachtelte Struktur
+                $current = &$finalPayload;
+                unset($finalPayload[$key]); // Entferne den ursprünglichen key
+
+                // Baue die verschachtelte Struktur auf
+                for ($i = 0; $i < count($parts) - 1; $i++) {
+                    if (!isset($current[$parts[$i]])) {
+                        $current[$parts[$i]] = [];
+                    }
+                    $current = &$current[$parts[$i]];
+                }
+
+                // Setze den Wert im letzten Level
+                $current[$parts[count($parts) - 1]] = $value;
             }
         }
         return $finalPayload;
