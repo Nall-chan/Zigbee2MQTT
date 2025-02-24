@@ -496,9 +496,10 @@ abstract class ModulBase extends \IPSModule
                     $this->BUFFER_MQTT_SUSPENDED = false;
                     // Nur ein UpdateDeviceInfo wenn Parent aktiv und System bereit
                     if (($this->HasActiveParent()) && (IPS_GetKernelRunlevel() == KR_READY)) {
-                        $this->checkExposeAttribute();
-                        $exposes = $this->ReadAttributeArray(self::ATTRIBUTE_EXPOSES);
-                        $this->mapExposesToVariables($exposes);
+                        if ($this->checkExposeAttribute()) {
+                            $exposes = $this->ReadAttributeArray(self::ATTRIBUTE_EXPOSES);
+                            $this->mapExposesToVariables($exposes);
+                        }
                     }
                 }
                 return;
@@ -3314,37 +3315,43 @@ abstract class ModulBase extends \IPSModule
         return $profileName;
     }
 
-    private function checkExposeAttribute(): void
+    /**
+     * checkExposeAttribute
+     *
+     * @return bool false wenn UpdateDeviceInfo ausgeführt wurde, sonst true
+     */
+    private function checkExposeAttribute(): bool
     {
         $mqttTopic = $this->ReadPropertyString(self::MQTT_TOPIC);
 
         // Erst prüfen ob MQTTTopic gesetzt ist
         if (empty($mqttTopic)) {
             $this->SendDebug(__FUNCTION__, 'MQTTTopic nicht gesetzt, überspringe Attribut Prüfung', 0);
-            return;
+            return true;
         }
 
         // Prüfe ob Expose-Attribute existiert und Daten enthält
         $exposes = $this->ReadAttributeArray(self::ATTRIBUTE_EXPOSES);
         if (count($exposes)) {
-            return;
+            return true;
         }
 
         $this->SendDebug(__FUNCTION__, 'Expose-Attribute nicht gefunden für Instance: ' . $this->InstanceID, 0);
 
         if (!$this->HasActiveParent()) {
             $this->SendDebug(__FUNCTION__, 'Parent nicht aktiv, überspringe UpdateDeviceInfo', 0);
-            return;
+            return true;
         }
 
         if (IPS_GetKernelRunlevel() != KR_READY) {
-            return;
+            return true;
         }
 
         $this->SendDebug(__FUNCTION__, 'Starte UpdateDeviceInfo für Topic: ' . $mqttTopic, 0);
         if (!$this->UpdateDeviceInfo()) {
             $this->SendDebug(__FUNCTION__, 'UpdateDeviceInfo fehlgeschlagen', 0);
         }
+        return false;
     }
 
     /**
