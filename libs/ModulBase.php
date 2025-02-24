@@ -287,10 +287,10 @@ abstract class ModulBase extends \IPSModule
         'brightness_l1'             => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l1', 'profile' => '~Intensity.100'],
         'brightness_l2'             => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l2', 'profile' => '~Intensity.100'],
         'voltage'                   => ['type' => VARIABLETYPE_FLOAT, 'ident' => 'voltage', 'profile' => '~Volt'],
-        'calibration_time'          => ['type' => VARIABLETYPE_FLOAT],
-        'countdown'                 => ['type' => VARIABLETYPE_INTEGER],
-        'countdown_l1'              => ['type' => VARIABLETYPE_INTEGER],
-        'countdown_l2'              => ['type' => VARIABLETYPE_INTEGER],
+        'calibration_time'          => ['type' => VARIABLETYPE_FLOAT, 'profile' => ''],
+        'countdown'                 => ['type' => VARIABLETYPE_INTEGER, 'profile' => ''],
+        'countdown_l1'              => ['type' => VARIABLETYPE_INTEGER, 'profile' => ''],
+        'countdown_l2'              => ['type' => VARIABLETYPE_INTEGER, 'profile' => ''],
         'update__installed_version' => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Installed Version', 'profile' => ''],
         'update__latest_version'    => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Latest Version', 'profile' => ''],
         'update__state'             => ['type' => VARIABLETYPE_STRING, 'name' => 'Update State', 'profile' => '']
@@ -353,7 +353,7 @@ abstract class ModulBase extends \IPSModule
                 0   => 'Minimum',    // Minimaler Wert
                 255 => 'Previous'    // Vorheriger Wert
             ],
-        'redirect' => true  // Zeigt an, dass diese Variable umgeleitet werden soll
+            'redirect' => true  // Zeigt an, dass diese Variable umgeleitet werden soll
         ]
     ];
 
@@ -497,6 +497,8 @@ abstract class ModulBase extends \IPSModule
                     // Nur ein UpdateDeviceInfo wenn Parent aktiv und System bereit
                     if (($this->HasActiveParent()) && (IPS_GetKernelRunlevel() == KR_READY)) {
                         $this->checkExposeAttribute();
+                        $exposes = $this->ReadAttributeArray(self::ATTRIBUTE_EXPOSES);
+                        $this->mapExposesToVariables($exposes);
                     }
                 }
                 return;
@@ -541,43 +543,51 @@ abstract class ModulBase extends \IPSModule
 
         $handled = match (true) {
             // Behandelt UpdateInfo
-            $ident == 'UpdateInfo' => function() {
+            $ident == 'UpdateInfo' => function ()
+            {
                 $this->SendDebug(__FUNCTION__, 'Verarbeite UpdateInfo', 0);
                 return $this->UpdateDeviceInfo();
             },
             // Behandelt ShowMissingTranslations
-            $ident == 'ShowMissingTranslations' => function() {
+            $ident == 'ShowMissingTranslations' => function ()
+            {
                 $this->SendDebug(__FUNCTION__, 'Verarbeite ShowMissingTranslations', 0);
                 return $this->ShowMissingTranslations();
             },
             // Behandelt Presets - WICHTIG: Vor dem Composite Key Check!
-            strpos($ident, 'presets') !== false => function() use ($ident, $value) {
+            strpos($ident, 'presets') !== false => function () use ($ident, $value)
+            {
                 $this->SendDebug(__FUNCTION__, 'Verarbeite Preset: ' . $ident, 0);
                 return $this->handlePresetVariable($ident, $value);
             },
             // Behandelt Composite Keys (z.B. color_options__execute_if_off)
-            strpos($ident, '__') !== false => function() use ($ident, $value) {
+            strpos($ident, '__') !== false => function () use ($ident, $value)
+            {
                 $this->SendDebug(__FUNCTION__, 'Verarbeite Composite Key: ' . $ident, 0);
                 $payload = $this->buildNestedPayload($ident, $value);
                 return $this->SendSetCommand($payload);
             },
             // Behandelt String-Variablen ohne Rückmeldung
-            in_array($ident, self::$stringVariablesNoResponse) => function() use ($ident, $value) {
+            in_array($ident, self::$stringVariablesNoResponse) => function () use ($ident, $value)
+            {
                 $this->SendDebug(__FUNCTION__, 'Verarbeite String ohne Rückmeldung: ' . $ident, 0);
                 return $this->handleStringVariableNoResponse($ident, (string) $value);
             },
             // Behandelt Farbvariablen (exakte Namen prüfen)
-            in_array($ident, ['color', 'color_hs', 'color_rgb']) => function() use ($ident, $value) {
+            in_array($ident, ['color', 'color_hs', 'color_rgb']) => function () use ($ident, $value)
+            {
                 $this->SendDebug(__FUNCTION__, 'Verarbeite Farbvariable: ' . $ident, 0);
                 return $this->handleColorVariable($ident, $value);
             },
             // Behandelt Status-Variablen
-            preg_match(self::STATE_PATTERN['SYMCON'], $ident) => function() use ($ident, $value) {
+            preg_match(self::STATE_PATTERN['SYMCON'], $ident) => function () use ($ident, $value)
+            {
                 $this->SendDebug(__FUNCTION__, 'Verarbeite Status-Variable: ' . $ident, 0);
                 return $this->handleStateVariable($ident, $value);
             },
             // Behandelt Standard-Variablen
-            default => function() use ($ident, $value) {
+            default => function () use ($ident, $value)
+            {
                 $this->SendDebug(__FUNCTION__, 'Verarbeite Standard-Variable: ' . $ident, 0);
                 return $this->handleStandardVariable($ident, $value);
             },
@@ -1645,25 +1655,25 @@ abstract class ModulBase extends \IPSModule
         // Neue Prüfung für composite keys
         if ($this->isCompositeKey($key)) {
             // Bestimme den Variablentyp basierend auf dem Wert
-            $varType = match(true) {
+            $varType = match (true) {
                 is_bool($value) => [
-                    'type' => VARIABLETYPE_BOOLEAN,
-                    'profile' => '~Switch',
+                    'type'         => VARIABLETYPE_BOOLEAN,
+                    'profile'      => '~Switch',
                     'registerFunc' => 'RegisterVariableBoolean'
                 ],
                 is_int($value) => [
-                    'type' => VARIABLETYPE_INTEGER,
-                    'profile' => '', // Hier ggf. ein passendes Profil wählen
+                    'type'         => VARIABLETYPE_INTEGER,
+                    'profile'      => '', // Hier ggf. ein passendes Profil wählen
                     'registerFunc' => 'RegisterVariableInteger'
                 ],
                 is_float($value) => [
-                    'type' => VARIABLETYPE_FLOAT,
-                    'profile' => '', // Hier ggf. ein passendes Profil wählen
+                    'type'         => VARIABLETYPE_FLOAT,
+                    'profile'      => '', // Hier ggf. ein passendes Profil wählen
                     'registerFunc' => 'RegisterVariableFloat'
                 ],
                 default => [
-                    'type' => VARIABLETYPE_STRING,
-                    'profile' => '',
+                    'type'         => VARIABLETYPE_STRING,
+                    'profile'      => '',
                     'registerFunc' => 'RegisterVariableString'
                 ]
             };
@@ -2051,30 +2061,30 @@ abstract class ModulBase extends \IPSModule
      * @see str_replace()
      */
     private function handlePresetVariable(string $ident, mixed $value): bool
-{
-    // Hauptvariable ohne _presets suffix
-    $mainIdent = str_replace('_presets', '', $ident);
+    {
+        // Hauptvariable ohne _presets suffix
+        $mainIdent = str_replace('_presets', '', $ident);
 
-    // Prüfen ob die Variable in presetDefinitions definiert ist mit redirect=true
-    if (isset(self::$presetDefinitions[$mainIdent]['redirect'])) {
-        $this->SendDebug(__FUNCTION__, 'Preset-Variable wird direkt umgeleitet: ' . $mainIdent, 0);
+        // Prüfen ob die Variable in presetDefinitions definiert ist mit redirect=true
+        if (isset(self::$presetDefinitions[$mainIdent]['redirect'])) {
+            $this->SendDebug(__FUNCTION__, 'Preset-Variable wird direkt umgeleitet: ' . $mainIdent, 0);
 
-        // Wichtig: Payload mit mainIdent erstellen (ohne _presets)
-        if ($this->isCompositeKey($mainIdent)) {
-            $payload = $this->buildNestedPayload($mainIdent, $value); // Verwendet mainIdent
-        } else {
-            $payload = [$mainIdent => $value]; // Verwendet mainIdent
-        }
+            // Wichtig: Payload mit mainIdent erstellen (ohne _presets)
+            if ($this->isCompositeKey($mainIdent)) {
+                $payload = $this->buildNestedPayload($mainIdent, $value); // Verwendet mainIdent
+            } else {
+                $payload = [$mainIdent => $value]; // Verwendet mainIdent
+            }
 
-        // Sende den Wert und aktualisiere beide Variablen bei Erfolg
-        if (!$this->SendSetCommand($payload)) {
-            return false;
-        }
+            // Sende den Wert und aktualisiere beide Variablen bei Erfolg
+            if (!$this->SendSetCommand($payload)) {
+                return false;
+            }
 
-        $this->SetValueDirect($ident, $value);
-        $this->SetValueDirect($mainIdent, $value);
+            $this->SetValueDirect($ident, $value);
+            $this->SetValueDirect($mainIdent, $value);
 
-        return true;
+            return true;
         }
 
         // Standard-Verarbeitung für nicht umgeleitete Presets...
@@ -2556,7 +2566,7 @@ abstract class ModulBase extends \IPSModule
             if (is_string($value)) {
                 return strtoupper($value) === 'ON';
             }
-            return (bool)$value;
+            return (bool) $value;
         } else {
             return $value ? 'ON' : 'OFF';
         }
@@ -3865,51 +3875,51 @@ abstract class ModulBase extends \IPSModule
      * @see json_encode()
      */
     private function registerSpecialVariable($feature): void
-{
-    // Während Migration keine Variablen erstellen
-    if ($this->BUFFER_PROCESSING_MIGRATION) {
+    {
+        // Während Migration keine Variablen erstellen
+        if ($this->BUFFER_PROCESSING_MIGRATION) {
+            return;
+        }
+
+        $ident = $feature['property'];
+        $this->SendDebug(__FUNCTION__, sprintf('Checking special case for %s: %s', $ident, json_encode($feature)), 0);
+
+        if (!isset(self::$specialVariables[$ident])) {
+            return;
+        }
+
+        $varDef = self::$specialVariables[$ident];
+        $formattedLabel = $this->convertLabelToName($ident);
+
+        // Wert anpassen wenn nötig
+        if (isset($feature['value'])) {
+            $value = $this->adjustSpecialValue($ident, $feature['value']);
+        }
+
+        switch ($varDef['type']) {
+            case VARIABLETYPE_FLOAT:
+                $this->RegisterVariableFloat($ident, $this->Translate($formattedLabel), $varDef['profile']);
+                break;
+            case VARIABLETYPE_INTEGER:
+                $this->RegisterVariableInteger($ident, $this->Translate($formattedLabel), $varDef['profile']);
+                break;
+            case VARIABLETYPE_STRING:
+                $this->RegisterVariableString($ident, $this->Translate($formattedLabel), $varDef['profile']);
+                break;
+            case VARIABLETYPE_BOOLEAN:
+                $this->RegisterVariableBoolean($ident, $this->Translate($formattedLabel), $varDef['profile']);
+                break;
+        }
+
+        // Prüfe Access-Rechte aus dem Feature-Array oder den knownVariables
+        if ((isset($feature['access']) && ($feature['access'] & 0b010) != 0) ||
+            (isset($this->getKnownVariables()[$ident]['access']) && ($this->getKnownVariables()[$ident]['access'] & 0b010) != 0)) {
+            $this->EnableAction($ident);
+            $this->SendDebug(__FUNCTION__, 'Set EnableAction for ident: ' . $ident . ' to: true', 0);
+        }
+
         return;
     }
-
-    $ident = $feature['property'];
-    $this->SendDebug(__FUNCTION__, sprintf('Checking special case for %s: %s', $ident, json_encode($feature)), 0);
-
-    if (!isset(self::$specialVariables[$ident])) {
-        return;
-    }
-
-    $varDef = self::$specialVariables[$ident];
-    $formattedLabel = $this->convertLabelToName($ident);
-
-    // Wert anpassen wenn nötig
-    if (isset($feature['value'])) {
-        $value = $this->adjustSpecialValue($ident, $feature['value']);
-    }
-
-    switch ($varDef['type']) {
-        case VARIABLETYPE_FLOAT:
-            $this->RegisterVariableFloat($ident, $this->Translate($formattedLabel), $varDef['profile']);
-            break;
-        case VARIABLETYPE_INTEGER:
-            $this->RegisterVariableInteger($ident, $this->Translate($formattedLabel), $varDef['profile']);
-            break;
-        case VARIABLETYPE_STRING:
-            $this->RegisterVariableString($ident, $this->Translate($formattedLabel), $varDef['profile']);
-            break;
-        case VARIABLETYPE_BOOLEAN:
-            $this->RegisterVariableBoolean($ident, $this->Translate($formattedLabel), $varDef['profile']);
-            break;
-    }
-
-    // Prüfe Access-Rechte aus dem Feature-Array oder den knownVariables
-    if ((isset($feature['access']) && ($feature['access'] & 0b010) != 0) ||
-        (isset($this->getKnownVariables()[$ident]['access']) && ($this->getKnownVariables()[$ident]['access'] & 0b010) != 0)) {
-        $this->EnableAction($ident);
-        $this->SendDebug(__FUNCTION__, 'Set EnableAction for ident: ' . $ident . ' to: true', 0);
-    }
-
-    return;
-}
 
     /**
      * getStateConfiguration
