@@ -287,10 +287,10 @@ abstract class ModulBase extends \IPSModule
         'brightness_l1'             => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l1', 'profile' => '~Intensity.100'],
         'brightness_l2'             => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l2', 'profile' => '~Intensity.100'],
         'voltage'                   => ['type' => VARIABLETYPE_FLOAT, 'ident' => 'voltage', 'profile' => '~Volt'],
-        'calibration_time'          => ['type' => VARIABLETYPE_FLOAT],
-        'countdown'                 => ['type' => VARIABLETYPE_INTEGER],
-        'countdown_l1'              => ['type' => VARIABLETYPE_INTEGER],
-        'countdown_l2'              => ['type' => VARIABLETYPE_INTEGER],
+        'calibration_time'          => ['type' => VARIABLETYPE_FLOAT, 'profile' => ''],
+        'countdown'                 => ['type' => VARIABLETYPE_INTEGER, 'profile' => ''],
+        'countdown_l1'              => ['type' => VARIABLETYPE_INTEGER, 'profile' => ''],
+        'countdown_l2'              => ['type' => VARIABLETYPE_INTEGER, 'profile' => ''],
         'update__installed_version' => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Installed Version', 'profile' => ''],
         'update__latest_version'    => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Latest Version', 'profile' => ''],
         'update__state'             => ['type' => VARIABLETYPE_STRING, 'name' => 'Update State', 'profile' => '']
@@ -352,24 +352,9 @@ abstract class ModulBase extends \IPSModule
             'values' => [
                 0   => 'Minimum',    // Minimaler Wert
                 255 => 'Previous'    // Vorheriger Wert
-            ]
+            ],
+            'redirect' => true  // Zeigt an, dass diese Variable umgeleitet werden soll
         ]
-    ];
-
-    /**
-     * @var array ONOFF_VARIABLES
-     * Definiert Variablen die ON/OFF statt true/false erwarten
-     *
-     * Typische Anwendungsfälle:
-     * - 'state': Allgemeiner Schaltzustand (z.B. für Lampen)
-     * - 'power': Ein/Aus-Schalter für Geräte
-     * - 'led': LED-Steuerung
-     */
-    protected const ONOFF_VARIABLES = [
-        'state',
-        'power',
-        'led',
-        'indicator_mode'
     ];
 
     // Kernfunktionen
@@ -512,6 +497,8 @@ abstract class ModulBase extends \IPSModule
                     // Nur ein UpdateDeviceInfo wenn Parent aktiv und System bereit
                     if (($this->HasActiveParent()) && (IPS_GetKernelRunlevel() == KR_READY)) {
                         $this->checkExposeAttribute();
+                        $exposes = $this->ReadAttributeArray(self::ATTRIBUTE_EXPOSES);
+                        $this->mapExposesToVariables($exposes);
                     }
                 }
                 return;
@@ -556,44 +543,51 @@ abstract class ModulBase extends \IPSModule
 
         $handled = match (true) {
             // Behandelt UpdateInfo
-            $ident == 'UpdateInfo' => function() {
+            $ident == 'UpdateInfo' => function ()
+            {
                 $this->SendDebug(__FUNCTION__, 'Verarbeite UpdateInfo', 0);
                 return $this->UpdateDeviceInfo();
             },
             // Behandelt ShowMissingTranslations
-            $ident == 'ShowMissingTranslations' => function() {
+            $ident == 'ShowMissingTranslations' => function ()
+            {
                 $this->SendDebug(__FUNCTION__, 'Verarbeite ShowMissingTranslations', 0);
                 return $this->ShowMissingTranslations();
             },
-
+            // Behandelt Presets - WICHTIG: Vor dem Composite Key Check!
+            strpos($ident, 'presets') !== false => function () use ($ident, $value)
+            {
+                $this->SendDebug(__FUNCTION__, 'Verarbeite Preset: ' . $ident, 0);
+                return $this->handlePresetVariable($ident, $value);
+            },
             // Behandelt Composite Keys (z.B. color_options__execute_if_off)
-            strpos($ident, '__') !== false => function() use ($ident, $value) {
+            strpos($ident, '__') !== false => function () use ($ident, $value)
+            {
                 $this->SendDebug(__FUNCTION__, 'Verarbeite Composite Key: ' . $ident, 0);
                 $payload = $this->buildNestedPayload($ident, $value);
                 return $this->SendSetCommand($payload);
             },
-            // Behandelt Presets
-            strpos($ident, 'presets') !== false => function() use ($ident, $value) {
-                $this->SendDebug(__FUNCTION__, 'Verarbeite Preset: ' . $ident, 0);
-                return $this->handlePresetVariable($ident, $value);
-            },
             // Behandelt String-Variablen ohne Rückmeldung
-            in_array($ident, self::$stringVariablesNoResponse) => function() use ($ident, $value) {
+            in_array($ident, self::$stringVariablesNoResponse) => function () use ($ident, $value)
+            {
                 $this->SendDebug(__FUNCTION__, 'Verarbeite String ohne Rückmeldung: ' . $ident, 0);
                 return $this->handleStringVariableNoResponse($ident, (string) $value);
             },
             // Behandelt Farbvariablen (exakte Namen prüfen)
-            in_array($ident, ['color', 'color_hs', 'color_rgb']) => function() use ($ident, $value) {
+            in_array($ident, ['color', 'color_hs', 'color_rgb']) => function () use ($ident, $value)
+            {
                 $this->SendDebug(__FUNCTION__, 'Verarbeite Farbvariable: ' . $ident, 0);
                 return $this->handleColorVariable($ident, $value);
             },
             // Behandelt Status-Variablen
-            preg_match(self::STATE_PATTERN['SYMCON'], $ident) => function() use ($ident, $value) {
+            preg_match(self::STATE_PATTERN['SYMCON'], $ident) => function () use ($ident, $value)
+            {
                 $this->SendDebug(__FUNCTION__, 'Verarbeite Status-Variable: ' . $ident, 0);
                 return $this->handleStateVariable($ident, $value);
             },
             // Behandelt Standard-Variablen
-            default => function() use ($ident, $value) {
+            default => function () use ($ident, $value)
+            {
                 $this->SendDebug(__FUNCTION__, 'Verarbeite Standard-Variable: ' . $ident, 0);
                 return $this->handleStandardVariable($ident, $value);
             },
@@ -1659,12 +1653,42 @@ abstract class ModulBase extends \IPSModule
     private function processVariable(string $key, mixed $value): void
     {
         // Neue Prüfung für composite keys
-        if (strpos($key, '__') !== false) {
-            // Für composite keys direkt eine Boolean Variable registrieren
+        if ($this->isCompositeKey($key)) {
+            // Bestimme den Variablentyp basierend auf dem Wert
+            $varType = match (true) {
+                is_bool($value) => [
+                    'type'         => VARIABLETYPE_BOOLEAN,
+                    'profile'      => '~Switch',
+                    'registerFunc' => 'RegisterVariableBoolean'
+                ],
+                is_int($value) => [
+                    'type'         => VARIABLETYPE_INTEGER,
+                    'profile'      => '', // Hier ggf. ein passendes Profil wählen
+                    'registerFunc' => 'RegisterVariableInteger'
+                ],
+                is_float($value) => [
+                    'type'         => VARIABLETYPE_FLOAT,
+                    'profile'      => '', // Hier ggf. ein passendes Profil wählen
+                    'registerFunc' => 'RegisterVariableFloat'
+                ],
+                default => [
+                    'type'         => VARIABLETYPE_STRING,
+                    'profile'      => '',
+                    'registerFunc' => 'RegisterVariableString'
+                ]
+            };
+
+            // Wenn Variable noch nicht existiert, registrieren
             if (!@$this->GetIDForIdent($key)) {
-                $this->RegisterVariableBoolean($key, $this->Translate($this->convertLabelToName($key)), '~Switch');
+                $registerFunc = $varType['registerFunc'];
+                $this->$registerFunc(
+                    $key,
+                    $this->Translate($this->convertLabelToName($key)),
+                    $varType['profile']
+                );
                 $this->EnableAction($key);
             }
+
             $this->SetValue($key, $value);
             return;
         }
@@ -1717,6 +1741,11 @@ abstract class ModulBase extends \IPSModule
         // Variable registrieren und Wert setzen
         $variableID = $this->getOrRegisterVariable($ident, $variableProps);
         if ($variableID) {
+            // EnableAction Check auch bei neu angelegten Variablen durchführen
+            if (isset($variableProps['access']) && ($variableProps['access'] & 0b010) != 0) {
+                $this->EnableAction($ident);
+                $this->SendDebug(__FUNCTION__, 'Set EnableAction for ident: ' . $ident . ' to: true', 0);
+            }
             $this->SetValue($ident, $value);
         }
 
@@ -1817,7 +1846,7 @@ abstract class ModulBase extends \IPSModule
         }
 
         // Prüfe auf composite key vor der brightness Prüfung
-        if (strpos($ident, '__') !== false) {
+        if ($this->isCompositeKey($ident)) {
             $payload = $this->buildNestedPayload($ident, $value);
             $this->SendDebug(__FUNCTION__, 'Sende composite payload: ' . json_encode($payload), 0);
             return $this->SendSetCommand($payload);
@@ -1855,33 +1884,29 @@ abstract class ModulBase extends \IPSModule
      *
      * @return bool True wenn State erfolgreich verarbeitet wurde, sonst False
      *
-     * Beispiel:
-     * ```php
-     * // Einfacher ON/OFF State
-     * $this->handleStateVariable("state", true); // Sendet ON
-     * $this->handleStateVariable("state", false); // Sendet OFF
-     * ```
-     *
-     * @see \Zigbee2MQTT\ModulBase::SendSetCommand()
-     * @see \Zigbee2MQTT\ModulBase::SetValueDirect()
-     * @see \IPSModule::SendDebug()
-     * @see json_encode()
-     * @see preg_match()
-     * @see is_bool()
-     * @see strtoupper()
+     * @see \Zigbee2MQTT\ModulBase::convertOnOffValue() Konvertiert Werte zwischen ON/OFF und bool
+     * @see \Zigbee2MQTT\ModulBase::SendSetCommand() Sendet MQTT Befehle
+     * @see \Zigbee2MQTT\ModulBase::SetValueDirect() Setzt Variablenwert direkt
+     * @see \IPSModule::SendDebug() Debug Ausgaben
+     * @see \IPSModule::GetValue() Aktuellen Wert abfragen
+     * @see preg_match() Pattern Matching für State-Erkennung
+     * @see strtoupper() String zu Großbuchstaben
+     * @see json_encode() JSON Konvertierung für Debug
+     * @see isset() Array Key Prüfung
      */
     private function handleStateVariable(string $ident, mixed $value): bool
     {
         $this->SendDebug(__FUNCTION__, 'State-Handler für: ' . $ident . ' mit Wert: ' . json_encode($value), 0);
 
-        // Prüfe auf Standard-State Pattern und konvertiere zu MQTT-Payload-Key
+        // State Pattern Prüfung
         if (preg_match(self::STATE_PATTERN['SYMCON'], $ident)) {
-            $payload = [$ident => $value ? 'ON' : 'OFF'];
+            $payload = [$ident => $this->convertOnOffValue($value, false)];
             $this->SendDebug(__FUNCTION__, 'State-Payload wird gesendet: ' . json_encode($payload), 0);
+
             if (!$this->SendSetCommand($payload)) {
                 return false;
             }
-            $this->SetValueDirect($ident, $value ? 'ON' : 'OFF');
+            $this->SetValueDirect($ident, $this->convertOnOffValue($value, false));
             return true;
         }
 
@@ -2037,35 +2062,48 @@ abstract class ModulBase extends \IPSModule
      */
     private function handlePresetVariable(string $ident, mixed $value): bool
     {
-        // Extrahiere den Identifikator der Hauptvariable
+        // Hauptvariable ohne _presets suffix
         $mainIdent = str_replace('_presets', '', $ident);
-        $this->SendDebug(__FUNCTION__, 'Aktion über presets erfolgt, Weiterleitung zur eigentlichen Variable: ' . $mainIdent, 0);
-        $this->SendDebug(__FUNCTION__, 'Aktion über presets erfolgt, Schreibe zur PresetVariable Variable: ' . $ident, 0);
 
-        // Setze den Wert der Hauptvariable und der Preset-Variable
-        $this->SetValue($mainIdent, $value);
-        $this->SetValue($ident, $value);
+        // Prüfen ob die Variable in presetDefinitions definiert ist mit redirect=true
+        if (isset(self::$presetDefinitions[$mainIdent]['redirect'])) {
+            $this->SendDebug(__FUNCTION__, 'Preset-Variable wird direkt umgeleitet: ' . $mainIdent, 0);
 
-        // Erstelle das Payload - Berücksichtige composite Strukturen
-        if (strpos($mainIdent, '__') !== false) {
-            $payload = $this->buildNestedPayload($mainIdent, $value);
-        } else {
-            $payload = [$mainIdent => $value];
+            // Wichtig: Payload mit mainIdent erstellen (ohne _presets)
+            if ($this->isCompositeKey($mainIdent)) {
+                $payload = $this->buildNestedPayload($mainIdent, $value); // Verwendet mainIdent
+            } else {
+                $payload = [$mainIdent => $value]; // Verwendet mainIdent
+            }
+
+            // Sende den Wert und aktualisiere beide Variablen bei Erfolg
+            if (!$this->SendSetCommand($payload)) {
+                return false;
+            }
+
+            $this->SetValueDirect($ident, $value);
+            $this->SetValueDirect($mainIdent, $value);
+
+            return true;
         }
 
+        // Standard-Verarbeitung für nicht umgeleitete Presets...
+        $this->SendDebug(__FUNCTION__, 'Aktion über presets erfolgt, Weiterleitung zur eigentlichen Variable: ' . $mainIdent, 0);
+
+        // Payload mit mainIdent erstellen (ohne _presets)
+        if ($this->isCompositeKey($mainIdent)) {
+            $payload = $this->buildNestedPayload($mainIdent, $value); // Verwendet mainIdent
+        } else {
+            $payload = [$mainIdent => $value]; // Verwendet mainIdent
+        }
+
+        // Sende Befehl und aktualisiere beide Variablen bei Erfolg
         if (!$this->SendSetCommand($payload)) {
             return false;
         }
 
-        // Aktualisiere die Preset-Variable
         $this->SetValueDirect($ident, $value);
-
-        // Aktualisiere die Farbtemperatur-Kelvin-Variable, wenn die Preset-Variable für Farbtemperatur geändert wird
-        if ($mainIdent === 'color_temp') {
-            $kelvinIdent = $mainIdent . '_kelvin';
-            $kelvinValue = $this->convertMiredToKelvin($value);
-            $this->SetValueDirect($kelvinIdent, $kelvinValue);
-        }
+        $this->SetValueDirect($mainIdent, $value);
 
         return true;
     }
@@ -2497,6 +2535,41 @@ abstract class ModulBase extends \IPSModule
             return $value * 0.001; // Umrechnung von mV in V mit Faktor 0.001
         }
         return $value; // Werte <= 400 sind bereits in V
+    }
+
+    /**
+     * convertOnOffValue
+     *
+     * Konvertiert Werte zwischen ON/OFF und bool.
+     * Zentrale Konvertierungsfunktion für State-Handler.
+     *
+     * @param mixed $value Zu konvertierender Wert:
+     *                    - String: "ON"/"OFF" wird zu true/false
+     *                    - Bool: true/false wird zu "ON"/"OFF"
+     *                    - Andere: Direkte Bool-Konvertierung
+     * @param bool $toBool True wenn Konvertierung zu Boolean, False wenn zu ON/OFF String
+     *
+     * @return mixed Konvertierter Wert:
+     *              - Bei toBool=true: Boolean true/false
+     *              - Bei toBool=false: String "ON"/"OFF"
+     *
+     * @see \Zigbee2MQTT\ModulBase::handleStateVariable() Hauptnutzer der Funktion
+     * @see \Zigbee2MQTT\ModulBase::processSpecialCases() Weitere Nutzung
+     * @see \Zigbee2MQTT\ModulBase::handleStandardVariable() Weitere Nutzung
+     * @see is_string() Prüft ob Wert ein String ist
+     * @see strtoupper() Konvertiert String zu Großbuchstaben
+     * @see bool() Boolean Typkonvertierung
+     */
+    private function convertOnOffValue($value, bool $toBool = true): mixed
+    {
+        if ($toBool) {
+            if (is_string($value)) {
+                return strtoupper($value) === 'ON';
+            }
+            return (bool) $value;
+        } else {
+            return $value ? 'ON' : 'OFF';
+        }
     }
 
     /**
@@ -3825,38 +3898,26 @@ abstract class ModulBase extends \IPSModule
 
         switch ($varDef['type']) {
             case VARIABLETYPE_FLOAT:
-                $profile = $varDef['profile'] ?? $this->registerVariableProfile($feature);
-                $this->RegisterVariableFloat($ident, $this->Translate($formattedLabel), $profile);
-                if (isset($value)) {
-                    $this->SetValue($ident, $value);
-                }
+                $this->RegisterVariableFloat($ident, $this->Translate($formattedLabel), $varDef['profile']);
                 break;
             case VARIABLETYPE_INTEGER:
-                $profile = $varDef['profile'] ?? $this->registerVariableProfile($feature);
-                $this->RegisterVariableInteger($ident, $this->Translate($formattedLabel), $profile);
-                if (isset($value)) {
-                    $this->SetValue($ident, $value);
-                }
+                $this->RegisterVariableInteger($ident, $this->Translate($formattedLabel), $varDef['profile']);
                 break;
             case VARIABLETYPE_STRING:
-                $this->RegisterVariableString($ident, $this->Translate($formattedLabel));
-                if (isset($value)) {
-                    $this->SetValue($ident, $value);
-                }
+                $this->RegisterVariableString($ident, $this->Translate($formattedLabel), $varDef['profile']);
                 break;
             case VARIABLETYPE_BOOLEAN:
-                $profile = $varDef['profile'] ?? $this->registerVariableProfile($feature);
-                $this->RegisterVariableBoolean($ident, $this->Translate($formattedLabel), $profile);
-                if (isset($value)) {
-                    $this->SetValue($ident, $value);
-                }
+                $this->RegisterVariableBoolean($ident, $this->Translate($formattedLabel), $varDef['profile']);
                 break;
         }
 
-        if (isset($feature['access']) && ($feature['access'] & 0b010) != 0) {
+        // Prüfe Access-Rechte aus dem Feature-Array oder den knownVariables
+        if ((isset($feature['access']) && ($feature['access'] & 0b010) != 0) ||
+            (isset($this->getKnownVariables()[$ident]['access']) && ($this->getKnownVariables()[$ident]['access'] & 0b010) != 0)) {
             $this->EnableAction($ident);
             $this->SendDebug(__FUNCTION__, 'Set EnableAction for ident: ' . $ident . ' to: true', 0);
         }
+
         return;
     }
 
@@ -4026,30 +4087,22 @@ abstract class ModulBase extends \IPSModule
         return $ProfileName;
     }
 
-    private function convertCompositePayload(array $Payload): array
+    /**
+     * isCompositeKey
+     *
+     * Prüft ob ein Key ein Composite Key ist (enthält '__').
+     * Zentrale Prüfmethode um Code-Duplikate zu vermeiden.
+     *
+     * @param string $key Der zu prüfende Key
+     *
+     * @return bool True wenn Key ein Composite Key ist, sonst False
+     *
+     * @see \Zigbee2MQTT\ModulBase::processVariable() Hauptnutzer
+     * @see \Zigbee2MQTT\ModulBase::handleStandardVariable() Weiterer Nutzer
+     * @see strpos() String Position Prüfung
+     */
+    private function isCompositeKey(string $key): bool
     {
-        $finalPayload = $Payload;
-        foreach ($Payload as $key => $value) {
-            if (strpos($key, '__') !== false) {
-                // Trenne den composite key in seine Bestandteile
-                $parts = explode('__', $key);
-
-                // Erstelle verschachtelte Struktur
-                $current = &$finalPayload;
-                unset($finalPayload[$key]); // Entferne den ursprünglichen key
-
-                // Baue die verschachtelte Struktur auf
-                for ($i = 0; $i < count($parts) - 1; $i++) {
-                    if (!isset($current[$parts[$i]])) {
-                        $current[$parts[$i]] = [];
-                    }
-                    $current = &$current[$parts[$i]];
-                }
-
-                // Setze den Wert im letzten Level
-                $current[$parts[count($parts) - 1]] = $value;
-            }
-        }
-        return $finalPayload;
+        return strpos($key, '__') !== false;
     }
 }
