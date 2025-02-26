@@ -408,7 +408,7 @@ class Zigbee2MQTTDiscovery extends IPSModule
         }
         foreach (IPS_GetInstanceListByModuleID(self::GUID_MQTT_CLIENT) as $mqttInstanceId) {
             $ioInstance = IPS_GetInstance($mqttInstanceId)['ConnectionID'];
-            if ($ioInstance) {
+            if (IPS_InstanceExists($ioInstance) && !empty(IPS_GetProperty($ioInstance, 'Host'))) {
                 $MqttSplitter[$mqttInstanceId] =
                     array_merge(
                         array_intersect_key(json_decode(IPS_GetConfiguration($mqttInstanceId), true), array_flip(['UserName', 'Password'])),

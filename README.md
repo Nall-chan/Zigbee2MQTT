@@ -191,6 +191,7 @@ Bitte den einzelnen Modulen entnehmen:
   -  Somit keine missing exposes Debugs mehr nötig!  
 - Nutzung von Standard-Symcon Profilen, soweit möglich  
 - Presets und Effekte als Variablen verfügbar  
+- Array und Composite Variablen (z.b. Update, Level-Config usw.) sind Variablen verfügbar.
 - Geräte speichern die IEEE um umbenannte Geräte (= geändertes Topic) zu erkennen
 - Z2M Prefix bei VariablenIdents entfernt    
 - Konfigurator übernimmt die MQTT Topic-Struktur beim Anlegen von Geräten als Kategorien  
