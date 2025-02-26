@@ -349,12 +349,16 @@ class Zigbee2MQTTDiscovery extends IPSModule
             return null;
         }
         foreach ($MqttSplitters as $SplitterId => $Config) {
-            if (isset($Config['Host'])) { // client
-                $FoundTopics = $this->SearchBridges($Config);
-                if ($FoundTopics !== null) {
-                    $Topics[$SplitterId] = $FoundTopics;
+            // client
+            if (IPS_GetInstance($SplitterId)['ModuleInfo']['ModuleID'] == self::GUID_MQTT_CLIENT) {
+                if (isset($Config['Host'])) {
+                    $FoundTopics = $this->SearchBridges($Config);
+                    if ($FoundTopics !== null) {
+                        $Topics[$SplitterId] = $FoundTopics;
+                    }
                 }
-            } else {  //server
+            }
+            if (IPS_GetInstance($SplitterId)['ModuleInfo']['ModuleID'] == self::GUID_MQTT_SERVER) {
                 foreach (array_filter(MQTT_GetRetainedMessageTopicList($SplitterId), [$this, 'FilterTopics']) as $Topic) {
                     $Found = [];
                     if (MQTT_GetRetainedMessage($SplitterId, $Topic)['Payload'] == '{"state":"online"}') {
@@ -408,7 +412,7 @@ class Zigbee2MQTTDiscovery extends IPSModule
         }
         foreach (IPS_GetInstanceListByModuleID(self::GUID_MQTT_CLIENT) as $mqttInstanceId) {
             $ioInstance = IPS_GetInstance($mqttInstanceId)['ConnectionID'];
-            if (IPS_InstanceExists($ioInstance) && !empty(IPS_GetProperty($ioInstance, 'Host'))) {
+            if (IPS_InstanceExists($ioInstance) && IPS_GetInstance($ioInstance)['ModuleInfo']['ModuleID'] == self::GUID_CLIENT_SOCKET) {
                 $MqttSplitter[$mqttInstanceId] =
                     array_merge(
                         array_intersect_key(json_decode(IPS_GetConfiguration($mqttInstanceId), true), array_flip(['UserName', 'Password'])),
