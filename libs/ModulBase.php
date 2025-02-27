@@ -1092,48 +1092,6 @@ abstract class ModulBase extends \IPSModule
         parent::SetValue($ident, $value);
     }
 
-    /**
-     * AppendVariableTypes
-     *
-     * Fügt den übergebenen Payload-Daten die entsprechenden Variablentypen hinzu.
-     * Diese Methode durchläuft die übergebenen Payload-Daten, prüft, ob die zugehörige
-     * Variable existiert, und fügt den Variablentyp als neuen Schlüssel-Wert-Paar hinzu.
-     *
-     * Beispiel:
-     * Wenn der Key 'temperature' vorhanden ist und die zugehörige Variable existiert, wird
-     * ein neuer Eintrag 'temperature_type' hinzugefügt, der den Typ der Variable enthält.
-     *
-     * @param array $Payload Assoziatives Array mit den Payload-Daten.
-     *
-     * @return array Das modifizierte Payload-Array mit den hinzugefügten Variablentypen.
-     *
-     * @see \IPSModule::GetIDForIdent()
-     * @see \IPSModule::SendDebug()
-     * @see json_encode()
-     * @see IPS_GetVariable()
-     */
-    protected function AppendVariableTypes(array $Payload): array
-    {
-        // Zeige das eingehende Payload im Debug
-        $this->SendDebug(__FUNCTION__ . ' :: Line ' . __LINE__ . ' :: Eingehendes Payload: ', json_encode($Payload), 0);
-        $this->lastPayload = $this->lastPayload + $Payload;
-        foreach ($Payload as $key => $value) {
-            // Prüfe, ob die Variable existiert
-            $objectID = @$this->GetIDForIdent($key);
-            // $this->SendDebug(__FUNCTION__ . ' :: Line ' . __LINE__ . ' :: Variable existiert für Ident: ', $ident, 0);
-            if ($objectID) {
-                // Füge dem Payload den Variablentyp als neuen Schlüssel hinzu
-                $Payload[$key . '_type'] = IPS_GetVariable($objectID)['VariableType'];
-            }
-        }
-
-        // Zeige das modifizierte Payload im Debug
-        $this->SendDebug(__FUNCTION__ . ' :: Line ' . __LINE__ . ' :: modifizierter Payload mit Typen: ', json_encode($Payload), 0);
-
-        // Gib das modifizierte Payload zurück
-        return $Payload;
-    }
-
     // Feature & Expose Handling
 
     /**
@@ -1564,15 +1522,8 @@ abstract class ModulBase extends \IPSModule
         // Verschachtelte Strukturen flach machen
         $flattenedPayload = $this->flattenPayload($payload);
 
-        // Variablentypen anhängen
-        $payloadWithTypes = $this->AppendVariableTypes($flattenedPayload);
-
         // Payload-Daten verarbeiten
-        foreach ($payloadWithTypes as $key => $value) {
-            if ($key === 0 || strpos($key, '_type') !== false) {
-                continue;
-            }
-
+        foreach ($flattenedPayload as $key => $value) {
             $this->SendDebug(__FUNCTION__, sprintf('Verarbeite: Key=%s, Value=%s', $key, is_array($value) ? json_encode($value) : (string) $value), 0);
 
             if (!$this->processSpecialVariable($key, $value)) {
