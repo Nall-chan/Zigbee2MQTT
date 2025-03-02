@@ -281,6 +281,7 @@ abstract class ModulBase extends \IPSModule
     protected static $specialVariables = [
         'last_seen'                 => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Last Seen', 'profile' => '~UnixTimestamp'],
         'color_mode'                => ['type' => VARIABLETYPE_STRING, 'name' => 'Color Mode', 'profile' => ''],
+        'update'                    => ['type' => VARIABLETYPE_STRING, 'name' => 'Firmware Update Status', 'profile' => ''],
         'device_temperature'        => ['type' => VARIABLETYPE_FLOAT, 'name' => 'Device Temperature', 'profile' => '~Temperature'],
         'brightness'                => ['type' => VARIABLETYPE_INTEGER, 'ident' => 'brightness', 'profile' => '~Intensity.100'],
         'brightness_l1'             => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l1', 'profile' => '~Intensity.100'],
@@ -292,9 +293,7 @@ abstract class ModulBase extends \IPSModule
         'countdown_l2'              => ['type' => VARIABLETYPE_INTEGER, 'profile' => ''],
         'update__installed_version' => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Installed Version', 'profile' => ''],
         'update__latest_version'    => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Latest Version', 'profile' => ''],
-        'update__state'             => ['type' => VARIABLETYPE_STRING, 'name' => 'Update State', 'profile' => ''],
-        'update__progress'          => ['type' => VARIABLETYPE_FLOAT, 'name' => 'Update Progress', 'profile' => '~Progress'],
-        'update_remaining'          => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Update Remaining', 'profile' => '']
+        'update__state'             => ['type' => VARIABLETYPE_STRING, 'name' => 'Update State', 'profile' => '']
     ];
 
     /**
@@ -1660,6 +1659,21 @@ abstract class ModulBase extends \IPSModule
             return;
         }
 
+        // Wenn Value ein Array ist und list im Type vorkommt
+        if (is_array($value) && isset($value['type']) && $value['type'] === 'list') {
+            // Speichere komplette Liste als JSON
+            $this->SetValueDirect($key, json_encode($value));
+
+            // Verarbeite einzelne Einträge wenn vorhanden
+            if (isset($value['items'])) {
+                foreach ($value['items'] as $index => $item) {
+                    $itemKey = $key . '_item_' . $index;
+                    $this->processVariable($itemKey, $item);
+                }
+            }
+            return;
+        }
+
         $lowerKey = strtolower($key);
         $ident = $key;
 
@@ -1706,6 +1720,18 @@ abstract class ModulBase extends \IPSModule
         $presetIdent = $ident . '_presets';
         if (@$this->GetIDForIdent($presetIdent) !== false) {
             $this->SetValue($presetIdent, $value);
+        }
+            // Liste verarbeiten
+        if (is_array($value) && isset($value['type']) && $value['type'] === 'list') {
+            // Speichere komplette Liste als JSON
+            $this->SetValueDirect($key, json_encode($value));
+
+            // Verarbeite einzelne Einträge
+            foreach ($value as $index => $item) {
+                $itemKey = $key . '_item_' . $index;
+                $this->processVariable($itemKey, $item);
+            }
+            return;
         }
     }
 
@@ -3635,6 +3661,24 @@ abstract class ModulBase extends \IPSModule
                     $this->registerColorVariable($feature);
                     return;
                 }
+            case 'list':
+                // Hauptvariable als JSON Array
+                $this->RegisterVariableString(
+                    $property,
+                    $this->Translate($this->convertLabelToName($property))
+                );
+
+                // Registriere item_type als composite
+                if (isset($feature['item_type'])) {
+                    $itemFeature = $feature['item_type'];
+                    $itemFeature['property'] = $property . '_item';
+                    $this->registerVariable($itemFeature);
+                }
+
+                if (isset($feature['access']) && ($feature['access'] & 0b010) != 0) {
+                    $this->EnableAction($property);
+                }
+                break;
 
                 // Feature-Verarbeitung
                 if (isset($feature['features'])) {
