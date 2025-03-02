@@ -3708,7 +3708,7 @@ abstract class ModulBase extends \IPSModule
                     if (isset($feature['access']) && ($feature['access'] & 0b010) != 0) {
                         $this->EnableAction($property);
                     }
-                break;
+                    break;
 
             default:
                 $this->SendDebug(__FUNCTION__, 'Unsupported variable type: ' . $variableType, 0);
