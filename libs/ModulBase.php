@@ -3691,24 +3691,24 @@ abstract class ModulBase extends \IPSModule
                 }
                 break;
 
-                case 'list':
-                    // Hauptvariable als JSON Array
-                    $this->RegisterVariableString(
-                        $property,
-                        $this->Translate($this->convertLabelToName($property))
-                    );
+            case 'list':
+                // Hauptvariable als JSON Array
+                $this->RegisterVariableString(
+                    $property,
+                    $this->Translate($this->convertLabelToName($property))
+                );
 
-                    // Registriere item_type als composite
-                    if (isset($feature['item_type'])) {
-                        $itemFeature = $feature['item_type'];
-                        $itemFeature['property'] = $property . '_item';
-                        $this->registerVariable($itemFeature);
-                    }
+                // Registriere item_type als composite
+                if (isset($feature['item_type'])) {
+                    $itemFeature = $feature['item_type'];
+                    $itemFeature['property'] = $property . '_item';
+                    $this->registerVariable($itemFeature);
+                }
 
-                    if (isset($feature['access']) && ($feature['access'] & 0b010) != 0) {
-                        $this->EnableAction($property);
-                    }
-                    break;
+                if (isset($feature['access']) && ($feature['access'] & 0b010) != 0) {
+                    $this->EnableAction($property);
+                }
+                break;
 
             default:
                 $this->SendDebug(__FUNCTION__, 'Unsupported variable type: ' . $variableType, 0);
