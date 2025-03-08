@@ -293,7 +293,9 @@ abstract class ModulBase extends \IPSModule
         'countdown_l2'              => ['type' => VARIABLETYPE_INTEGER, 'profile' => ''],
         'update__installed_version' => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Installed Version', 'profile' => ''],
         'update__latest_version'    => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Latest Version', 'profile' => ''],
-        'update__state'             => ['type' => VARIABLETYPE_STRING, 'name' => 'Update State', 'profile' => '']
+        'update__state'             => ['type' => VARIABLETYPE_STRING, 'name' => 'Update State', 'profile' => ''],
+        'update__progress'          => ['type' => VARIABLETYPE_FLOAT, 'name' => 'Update Progress', profile =>'~Progress'],
+        'update__remaining'         => ['type' => VARIABLETYPE_FLOAT, 'name' => 'Update Remaining', 'profile' => '']
     ];
 
     /**

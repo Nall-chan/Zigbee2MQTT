@@ -16,7 +16,7 @@ jobs:
       - name: JSON von API abrufen und speichern
         run: |
           curl -s https://api.crowdl.io/Z2MT/cdn/de.json -o temp.json
-          jq '{translations: {de: .}}' temp.json > libs/locale_z2m.json
+          jq --indent 4 '{translations: {de: .}}' temp.json > libs/locale_z2m.json
           rm temp.json
 
       - name: Änderungen überprüfen & committen
