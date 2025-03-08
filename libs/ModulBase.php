@@ -597,6 +597,7 @@ abstract class ModulBase extends \IPSModule
         $result = $handled();
 
         if ($result === false) {
+            //hier eine exception werfen?
             $this->SendDebug(__FUNCTION__, 'Fehler beim Verarbeiten der Aktion: ' . $ident . ' (Rückgabewert false)', 0);
         } else {
             $this->SendDebug(__FUNCTION__, 'Aktion erfolgreich verarbeitet: ' . $ident, 0);
@@ -768,6 +769,66 @@ abstract class ModulBase extends \IPSModule
         $this->BUFFER_MQTT_SUSPENDED = false;
         $this->BUFFER_PROCESSING_MIGRATION = false;
         return json_encode($j);
+    }
+
+    /**
+     * Z2M_WriteValueBoolean Instanz Funktion
+     *
+     * Damit auch ein Senden an einen Ident möglich ist, wenn die Standardaktion überschrieben wurde.
+     *
+     * @param  string $ident
+     * @param  bool $value
+     * @return bool
+     */
+    public function WriteValueBoolean(string $ident, bool $value)
+    {
+        $this->RequestAction($ident, $value);
+        return true;
+    }
+
+    /**
+     * Z2M_WriteValueInteger Instanz Funktion
+     *
+     * Damit auch ein Senden an einen Ident möglich ist, wenn die Standardaktion überschrieben wurde.
+     *
+     * @param  string $ident
+     * @param  int $value
+     * @return bool
+     */
+    public function WriteValueInteger(string $ident, int $value)
+    {
+        $this->RequestAction($ident, $value);
+        return true;
+    }
+
+    /**
+     * Z2M_WriteValueFloat Instanz Funktion
+     *
+     * Damit auch ein Senden an einen Ident möglich ist, wenn die Standardaktion überschrieben wurde.
+     *
+     * @param  string $ident
+     * @param  float $value
+     * @return bool
+     */
+    public function WriteValueFloat(string $ident, float $value)
+    {
+        $this->RequestAction($ident, $value);
+        return true;
+    }
+
+    /**
+     * Z2M_WriteValueString Instanz Funktion
+     *
+     * Damit auch ein Senden an einen Ident möglich ist, wenn die Standardaktion überschrieben wurde.
+     *
+     * @param  string $ident
+     * @param  string $value
+     * @return bool
+     */
+    public function WriteValueString(string $ident, string $value)
+    {
+        $this->RequestAction($ident, $value);
+        return true;
     }
 
     /**
@@ -1277,11 +1338,13 @@ abstract class ModulBase extends \IPSModule
      * // Ergebnis: ['weekly_schedule' => ['friday' => '00:00/7']]
      * ```
      *
-     * @internal Diese Methode wird von SendSetCommand verwendet
+     * @internal Diese Methode wird von handleStandardVariable, handlePresetVariable und RequestAction verwendet
      *
-     * @see \Zigbee2MQTT\ModulBase::SendSetCommand()
+     * @see \Zigbee2MQTT\ModulBase::handleStandardVariable()
+     * @see \Zigbee2MQTT\ModulBase::handlePresetVariable()
+     * @see \Zigbee2MQTT\ModulBase::RequestAction()
      */
-    protected function buildNestedPayload(string $ident, $value): array
+    protected function buildNestedPayload(string $ident, mixed $value): array
     {
         $parts = explode('__', $ident);
         $result = [];
