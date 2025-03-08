@@ -67,10 +67,13 @@
 
 ## 6. PHP-Funktionsreferenz
 
+### RequestAction <!-- omit in toc -->
    ```php
-   RequestAction($VariablenID, $Value);
+   RequestAction(int $VariablenID, mixed $Value);
    ```
-   Mit dieser Funktion können alle Aktionen einer Variable ausgelöst werden.
+   Mit dieser Funktion können alle Aktionen einer Variable ausgelöst werden.  
+
+   [!IMPORTANT] Bei der Nutzung von RequestAction innerhalb eines Aktionsskript darf nicht die Variable übergeben werden, welche dieses Aktionsskript nutzt.  Sonst wird eine Endlosschleife ausgelöst.  Anstatt RequestAction sind die Z2M_Command oder Z2M_WriteValue* Instanzfuntionen zu benutzen.  
 
    **Beispiel:**
 
@@ -79,11 +82,66 @@
    RequestAction(12345, true); //Einschalten
    RequestAction(12345, false); //Ausschalten
    ```
-
 ---
+### Z2M_WriteValueBoolean <!-- omit in toc -->
+   ```php
+   bool Z2M_WriteValueBoolean(int $InstanzId, bool $Value);
+   ```
+   Mit dieser Funktion können Bool Werte an eine Instanz gesendet werden.
+   
+   **Beispiel:**
+
+   VariablenIndent `State` der Instanz 12345
+   ```php
+   Z2M_WriteValueBoolean(12345, 'state', true); //Einschalten
+   ```
+---
+### Z2M_WriteValueInteger <!-- omit in toc -->
 
    ```php
-   Z2M_Command(string $topic, string $value)
+   bool Z2M_WriteValueInteger(int $InstanzId, int $Value);
+   ```
+   Mit dieser Funktion können Integer Werte an eine Instanz gesendet werden.
+
+   **Beispiel:**
+
+   VariablenIndent `Position` der Instanz 12345
+   ```php
+   Z2M_WriteValueInteger(12345, 'position', 50); // Setze Position auf 50
+   ```
+---
+### Z2M_WriteValueFloat <!-- omit in toc -->
+
+   ```php
+   bool Z2M_WriteValueFloat(int $InstanzId, float $Value);
+   ```
+   Mit dieser Funktion können Float Werte an eine Instanz gesendet werden.
+
+   **Beispiel:**
+
+   VariablenIndent `Kalibrierzeit` der Instanz 12345
+   ```php
+   Z2M_WriteValueFloat(12345, 'calibration_time', 22.5); // Setze Kalibrirung auf 22,5 Sekunden
+   ```
+---
+### Z2M_WriteValueString <!-- omit in toc -->
+
+   ```php
+   bool Z2M_WriteValueString(int $InstanzId, string $Value);
+   ```
+   Mit dieser Funktion können String Werte an eine Instanz gesendet werden.
+   
+   **Beispiel:**
+
+   VariablenIndent `Effekt` der Instanz 12345
+   ```php
+   Z2M_WriteValueString(12345, 'effect', 'blink'); // Effekt Blinken ausführen
+   ```
+---
+### Z2M_Command <!-- omit in toc -->
+
+   ```php
+   Z2M_Command(int $InstanzId, string $Topic, string $Value)
    ```
    Mit dies Funktion kann ein belibiger Payload (Datensatz) an das Gerät (Geräte-Topic) gesendet werden.
 
@@ -91,14 +149,15 @@
 
    ```php
    $Payload['brightness_step_onoff'] = 10;
-   Z2M_Command('set', json_encode($Payload));
+   Z2M_Command(12345, 'set', json_encode($Payload));
    ```
    Sendet `brightness_step_onoff` mit dem Wert 10 an das Gerät, welches entsprechend die Helligkeit um den Rohwert 10 erhöht und, falls es vorher ausgeschaltet war, eingeschaltet wird.
 
 ---
+### Z2M_CommandEx <!-- omit in toc -->
 
    ```php
-   Z2M_CommandEx(string $fulltopic, string $value)
+   Z2M_CommandEx(int $InstanzId,string $fulltopic, string $value)
    ```
    Mit dies Funktion kann ein belibiger Payload (Datensatz) an Z2M gesendet werden.
 
@@ -106,11 +165,11 @@
 
    ```php
    $Payload['state'] = '';
-   Z2M_CommandEx('Keller/Lampe1/get', json_encode($Payload));
+   Z2M_CommandEx(12345, 'Keller/Lampe1/get', json_encode($Payload));
    ```
 
    Dieses Beispiel ruft `state` von `{BaseTopic}Keller/Lampe1` ab.
-   
+      
 ## 7. Aktionen
 
 __Grundsätzlich können alle bedienbaren Statusvariablen als Ziel einer [`Aktion`](https://www.symcon.de/service/dokumentation/konzepte/automationen/ablaufplaene/aktionen/) mit 'Auf Wert schalten' angesteuert werden, so das hier keine speziellen Aktionen benutzt werden müssen.__

@@ -69,94 +69,129 @@
 
 ## 6. PHP-Funktionsreferenz
 
+### Z2M_InstallSymconExtension <!-- omit in toc -->
+
 ```php
 bool Z2M_InstallSymconExtension(int $InstanzID);
 ```
 Die aktuelle Symcon Erweiterung wird in Z2M installiert.  
 
---
+---
+### Z2M_SetLastSeen <!-- omit in toc -->
 
 ```php
 bool Z2M_SetLastSeen(int $InstanzID);
 ```
 Die Konfiguration der `last_seen` Einstellung in Z2M wird auf `epoch` verändert, damit die Instanzen in Symcon den Wert korrekt darstellen können.  
 
---
+---
+### Z2M_SetPermitJoin <!-- omit in toc -->
+
 ```php
 bool Z2M_SetPermitJoin(int $InstanzID, bool $PermitJoin);
 ```
 
---
+---
+### Z2M_SetLogLevel <!-- omit in toc -->
+
 ```php
 bool Z2M_SetLogLevel(int $InstanzID, string $LogLevel);
 ```
 
---
+---
+### Z2M_Restart <!-- omit in toc -->
+
 ```php
 bool Z2M_Restart(int $InstanzID);
 ```
 
---
+---
+### Z2M_CreateGroup <!-- omit in toc -->
+
 ```php
 bool Z2M_CreateGroup(int $InstanzID, string $GroupName);
 ```
 
---
+---
+### Z2M_DeleteGroup <!-- omit in toc -->
+
 ```php
 bool Z2M_DeleteGroup(int $InstanzID, string $GroupName);
 ```
 
---
+---
+### Z2M_RenameGroup <!-- omit in toc -->
+
 ```php
 bool Z2M_RenameGroup(int $InstanzID, string $OldName, string $NewName);
 ```
 
---
+---
+### Z2M_AddDeviceToGroup <!-- omit in toc -->
+
 ```php
 bool Z2M_AddDeviceToGroup(int $InstanzID, string $GroupName, string $DeviceName);
 ```
 
---
+---
+### Z2M_RemoveDeviceFromGroup <!-- omit in toc -->
+
 ```php
 bool Z2M_RemoveDeviceFromGroup(int $InstanzID, string $GroupName, string $DeviceName);
 ```
 
---
+---
+### Z2M_RemoveAllDevicesFromGroup <!-- omit in toc -->
+
 ```php
 bool Z2M_RemoveAllDevicesFromGroup(int $InstanzID, string $GroupName);
 ```
 
---
+---
+### Z2M_Bind <!-- omit in toc -->
+
 ```php
 bool Z2M_Bind(int $InstanzID, string $SourceDevice, string $TargetDevice);
 ```
 
---
+---
+### Z2M_Unbind <!-- omit in toc -->
+
 ```php
 bool Z2M_Unbind(int $InstanzID, string $SourceDevice, string $TargetDevice);
 ```
 
---
+---
+### Z2M_RequestNetworkmap <!-- omit in toc -->
+
 ```php
 bool Z2M_RequestNetworkmap(int $InstanzID);
 ```
 
---
+---
+### Z2M_RenameDevice <!-- omit in toc -->
+
 ```php
 bool Z2M_RenameDevice(int $InstanzID, string $OldDeviceName, string $NewDeviceName);
 ```
 
---
+---
+### Z2M_RemoveDevice <!-- omit in toc -->
+
 ```php
 bool Z2M_RemoveDevice(int $InstanzID, string $DeviceName);
 ```
 
---
+---
+### Z2M_CheckOTAUpdate <!-- omit in toc -->
+
 ```php
 bool Z2M_CheckOTAUpdate(int $InstanzID, string $DeviceName);
 ```
 
---
+---
+### Z2M_PerformOTAUpdate <!-- omit in toc -->
+
 ```php
 bool Z2M_PerformOTAUpdate(int $InstanzID, string $DeviceName);
 ```
