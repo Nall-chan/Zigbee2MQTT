@@ -293,7 +293,9 @@ abstract class ModulBase extends \IPSModule
         'countdown_l2'              => ['type' => VARIABLETYPE_INTEGER, 'profile' => ''],
         'update__installed_version' => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Installed Version', 'profile' => ''],
         'update__latest_version'    => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Latest Version', 'profile' => ''],
-        'update__state'             => ['type' => VARIABLETYPE_STRING, 'name' => 'Update State', 'profile' => '']
+        'update__state'             => ['type' => VARIABLETYPE_STRING, 'name' => 'Update State', 'profile' => ''],
+        'update__progress'          => ['type' => VARIABLETYPE_FLOAT, 'name' => 'Update Progress', 'profile' =>'~Progress'],
+        'update__remaining'         => ['type' => VARIABLETYPE_FLOAT, 'name' => 'Update Remaining', 'profile' => '']
     ];
 
     /**
@@ -458,10 +460,11 @@ abstract class ModulBase extends \IPSModule
         }
 
         //Setze Filter für ReceiveData
-        $Filter1 = preg_quote('"Topic":"' . $BaseTopic . '/' . $MQTTTopic);
-        $Filter2 = preg_quote('"Topic":"' . $BaseTopic . self::SYMCON_EXTENSION_RESPONSE . static::$ExtensionTopic . $MQTTTopic);
-        $this->SendDebug('Filter', '.*(' . $Filter1 . '|' . $Filter2 . ').*', 0);
-        $this->SetReceiveDataFilter('.*(' . $Filter1 . '|' . $Filter2 . ').*');
+        $Filter1 = preg_quote('"Topic":"' . $BaseTopic . '/' . $MQTTTopic . '/' . self::AVAILABILITY_TOPIC . '"');
+        $Filter2 = preg_quote('"Topic":"' . $BaseTopic . '/' . $MQTTTopic . '"');
+        $Filter3 = preg_quote('"Topic":"' . $BaseTopic . self::SYMCON_EXTENSION_RESPONSE . static::$ExtensionTopic . $MQTTTopic . '"');
+        $this->SendDebug('Filter', '.*(' . $Filter1 . '|' . $Filter2 . '|' . $Filter3 . ').*', 0);
+        $this->SetReceiveDataFilter('.*(' . $Filter1 . '|' . $Filter2 . '|' . $Filter3 . ').*');
         $this->SetStatus(IS_ACTIVE);
     }
 
@@ -597,6 +600,7 @@ abstract class ModulBase extends \IPSModule
         $result = $handled();
 
         if ($result === false) {
+            //hier eine exception werfen?
             $this->SendDebug(__FUNCTION__, 'Fehler beim Verarbeiten der Aktion: ' . $ident . ' (Rückgabewert false)', 0);
         } else {
             $this->SendDebug(__FUNCTION__, 'Aktion erfolgreich verarbeitet: ' . $ident, 0);
@@ -768,6 +772,66 @@ abstract class ModulBase extends \IPSModule
         $this->BUFFER_MQTT_SUSPENDED = false;
         $this->BUFFER_PROCESSING_MIGRATION = false;
         return json_encode($j);
+    }
+
+    /**
+     * Z2M_WriteValueBoolean Instanz Funktion
+     *
+     * Damit auch ein Senden an einen Ident möglich ist, wenn die Standardaktion überschrieben wurde.
+     *
+     * @param  string $ident
+     * @param  bool $value
+     * @return bool
+     */
+    public function WriteValueBoolean(string $ident, bool $value)
+    {
+        $this->RequestAction($ident, $value);
+        return true;
+    }
+
+    /**
+     * Z2M_WriteValueInteger Instanz Funktion
+     *
+     * Damit auch ein Senden an einen Ident möglich ist, wenn die Standardaktion überschrieben wurde.
+     *
+     * @param  string $ident
+     * @param  int $value
+     * @return bool
+     */
+    public function WriteValueInteger(string $ident, int $value)
+    {
+        $this->RequestAction($ident, $value);
+        return true;
+    }
+
+    /**
+     * Z2M_WriteValueFloat Instanz Funktion
+     *
+     * Damit auch ein Senden an einen Ident möglich ist, wenn die Standardaktion überschrieben wurde.
+     *
+     * @param  string $ident
+     * @param  float $value
+     * @return bool
+     */
+    public function WriteValueFloat(string $ident, float $value)
+    {
+        $this->RequestAction($ident, $value);
+        return true;
+    }
+
+    /**
+     * Z2M_WriteValueString Instanz Funktion
+     *
+     * Damit auch ein Senden an einen Ident möglich ist, wenn die Standardaktion überschrieben wurde.
+     *
+     * @param  string $ident
+     * @param  string $value
+     * @return bool
+     */
+    public function WriteValueString(string $ident, string $value)
+    {
+        $this->RequestAction($ident, $value);
+        return true;
     }
 
     /**
@@ -1277,11 +1341,13 @@ abstract class ModulBase extends \IPSModule
      * // Ergebnis: ['weekly_schedule' => ['friday' => '00:00/7']]
      * ```
      *
-     * @internal Diese Methode wird von SendSetCommand verwendet
+     * @internal Diese Methode wird von handleStandardVariable, handlePresetVariable und RequestAction verwendet
      *
-     * @see \Zigbee2MQTT\ModulBase::SendSetCommand()
+     * @see \Zigbee2MQTT\ModulBase::handleStandardVariable()
+     * @see \Zigbee2MQTT\ModulBase::handlePresetVariable()
+     * @see \Zigbee2MQTT\ModulBase::RequestAction()
      */
-    protected function buildNestedPayload(string $ident, $value): array
+    protected function buildNestedPayload(string $ident, mixed $value): array
     {
         $parts = explode('__', $ident);
         $result = [];
@@ -1721,7 +1787,7 @@ abstract class ModulBase extends \IPSModule
         if (@$this->GetIDForIdent($presetIdent) !== false) {
             $this->SetValue($presetIdent, $value);
         }
-            // Liste verarbeiten
+        // Liste verarbeiten
         if (is_array($value) && isset($value['type']) && $value['type'] === 'list') {
             // Speichere komplette Liste als JSON
             $this->SetValueDirect($key, json_encode($value));
@@ -3661,24 +3727,6 @@ abstract class ModulBase extends \IPSModule
                     $this->registerColorVariable($feature);
                     return;
                 }
-            case 'list':
-                // Hauptvariable als JSON Array
-                $this->RegisterVariableString(
-                    $property,
-                    $this->Translate($this->convertLabelToName($property))
-                );
-
-                // Registriere item_type als composite
-                if (isset($feature['item_type'])) {
-                    $itemFeature = $feature['item_type'];
-                    $itemFeature['property'] = $property . '_item';
-                    $this->registerVariable($itemFeature);
-                }
-
-                if (isset($feature['access']) && ($feature['access'] & 0b010) != 0) {
-                    $this->EnableAction($property);
-                }
-                break;
 
                 // Feature-Verarbeitung
                 if (isset($feature['features'])) {
@@ -3707,7 +3755,26 @@ abstract class ModulBase extends \IPSModule
                         $this->registerVariable($subFeature, $exposeType);
                     }
                 }
-                return;
+                break;
+
+            case 'list':
+                // Hauptvariable als JSON Array
+                $this->RegisterVariableString(
+                    $property,
+                    $this->Translate($this->convertLabelToName($property))
+                );
+
+                // Registriere item_type als composite
+                if (isset($feature['item_type'])) {
+                    $itemFeature = $feature['item_type'];
+                    $itemFeature['property'] = $property . '_item';
+                    $this->registerVariable($itemFeature);
+                }
+
+                if (isset($feature['access']) && ($feature['access'] & 0b010) != 0) {
+                    $this->EnableAction($property);
+                }
+                break;
 
             default:
                 $this->SendDebug(__FUNCTION__, 'Unsupported variable type: ' . $variableType, 0);
