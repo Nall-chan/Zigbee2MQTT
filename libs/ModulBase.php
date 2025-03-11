@@ -1569,7 +1569,6 @@ abstract class ModulBase extends \IPSModule
      *
      * @see \Zigbee2MQTT\ModulBase::ReceiveData()
      * @see \Zigbee2MQTT\ModulBase::mapExposesToVariables()
-     * @see \Zigbee2MQTT\ModulBase::AppendVariableTypes()
      * @see \Zigbee2MQTT\ModulBase::processSpecialVariable()
      * @see \Zigbee2MQTT\ModulBase::processVariable()
      * @see \IPSModule::SendDebug()
@@ -1584,6 +1583,8 @@ abstract class ModulBase extends \IPSModule
             $this->mapExposesToVariables($payload['exposes']);
             unset($payload['exposes']);
         }
+
+        $this->lastPayload = $this->lastPayload + $payload;
 
         // Verschachtelte Strukturen flach machen
         $flattenedPayload = $this->flattenPayload($payload);
