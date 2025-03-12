@@ -259,6 +259,8 @@ abstract class ModulBase extends \IPSModule
         ['group_type' => '', 'feature' => 'window_open', 'profile' => '~Window', 'variableType' => VARIABLETYPE_BOOLEAN],
         ['group_type' => '', 'feature' => 'valve', 'profile' => '~Valve', 'variableType' => VARIABLETYPE_INTEGER],
         ['group_type' => '', 'feature' => 'window_detection', 'profile' => '~Window', 'variableType' => VARIABLETYPE_BOOLEAN],
+        ['group_type' => '', 'feature' => 'contact', 'profile' => '~Window.Reversed', 'variableType' => VARIABLETYPE_BOOLEAN],
+        ['group_type' => '', 'feature' => 'tamper', 'profile' => '~Alert', 'variableType' => VARIABLETYPE_BOOLEAN],
         ['group_type' => 'light', 'feature' => 'color', 'profile' => '~HexColor', 'variableType' => VARIABLETYPE_INTEGER],
         ['group_type' => 'climate', 'feature' => 'occupied_heating_setpoint', 'profile' => '~Temperature.Room', 'variableType' => VARIABLETYPE_FLOAT]
     ];
