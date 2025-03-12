@@ -1749,6 +1749,8 @@ abstract class ModulBase extends \IPSModule
         if ($variableID !== false) {
             $this->SendDebug(__FUNCTION__, 'Existierende Variable gefunden: ' . $ident, 0);
             $this->SetValue($ident, $value);
+            // Allgemeine Aktualisierung von Preset-Variablen
+            $this->updatePresetVariable($ident, $value);
             return;
         }
 
@@ -2481,6 +2483,8 @@ abstract class ModulBase extends \IPSModule
         $this->SetValueDirect($ident, $adjustedValue);
 
         $this->SendDebug(__FUNCTION__, sprintf('SetValueDirect aufgerufen für %s mit Wert: %s (Typ: %s)', $ident, is_array($adjustedValue) ? json_encode($adjustedValue) : $adjustedValue, gettype($adjustedValue)), 0);
+        // Allgemeine Aktualisierung von Preset-Variablen
+        $this->updatePresetVariable($ident, $adjustedValue);
         return true;
     }
 
@@ -4175,5 +4179,24 @@ abstract class ModulBase extends \IPSModule
     private function isCompositeKey(string $key): bool
     {
         return strpos($key, '__') !== false;
+    }
+    
+    /**
+     * Aktualisiert eine zugehörige Preset-Variable, falls vorhanden
+     *
+     * @param string $ident Identifikator der Hauptvariable
+     * @param mixed $value Zu setzender Wert
+     * @return void
+     */
+    private function updatePresetVariable(string $ident, mixed $value): void
+    {
+        $presetIdent = $ident . '_presets';
+
+        // Prüfe ob die Preset-Variable existiert
+        if (@$this->GetIDForIdent($presetIdent) !== false) {
+            // Variable existiert, also aktualisieren wir direkt ihren Wert
+            $this->SetValueDirect($presetIdent, $value);
+            $this->SendDebug(__FUNCTION__, "Updated $presetIdent with value: " . (is_array($value) ? json_encode($value) : $value), 0);
+        }
     }
 }
