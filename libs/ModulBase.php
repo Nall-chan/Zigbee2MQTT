@@ -4180,7 +4180,7 @@ abstract class ModulBase extends \IPSModule
     {
         return strpos($key, '__') !== false;
     }
-    
+
     /**
      * Aktualisiert eine zugehörige Preset-Variable, falls vorhanden
      *
