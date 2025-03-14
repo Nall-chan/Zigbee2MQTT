@@ -578,7 +578,7 @@ abstract class ModulBase extends \IPSModule
                 return $this->handleStringVariableNoResponse($ident, (string) $value);
             },
             // Behandelt Farbvariablen (exakte Namen prüfen)
-            in_array($ident, ['color', 'color_hs', 'color_rgb']) => function () use ($ident, $value)
+            in_array($ident, ['color', 'color_hs', 'color_rgb', 'color_temp_kelvin']) => function () use ($ident, $value)
             {
                 $this->SendDebug(__FUNCTION__, 'Verarbeite Farbvariable: ' . $ident, 0);
                 return $this->handleColorVariable($ident, $value);
