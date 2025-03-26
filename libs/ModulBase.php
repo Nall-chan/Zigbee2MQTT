@@ -3258,8 +3258,8 @@ abstract class ModulBase extends \IPSModule
     {
         // Erstelle Profilwerte
         $profileValues = [
-            [false, $valueOff, '', 0xFF0000],  // Rot für Aus
-            [true, $valueOn, '', 0x00FF00]     // Grün für An
+            [$valueOff, $this->convertLabelToName($valueOff),'', 0xFF0000],  // Rot für Aus
+            [$valueOn, $this->convertLabelToName($valueOff) ,'', 0x00FF00]     // Grün für An
         ];
 
         // Registriere das Profil
