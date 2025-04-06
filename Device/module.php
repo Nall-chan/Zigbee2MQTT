@@ -91,6 +91,7 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
             $ModelUrl = str_replace([' ', '/'], '_', $Model);
             $Form['elements'][1]['caption'] = $this->Translate('Link to device information: ') .
             'https://www.zigbee2mqtt.io/devices/' . rawurlencode($ModelUrl) . '.html';
+            $Form['actions'][1]['items'][0]['items'][1]['download'] = 'Z2M_Debug_' . rawurlencode($ModelUrl) . '.json';
         } else {
             $Form['elements'][1]['visible'] = false;
         }
