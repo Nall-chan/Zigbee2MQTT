@@ -1594,7 +1594,11 @@ abstract class ModulBase extends \IPSModule
 
         // Payload-Daten verarbeiten
         foreach ($flattenedPayload as $key => $value) {
-            $this->SendDebug(__FUNCTION__, sprintf('Verarbeite: Key=%s, Value=%s', $key, is_array($value) ? json_encode($value) : (string) $value), 0);
+            if ($value === null) {
+                $this->SendDebug(__FUNCTION__, sprintf('Skip empty value for key=%s', $key), 0);
+                continue;
+            }
+            $this->SendDebug(__FUNCTION__, sprintf('Verarbeite: Key=%s, Value=%s', $key, is_array($value) ? json_encode($value) : (is_bool($value) ? ($value ? 'TRUE' : 'FALSE') : (string) $value)), 0);
 
             if (!$this->processSpecialVariable($key, $value)) {
                 $this->processVariable($key, $value);
