@@ -209,7 +209,6 @@ abstract class ModulBase extends \IPSModule
         'Z2M_YAxis',
         'Z2M_ZAxis'
     ];
-
     
     /**
      * @var string[]
