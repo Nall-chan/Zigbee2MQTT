@@ -210,6 +210,18 @@ abstract class ModulBase extends \IPSModule
         'Z2M_ZAxis'
     ];
 
+    
+    /**
+     * @var string[]
+     * Liste von Composite-Keys, die beim Flattening übersprungen werden sollen.
+     * Diese Composites werden nicht in einzelne Variablen aufgelöst.
+     */
+    private const SKIP_COMPOSITES = [
+        'device',       // Geräteinformationen nicht als Einzelvariablen anlegen
+        'endpoints',    // Endpoint-Informationen nicht als Einzelvariablen anlegen
+        'options'       // Optionsstruktur nicht als Einzelvariablen anlegen
+    ];
+
     /**
      * @var string $ExtensionTopic
      * Muss überschrieben werden.
@@ -1302,6 +1314,12 @@ abstract class ModulBase extends \IPSModule
 
         foreach ($payload as $key => $value) {
             $newKey = $prefix ? $prefix . '__' . $key : $key;
+
+            // Composite-Keys überspringen, die in SKIP_COMPOSITES definiert sind
+            if (in_array($key, self::SKIP_COMPOSITES) && is_array($value)) {
+                $this->SendDebug(__FUNCTION__, "Überspringe Composite-Key: $key", 0);
+                continue;
+            }
 
             // Spezialbehandlung für color-Properties
             if ($key === 'color' && is_array($value)) {
