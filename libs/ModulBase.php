@@ -220,7 +220,7 @@ abstract class ModulBase extends \IPSModule
         'endpoints',    // Endpoint-Informationen nicht als Einzelvariablen anlegen
         'options'       // Optionsstruktur nicht als Einzelvariablen anlegen
     ];
-    
+
     /**
      * @var string $ExtensionTopic
      * Muss überschrieben werden.
