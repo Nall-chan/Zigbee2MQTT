@@ -209,7 +209,7 @@ abstract class ModulBase extends \IPSModule
         'Z2M_YAxis',
         'Z2M_ZAxis'
     ];
-    
+
     /**
      * @var string[]
      * Liste von Composite-Keys, die beim Flattening übersprungen werden sollen.
@@ -220,7 +220,7 @@ abstract class ModulBase extends \IPSModule
         'endpoints',    // Endpoint-Informationen nicht als Einzelvariablen anlegen
         'options'       // Optionsstruktur nicht als Einzelvariablen anlegen
     ];
-
+    
     /**
      * @var string $ExtensionTopic
      * Muss überschrieben werden.
