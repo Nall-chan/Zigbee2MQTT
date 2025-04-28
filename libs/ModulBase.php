@@ -1307,31 +1307,23 @@ abstract class ModulBase extends \IPSModule
      *
      * @see \Zigbee2MQTT\ModulBase::processPayload()
      */
-    protected function flattenPayload(array $payload, string $prefix = ''): array
+    protected function flattenPayload(array $payload, string $prefix = '', int $depth = 0): array
     {
         $result = [];
 
         foreach ($payload as $key => $value) {
             $newKey = $prefix ? $prefix . '__' . $key : $key;
 
-            // Composite-Keys überspringen, die in SKIP_COMPOSITES definiert sind
-            if (in_array($key, self::SKIP_COMPOSITES) && is_array($value)) {
-                $this->SendDebug(__FUNCTION__, "Überspringe Composite-Key: $key", 0);
+            // Composite-Keys überspringen, die in SKIP_COMPOSITES definiert sind und auf oberster Ebene gesetzt sind
+            if ($depth === 0 && in_array($key, self::SKIP_COMPOSITES) && is_array($value)) {
+                $this->SendDebug(__FUNCTION__, "Überspringe Composite-Key auf oberster Ebene: $key", 0);
                 continue;
             }
 
-            // Spezialbehandlung für color-Properties
+            // Spezialbehandlung für color-Properties, da zur Farbberechnung nicht als flatten benötigt
             if ($key === 'color' && is_array($value)) {
                 // Übernehme die color-Properties direkt ins color-Array
                 $result['color'] = $value;
-                continue;
-            }
-
-            // Update-Properties zusammenfassen
-            if ($key === 'update' && is_array($value)) {
-                foreach ($value as $updateKey => $updateValue) {
-                    $result['update__' . $updateKey] = $updateValue;
-                }
                 continue;
             }
 
