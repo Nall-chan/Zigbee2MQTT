@@ -1307,15 +1307,14 @@ abstract class ModulBase extends \IPSModule
      *
      * @see \Zigbee2MQTT\ModulBase::processPayload()
      */
-    protected function flattenPayload(array $payload, string $prefix = '', int $depth = 0): array
+    protected function flattenPayload(array $payload, string $prefix = ''): array
     {
         $result = [];
 
         foreach ($payload as $key => $value) {
-            $newKey = $prefix ? $prefix . '__' . $key : $key;
 
             // Composite-Keys überspringen, die in SKIP_COMPOSITES definiert sind und auf oberster Ebene gesetzt sind
-            if ($depth === 0 && in_array($key, self::SKIP_COMPOSITES) && is_array($value)) {
+            if ($prefix === '' && in_array($key, self::SKIP_COMPOSITES) && is_array($value)) {
                 $this->SendDebug(__FUNCTION__, "Überspringe Composite-Key auf oberster Ebene: $key", 0);
                 continue;
             }
@@ -1327,6 +1326,7 @@ abstract class ModulBase extends \IPSModule
                 continue;
             }
 
+            $newKey = $prefix ? $prefix . '__' . $key : $key;
             if (is_array($value)) {
                 $result = array_merge($result, $this->flattenPayload($value, $newKey));
             } else {
