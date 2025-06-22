@@ -503,13 +503,11 @@ abstract class ModulBase extends \IPSModule
                     $this->BUFFER_MQTT_SUSPENDED = false;
                 }
                 if (($this->HasActiveParent()) && (IPS_GetKernelRunlevel() == KR_READY)) {
-                    $this->LogMessage('FM_CONNECT', KL_NOTIFY);
                     $this->checkExposeAttribute();
                 }
                 break;
             case IM_CHANGESTATUS:
                 if ($Data[0] == IS_ACTIVE) {
-                    $this->LogMessage('IM_CHANGESTATUS', KL_NOTIFY);
                     $this->BUFFER_MQTT_SUSPENDED = false;
                     // Nur ein UpdateDeviceInfo wenn Parent aktiv und System bereit
                     if (($this->HasActiveParent()) && (IPS_GetKernelRunlevel() == KR_READY)) {
@@ -3366,13 +3364,9 @@ abstract class ModulBase extends \IPSModule
 
         // Neues Profil anlegen
         if ($variableType === 'float') {
-            if (!$this->RegisterProfileFloatEx($profileName, '', '', '', $associations)) {
-                $this->LogMessage(sprintf('%s: Could not create float profile %s', __FUNCTION__, $profileName), KL_DEBUG);
-            }
+            $this->RegisterProfileFloatEx($profileName, '', '', '', $associations);
         } else {
-            if (!$this->RegisterProfileIntegerEx($profileName, '', '', '', $associations)) {
-                $this->LogMessage(sprintf('%s: Could not create integer profile %s', __FUNCTION__, $profileName), KL_DEBUG);
-            }
+            $this->RegisterProfileIntegerEx($profileName, '', '', '', $associations);
         }
 
         return $profileName;
