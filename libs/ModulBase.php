@@ -211,6 +211,17 @@ abstract class ModulBase extends \IPSModule
     ];
 
     /**
+     * @var string[]
+     * Liste von Composite-Keys, die beim Flattening übersprungen werden sollen.
+     * Diese Composites werden nicht in einzelne Variablen aufgelöst.
+     */
+    private const SKIP_COMPOSITES = [
+        'device',       // Geräteinformationen nicht als Einzelvariablen anlegen
+        'endpoints',    // Endpoint-Informationen nicht als Einzelvariablen anlegen
+        'options'       // Optionsstruktur nicht als Einzelvariablen anlegen
+    ];
+
+    /**
      * @var string $ExtensionTopic
      * Muss überschrieben werden.
      * - für den ReceiveFilter
@@ -492,13 +503,11 @@ abstract class ModulBase extends \IPSModule
                     $this->BUFFER_MQTT_SUSPENDED = false;
                 }
                 if (($this->HasActiveParent()) && (IPS_GetKernelRunlevel() == KR_READY)) {
-                    $this->LogMessage('FM_CONNECT', KL_NOTIFY);
                     $this->checkExposeAttribute();
                 }
                 break;
             case IM_CHANGESTATUS:
                 if ($Data[0] == IS_ACTIVE) {
-                    $this->LogMessage('IM_CHANGESTATUS', KL_NOTIFY);
                     $this->BUFFER_MQTT_SUSPENDED = false;
                     // Nur ein UpdateDeviceInfo wenn Parent aktiv und System bereit
                     if (($this->HasActiveParent()) && (IPS_GetKernelRunlevel() == KR_READY)) {
@@ -1301,23 +1310,21 @@ abstract class ModulBase extends \IPSModule
         $result = [];
 
         foreach ($payload as $key => $value) {
-            $newKey = $prefix ? $prefix . '__' . $key : $key;
 
-            // Spezialbehandlung für color-Properties
+            // Composite-Keys überspringen, die in SKIP_COMPOSITES definiert sind und auf oberster Ebene gesetzt sind
+            if ($prefix === '' && in_array($key, self::SKIP_COMPOSITES) && is_array($value)) {
+                $this->SendDebug(__FUNCTION__, "Überspringe Composite-Key auf oberster Ebene: $key", 0);
+                continue;
+            }
+
+            // Spezialbehandlung für color-Properties, da zur Farbberechnung nicht als flatten benötigt
             if ($key === 'color' && is_array($value)) {
                 // Übernehme die color-Properties direkt ins color-Array
                 $result['color'] = $value;
                 continue;
             }
 
-            // Update-Properties zusammenfassen
-            if ($key === 'update' && is_array($value)) {
-                foreach ($value as $updateKey => $updateValue) {
-                    $result['update__' . $updateKey] = $updateValue;
-                }
-                continue;
-            }
-
+            $newKey = $prefix ? $prefix . '__' . $key : $key;
             if (is_array($value)) {
                 $result = array_merge($result, $this->flattenPayload($value, $newKey));
             } else {
@@ -3357,13 +3364,9 @@ abstract class ModulBase extends \IPSModule
 
         // Neues Profil anlegen
         if ($variableType === 'float') {
-            if (!$this->RegisterProfileFloatEx($profileName, '', '', '', $associations)) {
-                $this->LogMessage(sprintf('%s: Could not create float profile %s', __FUNCTION__, $profileName), KL_DEBUG);
-            }
+            $this->RegisterProfileFloatEx($profileName, '', '', '', $associations);
         } else {
-            if (!$this->RegisterProfileIntegerEx($profileName, '', '', '', $associations)) {
-                $this->LogMessage(sprintf('%s: Could not create integer profile %s', __FUNCTION__, $profileName), KL_DEBUG);
-            }
+            $this->RegisterProfileIntegerEx($profileName, '', '', '', $associations);
         }
 
         return $profileName;
