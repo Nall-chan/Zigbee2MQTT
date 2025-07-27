@@ -4033,6 +4033,11 @@ abstract class ModulBase extends \IPSModule
      * - values: Mögliche Zustände (z.B. ['ON', 'OFF'] oder ['OPEN', 'CLOSE', 'STOP'])
      * - profile: Zu verwendenes IPS-Profil (z.B. '~Switch' oder 'Z2M.state.hash')
      * - ident: Normalisierter Identifikator
+     * - enableAction: Optional - Nur bei explizit definierten States aus stateDefinitions
+     *
+     * Hinweis: EnableAction wird nur zurückgegeben wenn explizit in stateDefinitions
+     * definiert. Ansonsten wird EnableAction zentral in registerVariable() über
+     * checkAndEnableAction() basierend auf Access-Rechten bestimmt.
      *
      * @param string $featureId Feature-Identifikator (z.B. 'state', 'state_left')
      * @param array|null $feature Optionales Feature-Array mit weiteren Eigenschaften:
@@ -4058,7 +4063,7 @@ abstract class ModulBase extends \IPSModule
      *
      * // Vordefinierter state
      * $config = $this->getStateConfiguration('valve_state');
-     * // Ergebnis: Konfiguration aus stateDefinitions (ohne enableAction)
+     * // Ergebnis: Konfiguration aus stateDefinitions (inklusive enableAction falls definiert)
      * ```
      *
      * @see \Zigbee2MQTT\ModulBase::registerVariable() Verwendet die Konfiguration und trifft EnableAction-Entscheidung
