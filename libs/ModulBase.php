@@ -322,13 +322,15 @@ abstract class ModulBase extends \IPSModule
      *   'VariablenName' => [
      *      'type'     => string,   // Typ der Variable (z.B. 'automode', 'valve')
      *      'dataType' => integer,  // IPS Variablentyp (VARIABLETYPE_*)
-     *      'values'   => array     // Erlaubte Werte für die Variable
+     *      'values'   => array,    // Erlaubte Werte für die Variable
+     *      'ident'    => string,   // Identifier für die Variable
+     *      'profile'  => string    // Profil für die Variable
      *   ]
      * ]
      */
     protected static $stateDefinitions = [
-        'auto_lock'   => ['type' => 'automode', 'dataType' => VARIABLETYPE_STRING, 'values' => ['AUTO', 'MANUAL']],
-        'valve_state' => ['type' => 'valve', 'dataType' => VARIABLETYPE_STRING, 'values' => ['OPEN', 'CLOSED']],
+        'auto_lock'   => ['type' => 'automode', 'dataType' => VARIABLETYPE_STRING, 'values' => ['AUTO', 'MANUAL'], 'ident' => 'auto_lock', 'profile' => 'Z2M.AutoLock', 'enableAction' => true],
+        'valve_state' => ['type' => 'valve', 'dataType' => VARIABLETYPE_STRING, 'values' => ['OPEN', 'CLOSED'], 'ident' => 'valve_state', 'profile' => 'Z2M.ValveState', 'enableAction' => true],
     ];
 
     /**
@@ -4106,9 +4108,18 @@ abstract class ModulBase extends \IPSModule
         }
 
         // Prüfe auf vordefinierte States wenn kein state pattern matched
-        return isset(static::$stateDefinitions[$featureId])
-            ? static::$stateDefinitions[$featureId]
-            : null;
+        if (isset(static::$stateDefinitions[$featureId])) {
+            $stateConfig = static::$stateDefinitions[$featureId];
+            // Stelle sicher, dass ident und profile Keys existieren
+            $stateConfig['ident'] = $stateConfig['ident'] ?? $featureId;
+            $stateConfig['profile'] = $stateConfig['profile'] ?? '';
+            // EnableAction nur wenn explizit definiert oder access-Flag gesetzt
+            $stateConfig['enableAction'] = $stateConfig['enableAction'] ??
+                (isset($feature['access']) && ($feature['access'] & 0b010) != 0);
+            return $stateConfig;
+        }
+
+        return null;
     }
 
     /**
