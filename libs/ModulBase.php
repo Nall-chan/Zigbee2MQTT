@@ -322,13 +322,15 @@ abstract class ModulBase extends \IPSModule
      *   'VariablenName' => [
      *      'type'     => string,   // Typ der Variable (z.B. 'automode', 'valve')
      *      'dataType' => integer,  // IPS Variablentyp (VARIABLETYPE_*)
-     *      'values'   => array     // Erlaubte Werte für die Variable
+     *      'values'   => array,    // Erlaubte Werte für die Variable
+     *      'ident'    => string,   // Identifier für die Variable
+     *      'profile'  => string    // Profil für die Variable
      *   ]
      * ]
      */
     protected static $stateDefinitions = [
-        'auto_lock'   => ['type' => 'automode', 'dataType' => VARIABLETYPE_STRING, 'values' => ['AUTO', 'MANUAL']],
-        'valve_state' => ['type' => 'valve', 'dataType' => VARIABLETYPE_STRING, 'values' => ['OPEN', 'CLOSED']],
+        'auto_lock'   => ['type' => 'automode', 'dataType' => VARIABLETYPE_STRING, 'values' => ['AUTO', 'MANUAL'], 'ident' => 'auto_lock', 'profile' => 'Z2M.AutoLock', 'enableAction' => true],
+        'valve_state' => ['type' => 'valve', 'dataType' => VARIABLETYPE_STRING, 'values' => ['OPEN', 'CLOSED'], 'ident' => 'valve_state', 'profile' => 'Z2M.ValveState', 'enableAction' => true],
     ];
 
     /**
@@ -778,7 +780,9 @@ abstract class ModulBase extends \IPSModule
                 '~Intensity.100',
                 10
             );
-            $this->EnableAction('brightness');
+
+            // Zentrale EnableAction-Prüfung für brightness Migration
+            $this->checkAndEnableAction('brightness');
         }
         // Flag für beendete Migration wieder setzen
         $this->BUFFER_MQTT_SUSPENDED = false;
@@ -1719,7 +1723,9 @@ abstract class ModulBase extends \IPSModule
                     $this->Translate($this->convertLabelToName($key)),
                     $varType['profile']
                 );
-                $this->EnableAction($key);
+
+                // Zentrale EnableAction-Prüfung für neue Variable
+                $this->checkAndEnableAction($key);
             }
 
             $this->SetValue($key, $value);
@@ -1791,11 +1797,8 @@ abstract class ModulBase extends \IPSModule
         // Variable registrieren und Wert setzen
         $variableID = $this->getOrRegisterVariable($ident, $variableProps);
         if ($variableID) {
-            // EnableAction Check auch bei neu angelegten Variablen durchführen
-            if (isset($variableProps['access']) && ($variableProps['access'] & 0b010) != 0) {
-                $this->EnableAction($ident);
-                $this->SendDebug(__FUNCTION__, 'Set EnableAction for ident: ' . $ident . ' to: true', 0);
-            }
+            // Zentrale EnableAction-Prüfung auch bei neu angelegten Variablen
+            $this->checkAndEnableAction($ident, $variableProps);
             $this->SetValue($ident, $value);
         }
 
@@ -3669,9 +3672,9 @@ abstract class ModulBase extends \IPSModule
                     return;
             }
 
+            // Zentrale EnableAction-Prüfung für State-Variablen
             if (isset($stateConfig['enableAction']) && $stateConfig['enableAction']) {
-                $this->EnableAction($stateConfig['ident']);
-                $this->SendDebug(__FUNCTION__, 'Enabled action for ' . $featureProperty . ' (writable state)', 0);
+                $this->checkAndEnableAction($stateConfig['ident'], is_array($feature) ? $feature : null, true);
             }
             return;
         }
@@ -3784,9 +3787,8 @@ abstract class ModulBase extends \IPSModule
                     $this->registerVariable($itemFeature);
                 }
 
-                if (isset($feature['access']) && ($feature['access'] & 0b010) != 0) {
-                    $this->EnableAction($property);
-                }
+                // Zentrale EnableAction-Prüfung für list-Variable
+                $this->checkAndEnableAction($property, $feature);
                 break;
 
             default:
@@ -3794,17 +3796,16 @@ abstract class ModulBase extends \IPSModule
                 return;
         }
 
-        if (isset($feature['access']) && ($feature['access'] & 0b010) != 0) {
-            $this->EnableAction($property);
-            $this->SendDebug(__FUNCTION__, 'Set EnableAction for ident: ' . $property . ' to: true', 0);
-        }
+        // Zentrale EnableAction-Prüfung für die Hauptvariable
+        $this->checkAndEnableAction($property, $feature);
+
         // Zusätzliche Registrierung der color_temp_kelvin Variable, wenn color_temp registriert wird
         if ($property === 'color_temp') {
             $kelvinIdent = $property . '_kelvin';
             $this->RegisterVariableInteger($kelvinIdent, $this->Translate('Color Temperature Kelvin'), '~TWColor');
             $variableId = $this->GetIDForIdent($kelvinIdent);
-            $this->EnableAction($kelvinIdent);
-
+            // color_temp_kelvin ist eine spezielle UI-Variable, die immer EnableAction haben soll
+            $this->checkAndEnableAction($kelvinIdent, null, true);
         }
         // Preset-Verarbeitung nach der normalen Variablenregistrierung
         if (isset($feature['presets']) && !empty($feature['presets'])) {
@@ -3848,17 +3849,20 @@ abstract class ModulBase extends \IPSModule
         switch ($feature['name']) {
             case 'color_xy':
                 $this->RegisterVariableInteger('color', $this->Translate($this->convertLabelToName('color')), '~HexColor');
-                $this->EnableAction('color');
+                // Farbvariablen erhalten IMMER EnableAction, unabhängig von Access-Prüfung
+                $this->checkAndEnableAction('color', null, true);
                 $this->SendDebug(__FUNCTION__ . ' :: Line ' . __LINE__ . ' :: Creating composite color_xy', 'color', 0);
                 break;
             case 'color_hs':
                 $this->RegisterVariableInteger('color_hs', $this->Translate($this->convertLabelToName('color_hs')), '~HexColor');
-                $this->EnableAction('color_hs');
+                // Farbvariablen erhalten IMMER EnableAction, unabhängig von Access-Prüfung
+                $this->checkAndEnableAction('color_hs', null, true);
                 $this->SendDebug(__FUNCTION__ . ' :: Line ' . __LINE__ . ' :: Creating composite color_hs', 'color_hs', 0);
                 break;
             case 'color_rgb':
                 $this->RegisterVariableInteger('color_rgb', $this->Translate($this->convertLabelToName('color_rgb')), '~HexColor');
-                $this->EnableAction('color_rgb');
+                // Farbvariablen erhalten IMMER EnableAction, unabhängig von Access-Prüfung
+                $this->checkAndEnableAction('color_rgb', null, true);
                 $this->SendDebug(__FUNCTION__ . ' :: Line ' . __LINE__ . ' :: Creating composite color_rgb', 'color_rgb', 0);
                 break;
             default:
@@ -3928,10 +3932,8 @@ abstract class ModulBase extends \IPSModule
             $this->RegisterVariableInteger($presetIdent, $this->Translate($formattedLabel . ' Presets'), $profileName);
         }
 
-        // Aktiviere Aktion wenn beschreibbar
-        if (isset($feature['access']) && ($feature['access'] & 0b010) != 0) {
-            $this->EnableAction($presetIdent);
-        }
+        // Zentrale EnableAction-Prüfung für Preset-Variable
+        $this->checkAndEnableAction($presetIdent, $feature);
     }
 
     /**
@@ -3994,12 +3996,8 @@ abstract class ModulBase extends \IPSModule
                 break;
         }
 
-        // Prüfe Access-Rechte aus dem Feature-Array oder den knownVariables
-        if ((isset($feature['access']) && ($feature['access'] & 0b010) != 0) ||
-            (isset($this->getKnownVariables()[$ident]['access']) && ($this->getKnownVariables()[$ident]['access'] & 0b010) != 0)) {
-            $this->EnableAction($ident);
-            $this->SendDebug(__FUNCTION__, 'Set EnableAction for ident: ' . $ident . ' to: true', 0);
-        }
+        // Zentrale EnableAction-Prüfung für spezielle Variable
+        $this->checkAndEnableAction($ident, $feature);
 
         return;
     }
@@ -4106,9 +4104,18 @@ abstract class ModulBase extends \IPSModule
         }
 
         // Prüfe auf vordefinierte States wenn kein state pattern matched
-        return isset(static::$stateDefinitions[$featureId])
-            ? static::$stateDefinitions[$featureId]
-            : null;
+        if (isset(static::$stateDefinitions[$featureId])) {
+            $stateConfig = static::$stateDefinitions[$featureId];
+            // Stelle sicher, dass ident und profile Keys existieren
+            $stateConfig['ident'] = $stateConfig['ident'] ?? $featureId;
+            $stateConfig['profile'] = $stateConfig['profile'] ?? '';
+            // EnableAction nur wenn explizit definiert oder access-Flag gesetzt
+            $stateConfig['enableAction'] = $stateConfig['enableAction'] ??
+                (isset($feature['access']) && ($feature['access'] & 0b010) != 0);
+            return $stateConfig;
+        }
+
+        return null;
     }
 
     /**
@@ -4206,5 +4213,53 @@ abstract class ModulBase extends \IPSModule
             $this->SetValueDirect($presetIdent, $value);
             $this->SendDebug(__FUNCTION__, "Updated $presetIdent with value: " . (is_array($value) ? json_encode($value) : $value), 0);
         }
+    }
+
+    /**
+     * checkAndEnableAction
+     *
+     * Zentrale Hilfsfunktion zur konsistenten EnableAction-Prüfung
+     *
+     * Diese Methode implementiert die einheitliche Logik für EnableAction basierend auf:
+     * 1. Access-Rechte aus Feature-Array (0b010 Flag für Schreibzugriff)
+     * 2. Access-Rechte aus knownVariables
+     * 3. Spezielle Variablen (color_temp_kelvin)
+     *
+     * @param string $ident Identifikator der Variable
+     * @param array|null $feature Optional: Feature-Array mit Access-Informationen
+     * @param bool $forceEnable Optional: Erzwingt EnableAction (für spezielle Variablen)
+     *
+     * @return void
+     *
+     * @see \Zigbee2MQTT\ModulBase::getKnownVariables()
+     * @see \IPSModule::EnableAction()
+     * @see \IPSModule::SendDebug()
+     */
+    private function checkAndEnableAction(string $ident, ?array $feature = null, bool $forceEnable = false): void
+    {
+        // Spezielle Variablen oder erzwungene Aktivierung
+        if ($forceEnable) {
+            $this->EnableAction($ident);
+            $this->SendDebug(__FUNCTION__, 'Enabled action for ' . $ident . ' (forced/special variable)', 0);
+            return;
+        }
+
+        // Prüfe Access-Rechte aus Feature-Array
+        if (isset($feature['access']) && ($feature['access'] & 0b010) != 0) {
+            $this->EnableAction($ident);
+            $this->SendDebug(__FUNCTION__, 'Enabled action for ' . $ident . ' (has write access from feature)', 0);
+            return;
+        }
+
+        // Prüfe Access-Rechte aus knownVariables
+        $knownVariables = $this->getKnownVariables();
+        if (isset($knownVariables[$ident]['access']) && ($knownVariables[$ident]['access'] & 0b010) != 0) {
+            $this->EnableAction($ident);
+            $this->SendDebug(__FUNCTION__, 'Enabled action for ' . $ident . ' (has write access from known variables)', 0);
+            return;
+        }
+
+        // Keine Berechtigung gefunden
+        $this->SendDebug(__FUNCTION__, 'Skipped EnableAction for ' . $ident . ' (no write access)', 0);
     }
 }
