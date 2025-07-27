@@ -3673,9 +3673,7 @@ abstract class ModulBase extends \IPSModule
             }
 
             // Zentrale EnableAction-Prüfung für State-Variablen
-            if (isset($stateConfig['enableAction']) && $stateConfig['enableAction']) {
-                $this->checkAndEnableAction($stateConfig['ident'], is_array($feature) ? $feature : null, true);
-            }
+            $this->checkAndEnableAction($stateConfig['ident'], is_array($feature) ? $feature : null);
             return;
         }
 
@@ -4008,6 +4006,7 @@ abstract class ModulBase extends \IPSModule
      * Prüft und liefert die Konfiguration für State-basierte Features.
      *
      * Diese Methode analysiert ein Feature und bestimmt, ob es sich um ein State-Feature handelt.
+     *
      * Sie prüft drei Szenarien:
      * 1. Vordefinierte States aus stateDefinitions
      * 2. Enum-Typ States (z.B. "state" mit definierten Werten)
@@ -4023,14 +4022,14 @@ abstract class ModulBase extends \IPSModule
      * - dataType: IPS Variablentyp (z.B. VARIABLETYPE_BOOLEAN, VARIABLETYPE_STRING)
      * - values: Mögliche Zustände (z.B. ['ON', 'OFF'] oder ['OPEN', 'CLOSE', 'STOP'])
      * - profile: Zu verwendenes IPS-Profil (z.B. '~Switch' oder 'Z2M.state.hash')
-     * - enableAction: Ob Aktionen erlaubt sind (basierend auf access)
      * - ident: Normalisierter Identifikator
      *
      * @param string $featureId Feature-Identifikator (z.B. 'state', 'state_left')
      * @param array|null $feature Optionales Feature-Array mit weiteren Eigenschaften:
-     *                           - access: Zugriffsrechte (0b010 für Schreibzugriff)
      *                           - type: Datentyp ('enum', 'binary')
      *                           - values: Array möglicher Enum-Werte
+     *                           Hinweis: Access-Rechte werden für EnableAction-Entscheidung
+     *                           an registerVariable() weitergegeben
      *
      * @return array|null Array mit State-Konfiguration oder null wenn kein State-Feature
      *
@@ -4038,20 +4037,22 @@ abstract class ModulBase extends \IPSModule
      * ```php
      * // Standard boolean state
      * $config = $this->getStateConfiguration('state');
-     * // Ergebnis: ['type' => 'switch', 'dataType' => VARIABLETYPE_BOOLEAN, 'profile' => '~Switch', ...]
+     * // Ergebnis: ['type' => 'switch', 'dataType' => VARIABLETYPE_BOOLEAN, 'profile' => '~Switch', 'ident' => 'state']
      *
      * // Enum state mit Profilerstellung
      * $config = $this->getStateConfiguration('state', [
      *     'type' => 'enum',
      *     'values' => ['OPEN', 'CLOSE', 'STOP']
      * ]);
-     * // Ergebnis: ['type' => 'enum', 'dataType' => VARIABLETYPE_STRING, 'profile' => 'Z2M.state.hash', ...]
+     * // Ergebnis: ['type' => 'enum', 'dataType' => VARIABLETYPE_STRING, 'profile' => 'Z2M.state.hash', 'ident' => 'state']
      *
      * // Vordefinierter state
      * $config = $this->getStateConfiguration('valve_state');
-     * // Ergebnis: Konfiguration aus stateDefinitions
+     * // Ergebnis: Konfiguration aus stateDefinitions (ohne enableAction)
      * ```
      *
+     * @see \Zigbee2MQTT\ModulBase::registerVariable() Verwendet die Konfiguration und trifft EnableAction-Entscheidung
+     * @see \Zigbee2MQTT\ModulBase::checkAndEnableAction() Zentrale EnableAction-Logik
      * @see \IPSModule::SendDebug()
      * @see preg_match()
      */
@@ -4065,7 +4066,11 @@ abstract class ModulBase extends \IPSModule
 
             // Prüfe ZUERST auf vordefinierte States
             if (isset(static::$stateDefinitions[$featureId])) {
-                return static::$stateDefinitions[$featureId];
+                $stateConfig = static::$stateDefinitions[$featureId];
+                // Stelle sicher, dass ident und profile Keys existieren
+                $stateConfig['ident'] = $stateConfig['ident'] ?? $featureId;
+                $stateConfig['profile'] = $stateConfig['profile'] ?? '';
+                return $stateConfig;
             }
 
             // Dann auf enum type
@@ -4081,13 +4086,12 @@ abstract class ModulBase extends \IPSModule
                 // Profil anlegen
                 $profileName = $this->registerEnumProfile($enumFeature, 'Z2M.' . $featureId);
 
-                // Daten zur Variavblenregistrierung zurückgeben
+                // Daten zur Variablenregistrierung zurückgeben
                 return [
                     'type'         => 'enum',
                     'dataType'     => VARIABLETYPE_STRING,
                     'values'       => $feature['values'],
                     'profile'      => $profileName,
-                    'enableAction' => (isset($feature['access']) && ($feature['access'] & 0b010) != 0),
                     'ident'        => $featureId
                 ];
             }
@@ -4098,7 +4102,6 @@ abstract class ModulBase extends \IPSModule
                 'dataType'     => VARIABLETYPE_BOOLEAN,
                 'values'       => ['ON', 'OFF'],
                 'profile'      => '~Switch',
-                'enableAction' => (isset($feature['access']) && ($feature['access'] & 0b010) != 0),
                 'ident'        => $featureId
             ];
         }
@@ -4109,9 +4112,6 @@ abstract class ModulBase extends \IPSModule
             // Stelle sicher, dass ident und profile Keys existieren
             $stateConfig['ident'] = $stateConfig['ident'] ?? $featureId;
             $stateConfig['profile'] = $stateConfig['profile'] ?? '';
-            // EnableAction nur wenn explizit definiert oder access-Flag gesetzt
-            $stateConfig['enableAction'] = $stateConfig['enableAction'] ??
-                (isset($feature['access']) && ($feature['access'] & 0b010) != 0);
             return $stateConfig;
         }
 
