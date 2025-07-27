@@ -3673,7 +3673,17 @@ abstract class ModulBase extends \IPSModule
             }
 
             // Zentrale EnableAction-Prüfung für State-Variablen
-            $this->checkAndEnableAction($stateConfig['ident'], is_array($feature) ? $feature : null);
+            // Prüfe erst auf explizite enableAction-Definition in stateConfig
+            if (isset($stateConfig['enableAction'])) {
+                // Explizit definierter enableAction-Wert hat Vorrang
+                if ($stateConfig['enableAction']) {
+                    $this->checkAndEnableAction($stateConfig['ident'], is_array($feature) ? $feature : null, true);
+                }
+                // Wenn explizit false, dann kein EnableAction - auch nicht über Access-Rechte
+            } else {
+                // Kein expliziter enableAction-Wert, verwende Access-basierte Prüfung
+                $this->checkAndEnableAction($stateConfig['ident'], is_array($feature) ? $feature : null);
+            }
             return;
         }
 
