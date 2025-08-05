@@ -316,6 +316,27 @@ trait ColorHelper
     }
 
     /**
+     * getColorMode
+     *
+     * Für Geräte welche verschiedene Modi in der Variable color_mode speichern und nur eine color Variable haben.
+     *
+     * @return string Liefert den Typ für die Funktion setColor
+     *
+     * @see \Zigbee2MQTT\ModulBase::handleColorVariable
+     * @see \Zigbee2MQTT\ModulBase::setColor
+     * @see \IPSModule::GetValue()
+     * @see strtolower()
+     */
+    protected function getColorMode(): string
+    {
+        $mode = @$this->GetValue('color_mode');
+        if (!$mode || $mode == 'XY') {
+            return 'cie';
+        }
+        return strtolower($mode);
+    }
+
+    /**
      * getBrightnessValue
      *
      * Gibt den maximalen und minimalen Helligkeitswert aus der Konfiguration zurück.

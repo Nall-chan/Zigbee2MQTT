@@ -892,7 +892,7 @@ abstract class ModulBase extends \IPSModule
      */
     public function SetColorExt(int $color, int $TransitionTime): bool
     {
-        return $this->setColor($color, 'cie', 'color', $TransitionTime);
+        return $this->setColor($color, $this->getColorMode(), 'color', $TransitionTime);
     }
 
     /**
@@ -2024,17 +2024,21 @@ abstract class ModulBase extends \IPSModule
      *
      * Diese Methode wird aufgerufen, wenn eine Aktion für eine Farbvariable angefordert wird.
      * Sie verarbeitet verschiedene Arten von Farbvariablen basierend auf dem Identifikator der Variable.
+     * Der Identifikator color kann verschiedene Modi abbilden.
+     * Der aktuelle Modus wird aus der Variable color_mode über getColorMode ermittelt.
      *
      * @param string $ident Der Identifikator der Farbvariable.
      * @param mixed $value Der Wert, der mit der Farbvariablen-Aktionsanforderung verbunden ist.
      *
      * @return bool Gibt true zurück, wenn die Aktion erfolgreich verarbeitet wurde, andernfalls false.
      *
-     * @see \Zigbee2MQTT\ModulBase::xyToInt()
+     * @see \Zigbee2MQTT\ColorHelper::getColorMode()
+     * @see \Zigbee2MQTT\ColorHelper::xyToInt()
+     * @see \Zigbee2MQTT\ColorHelper::convertKelvinToMired()
      * @see \Zigbee2MQTT\ModulBase::SendSetCommand()
      * @see \Zigbee2MQTT\ModulBase::SetValueDirect()
      * @see \Zigbee2MQTT\ModulBase::setColor()
-     * @see \Zigbee2MQTT\ModulBase::convertKelvinToMired()
+     * @see \IPSModule::GetValue()
      * @see \IPSModule::SendDebug()
      * @see json_encode()
      * @see is_int()
@@ -2049,7 +2053,8 @@ abstract class ModulBase extends \IPSModule
                 $this->SendDebug(__FUNCTION__, 'Color Value: ' . json_encode($value), 0);
                 if (is_int($value)) { //Schaltaktion aus Symcon
                     if ($this->GetValue('color') !== $value) {
-                        return $this->setColor($value, 'cie');
+                        $mode = $this->getColorMode();
+                        return $this->setColor($value, $mode);
                     }
                     return false;
                 } elseif (is_array($value)) { //Datenempfang
