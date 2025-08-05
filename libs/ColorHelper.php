@@ -325,15 +325,21 @@ trait ColorHelper
      * @see \Zigbee2MQTT\ModulBase::handleColorVariable
      * @see \Zigbee2MQTT\ModulBase::setColor
      * @see \IPSModule::GetValue()
-     * @see strtolower()
      */
     protected function getColorMode(): string
     {
         $mode = @$this->GetValue('color_mode');
-        if (!$mode || $mode == 'XY') {
-            return 'cie';
+        switch ($mode) {
+            case 'HS':
+                return 'hs';
+            case 'HSL':
+                return 'hsl';
+            case 'HSV':
+                return 'hsv';
+            default:
+                return 'cie';
         }
-        return strtolower($mode);
+
     }
 
     /**
