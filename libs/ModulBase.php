@@ -2060,16 +2060,24 @@ abstract class ModulBase extends \IPSModule
                 } elseif (is_array($value)) { //Datenempfang
                     // Prüfen auf x/y Werte im color Array
                     if (isset($value['color']) && isset($value['color']['x']) && isset($value['color']['y'])) {
+                        //  x/y Werte innerhalb color
                         $brightness = $value['brightness'] ?? 254;
                         $this->SendDebug(__FUNCTION__, 'Processing color with brightness: ' . $brightness, 0);
-
                         // Umrechnung der x und y Werte in einen HEX-Wert mit Helligkeit
                         $hexValue = $this->xyToInt($value['color']['x'], $value['color']['y'], $brightness);
                         $this->SetValueDirect('color', $hexValue);
                     } elseif (isset($value['x']) && isset($value['y'])) {
                         // Direkte x/y Werte
                         $brightness = $value['brightness'] ?? 254;
+                        $this->SendDebug(__FUNCTION__, 'Processing color with brightness: ' . $brightness, 0);
+                        // Umrechnung der x und y Werte in einen HEX-Wert mit Helligkeit
                         $hexValue = $this->xyToInt($value['x'], $value['y'], $brightness);
+                        $this->SetValueDirect('color', $hexValue);
+                    } elseif (isset($value['hue']) && isset($value['saturation'])) {
+                        $brightness = $value['brightness'] ?? 254;
+                        $this->SendDebug(__FUNCTION__, 'Processing color with brightness: ' . $brightness, 0);
+                        // Umrechnung der H und S Werte in einen HEX-Wert mit Helligkeit
+                        $hexValue = $this->HSVToInt($value['hue'], $value['saturation'], $brightness);
                         $this->SetValueDirect('color', $hexValue);
                     }
                     return true;
