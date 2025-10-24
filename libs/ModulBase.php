@@ -316,10 +316,13 @@ abstract class ModulBase extends \IPSModule
      * @var array $stateDefinitions Array mit Status-Definitionen
      *
      * Definiert Status-Variablen mit festgelegten Wertebereichen
-     *
+     * @todo die Struktur nutzt VariablenName als Index. Im Code wird aber sowohl ProfileName als auch Ident bzw. features->property benutzt.
+     * Hier ist also irgendwas falsch.
+     * Fix vom 24.10.2025 auf Ident / features->property, da der ProfileName innerhalb des Array vorhanden ist.
+     * 
      * Struktur:
      * [
-     *   'VariablenName' => [
+     *   'VarIdent' => [
      *      'type'     => string,   // Typ der Variable (z.B. 'automode', 'valve')
      *      'dataType' => integer,  // IPS Variablentyp (VARIABLETYPE_*)
      *      'values'   => array,    // Erlaubte Werte für die Variable
@@ -2777,9 +2780,8 @@ abstract class ModulBase extends \IPSModule
         $ProfileName = str_replace('Z2M.Z2M_', 'Z2M.', $ProfileName);
 
         // State-Mapping prüfen
-        if (isset(self::$stateDefinitions[$ProfileName])) {
-            $this->registerStateMappingProfile($ProfileName);
-            return $ProfileName;
+        if (isset(self::$stateDefinitions[$property])) {
+            return $this->registerStateMappingProfile($property);
         }
 
         // Enum-Profil-Logik
@@ -4136,6 +4138,8 @@ abstract class ModulBase extends \IPSModule
 
         // Prüfe auf vordefinierte States wenn kein state pattern matched
         if (isset(static::$stateDefinitions[$featureId])) {
+            // Registriere gefundenes StateMappingProfil
+            $this->registerStateMappingProfile($featureId);
             $stateConfig = static::$stateDefinitions[$featureId];
             // Stelle sicher, dass ident und profile Keys existieren
             $stateConfig['ident'] = $stateConfig['ident'] ?? $featureId;
@@ -4187,11 +4191,11 @@ abstract class ModulBase extends \IPSModule
      * @see \Zigbee2MQTT\ModulBase::RegisterProfileStringEx()
      * @see \IPSModule::SendDebug()
      */
-    private function registerStateMappingProfile(string $ProfileName): ?string
+    private function registerStateMappingProfile(string $featureProperty): ?string
     {
-        $stateInfo = self::$stateDefinitions[$ProfileName];
+        $stateInfo = self::$stateDefinitions[$featureProperty];
         $this->RegisterProfileStringEx(
-            $ProfileName,
+            $stateInfo['profile'],
             '',
             '',
             '',
@@ -4201,8 +4205,8 @@ abstract class ModulBase extends \IPSModule
             ]
         );
 
-        $this->SendDebug(__FUNCTION__, 'State mapping profile created for: ' . $ProfileName, 0);
-        return $ProfileName;
+        $this->SendDebug(__FUNCTION__, 'State mapping profile created for: ' . $stateInfo['profile'], 0);
+        return $stateInfo['profile'];
     }
 
     /**
