@@ -49,4 +49,13 @@ class DevicesTest extends DumpInclude
         $this->assertSame(count($Debug['LastPayload'], COUNT_RECURSIVE), count(IPS_GetChildrenIDs($iid)));
         // Weitere Tests möglich
     }
+
+    public function _testTS0601_thermostat()
+    {
+        [$iid,$Debug] = $this->createTestInstance('TS0601_thermostat.json');
+        // Wurden alle Variablen aus Payload verarbeitet und in Symcon angelegt?
+        $this->assertSame(count($Debug['Childs']), count(IPS_GetChildrenIDs($iid)));
+        $this->assertSame(count($Debug['LastPayload'], COUNT_RECURSIVE), count(IPS_GetChildrenIDs($iid)));
+        // Weitere Tests möglich
+    }
 }

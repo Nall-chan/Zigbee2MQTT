@@ -308,7 +308,7 @@ abstract class ModulBase extends \IPSModule
         'update__installed_version' => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Installed Version', 'profile' => ''],
         'update__latest_version'    => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Latest Version', 'profile' => ''],
         'update__state'             => ['type' => VARIABLETYPE_STRING, 'name' => 'Update State', 'profile' => ''],
-        'update__progress'          => ['type' => VARIABLETYPE_FLOAT, 'name' => 'Update Progress', 'profile' =>'~Progress'],
+        'update__progress'          => ['type' => VARIABLETYPE_FLOAT, 'name' => 'Update Progress', 'profile' => '~Progress'],
         'update__remaining'         => ['type' => VARIABLETYPE_FLOAT, 'name' => 'Update Remaining', 'profile' => '']
     ];
 
@@ -319,7 +319,7 @@ abstract class ModulBase extends \IPSModule
      * @todo die Struktur nutzt VariablenName als Index. Im Code wird aber sowohl ProfileName als auch Ident bzw. features->property benutzt.
      * Hier ist also irgendwas falsch.
      * Fix vom 24.10.2025 auf Ident / features->property, da der ProfileName innerhalb des Array vorhanden ist.
-     * 
+     *
      * Struktur:
      * [
      *   'VarIdent' => [
