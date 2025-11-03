@@ -11,7 +11,7 @@ class DevicesTest extends DumpInclude
         [$iid,$Debug] = $this->createTestInstance('TRV06.json');
         // Wurden alle Variablen aus Payload verarbeitet und in Symcon angelegt?
         $this->assertSame(count($Debug['Childs']), count(IPS_GetChildrenIDs($iid)));
-        $this->assertSame(count($Debug['LastPayload'], COUNT_RECURSIVE), count(IPS_GetChildrenIDs($iid)));
+        $this->assertSame(count($Debug['LastPayload'], COUNT_RECURSIVE), count(IPS_GetChildrenIDs($iid)) - 1);
         // Weitere Tests möglich
     }
     public function _test701721()
@@ -19,24 +19,24 @@ class DevicesTest extends DumpInclude
         [$iid,$Debug] = $this->createTestInstance('701721.json');
         // Wurden alle Variablen aus Payload verarbeitet und in Symcon angelegt?
         $this->assertSame(count($Debug['Childs']), count(IPS_GetChildrenIDs($iid)));
-        $this->assertSame(count($Debug['LastPayload'], COUNT_RECURSIVE), count(IPS_GetChildrenIDs($iid)));
+        $this->assertSame(count($Debug['LastPayload'], COUNT_RECURSIVE), count(IPS_GetChildrenIDs($iid)) - 1);
         // Weitere Tests möglich
     }
-    public function _testTS130F()
+    public function testTS130F()
     {
         [$iid,$Debug] = $this->createTestInstance('TS130F.json');
         // Wurden alle Variablen aus Payload verarbeitet und in Symcon angelegt?
         $this->assertSame(count($Debug['Childs']), count(IPS_GetChildrenIDs($iid)));
-        $this->assertSame(count($Debug['LastPayload'], COUNT_RECURSIVE), count(IPS_GetChildrenIDs($iid)));
+        $this->assertSame(count($Debug['LastPayload'], COUNT_RECURSIVE), count(IPS_GetChildrenIDs($iid)) - 1);
         // Weitere Tests möglich
     }
 
-    public function _testWHD02()
+    public function testWHD02()
     {
         [$iid,$Debug] = $this->createTestInstance('TS130F.json');
         // Wurden alle Variablen aus Payload verarbeitet und in Symcon angelegt?
         $this->assertSame(count($Debug['Childs']), count(IPS_GetChildrenIDs($iid)));
-        $this->assertSame(count($Debug['LastPayload'], COUNT_RECURSIVE), count(IPS_GetChildrenIDs($iid)));
+        $this->assertSame(count($Debug['LastPayload'], COUNT_RECURSIVE), count(IPS_GetChildrenIDs($iid)) - 1);
         // Weitere Tests möglich
     }
 
@@ -46,7 +46,7 @@ class DevicesTest extends DumpInclude
         // Wurden alle Variablen aus Payload verarbeitet und in Symcon angelegt?
 
         $this->assertSame(count($Debug['Childs']), count(IPS_GetChildrenIDs($iid)));
-        $this->assertSame(count($Debug['LastPayload'], COUNT_RECURSIVE), count(IPS_GetChildrenIDs($iid)));
+        $this->assertSame(count($Debug['LastPayload'], COUNT_RECURSIVE), count(IPS_GetChildrenIDs($iid)) - 1);
         // Weitere Tests möglich
     }
 
@@ -55,7 +55,15 @@ class DevicesTest extends DumpInclude
         [$iid,$Debug] = $this->createTestInstance('TS0601_thermostat.json');
         // Wurden alle Variablen aus Payload verarbeitet und in Symcon angelegt?
         $this->assertSame(count($Debug['Childs']), count(IPS_GetChildrenIDs($iid)));
-        $this->assertSame(count($Debug['LastPayload'], COUNT_RECURSIVE), count(IPS_GetChildrenIDs($iid)));
+        $this->assertSame(count($Debug['LastPayload'], COUNT_RECURSIVE), count(IPS_GetChildrenIDs($iid)) - 1);
+        // Weitere Tests möglich
+    }
+    public function testRTCGQ01LM()
+    {
+        [$iid,$Debug] = $this->createTestInstance('RTCGQ01LM.json');
+        // Wurden alle Variablen aus Payload verarbeitet und in Symcon angelegt?
+        $this->assertSame(count($Debug['Childs']), count(IPS_GetChildrenIDs($iid)));
+        $this->assertSame(count($Debug['LastPayload'], COUNT_RECURSIVE), count(IPS_GetChildrenIDs($iid)) - 1);
         // Weitere Tests möglich
     }
 }

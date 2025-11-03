@@ -15,6 +15,7 @@
         "ObjectIsLocked": false,
         "HasChildren": true,
         "ChildrenIDs": [
+            12548,
             30293,
             11379,
             34610,
@@ -496,6 +497,38 @@
         "window_open_internal": "closed"
     },
     "Childs": {
+        "12548": {
+            "ParentID": 35861,
+            "ObjectID": 12548,
+            "ObjectType": 2,
+            "ObjectIdent": "device_status",
+            "ObjectName": "Verfügbarkeit",
+            "ObjectInfo": "",
+            "ObjectIcon": "",
+            "ObjectSummary": "",
+            "ObjectPosition": 0,
+            "ObjectIsReadOnly": false,
+            "ObjectIsHidden": false,
+            "ObjectIsDisabled": false,
+            "ObjectIsLocked": false,
+            "HasChildren": false,
+            "ChildrenIDs": [],
+            "VariableID": 12548,
+            "VariableProfile": "Z2M.DeviceStatus",
+            "VariableAction": 0,
+            "VariableCustomProfile": "",
+            "VariableCustomAction": 0,
+            "VariableUpdated": 1762177931,
+            "VariableChanged": 1740930939,
+            "VariablePresentation": {
+                "PRESENTATION": "{4153A8D4-5C33-C65F-C1F3-7B61AAF99B1C}",
+                "PROFILE": "Z2M.DeviceStatus"
+            },
+            "VariableCustomPresentation": [],
+            "VariableType": 0,
+            "VariableValue": true,
+            "VariableIsLocked": false
+        },
         "30293": {
             "ParentID": 58232,
             "ObjectID": 30293,

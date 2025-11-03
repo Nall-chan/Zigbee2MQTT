@@ -185,7 +185,92 @@ Bitte den einzelnen Modulen entnehmen:
 
 ## 5. Changelog  
 
-**Version 5.0:**  
+**Version 5.31:**  
+- Fehlermeldung Profil Z2M.AutoLock existiert nicht behoben  
+- Bridge Instanz erkennt ZH Version 6.X  
+- Alle Instanzen mit einer "Occupancy"/"Bewegung" Variable unterstützen, sofern in Z2M eingerichtet, auch die "No Occupancy Since"/"Keine Bewegung seit" Variable  
+- interne Modul Tests erweitert  
+  
+**Version 5.26:**  
+- Diverse Fixes betreffend der Fehlermeldungen Undefined array key  
+- Die Aktion "Helligkeit mit Übergang" war defekt  
+- Geändertes Verhalten beim schalten der Farbe, basierend auf dem aktiven Farbmodus  
+- Color Datenempfang um Hue / Saturation ergänzt  
+- Bridge Instanz erkennt ZH Version 5.X  
+
+**Version 5.25:**
+- Erste Version als stable im Store erhältlich  
+- Letzte Änderung war nun das Entfernen von Debug Meldungen aus dem Logfile  
+
+**Version 5.22:**  
+- Durch das aktiveren von Include device information in Z2M werden keine Variablen mehr in Symcon angelegt  
+
+**Version 5.20:** 
+- Diverse Übersetzungen ergänzt (Nachträglich werden diese bei Variablen nicht angepasst!)  
+- Fix für Smoke Profile (~Alert)  
+- Fix für Boolean Profile, wo Variablen als Boolean und Profile als String angelegt wurden  
+- Dateiname des Debug Download enthält den Modelnamen  
+
+**Version 5.19:**
+- Diverse Übersetzungen ergänzt (Nachträglich werden diese bei Variablen nicht angepasst!)  
+- contact, tamper Variablen erhalten korrekte Standard-Profile (~Window.Reserved bzw ~Alert)  
+- Fix für color_temp_kelvin Variable  
+
+**Version 5.18:**  
+- Preset Variablen (Voreinstellungen) zeigen den zuletzt empfangenen / gesendeten Wert an  
+- Übersetzungen von Profil zu Voreinstellungen geändert. (Hat keinen Einfluss auf vorhandenen Variablen)  
+
+**Version 5.17:**  
+- Das Debug Download war teilweise defekt  
+  
+**Version 5.16:**  
+- Instanzen welche als Topic einen Anfang von anderen Topics enthielten, haben falsche Daten empfangen und verarbeitet (z.B. Topic "Flur" hat auch Daten von Topics "Flur 01", "Flur 02", "Flur hinten" verarbeitet)  
+  
+**Version 5.15:**  
+- Erweiterung bei Update Variablen  
+- Einführung der Instanz-Funktionen Z2M_WriteValueBoolean, Z2M_WriteValueInteger, Z2M_WriteValueFloat und Z2M_WriteValueString für PHP-Skripte  
+
+**Version 5.13:**  
+- Erweiterung der Variablen-Erstellung auf die ‚list‘-Exposes, welche vorher nicht beachtet wurden  
+- fehlende Übersetzungen ergänzt  
+- Fehler bei Discovery Instanz sollte behoben sein  
+
+**Version 5.12:**  
+- Array und Composite Variablen (z.b. Update, Level-Config usw.) sind Variablen verfügbar  
+
+**Version 5.11:**  
+- Child Lock konnte nicht geschaltet werden  
+- einige Text Variablen wurden nicht angelegt (z.B. die Schedule Variablen)  
+- Fehlende Übersetzungen ergänzt (werden nur beim neu Anlegen von Variablen/Profilen berücksichtigt)  
+- Debug Download bei Gruppen war defekt  
+- JSON Datei für fehlende Übersetzungen konnte kaputt gehen  
+- Fehlende Übersetzungen werden im Debug Download einbezogen  
+- Fehlende Übersetzungen können in der Instanz-Konfig angezeigt werden (nur wenn es welche gibt)  
+
+**Version 5.10:**  
+- Fix für nicht vorhandene Profile bei Text Datentypen  
+
+**Version 5.09:**  
+- Fix für 32-Bit Int zu Float Überlauf bei last_seen behoben  
+
+**Version 5.08:**  
+- diverse fixes für die Migration → einige Idents konnten nicht übertragen werden (z.B. Z2M_SmokeDensityDBM, Z2M_Window_OpenFeature, Z2M_PiHeatingDemand etc)  
+- Variablen welche aufgrund eines (früher) falschen Variablentyps nicht migriert werden können, werden übersprungen  
+- last_seen wird immer als integer behandelt.
+- calibration_time wird immer auf float und countdown* immer auf int gemappt  
+- Debug JSON um unnötige Verschachtlungen reduziert  
+  
+**Version 5.05:**  
+- Debug Download eingeführt  
+- Discovery Instanz verfügbar
+- Konfigurator erkennt falsch zugeordnete MQTT-Server/Clients  
+
+**Version 5.01:**  
+- diverse Profile von float zu int umgestellt  
+- Extension filtert Gruppen ohne Namen aus (vermutlich Reste aus alten Z2M Versionen)  
+- Migrate hat State Variablen nicht korrekt verarbeitet  
+
+**Version 5.00:**  
 - Kompatibilität mit Zigbee2MQTT Version 2.0 hergestellt  
 - Geräte erkennen automatisch die Features und Exposes und erstellen die benötigten Variablen mit den entsprechenden Profilen eigenständig  
   -  Somit keine missing exposes Debugs mehr nötig!  

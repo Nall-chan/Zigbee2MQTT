@@ -293,23 +293,24 @@ abstract class ModulBase extends \IPSModule
      *   - ident?: string Optional: Benutzerdefinierter Identifier
      */
     protected static $specialVariables = [
-        'last_seen'                 => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Last Seen', 'profile' => '~UnixTimestamp'],
-        'color_mode'                => ['type' => VARIABLETYPE_STRING, 'name' => 'Color Mode', 'profile' => ''],
-        'update'                    => ['type' => VARIABLETYPE_STRING, 'name' => 'Firmware Update Status', 'profile' => ''],
-        'device_temperature'        => ['type' => VARIABLETYPE_FLOAT, 'name' => 'Device Temperature', 'profile' => '~Temperature'],
-        'brightness'                => ['type' => VARIABLETYPE_INTEGER, 'ident' => 'brightness', 'profile' => '~Intensity.100'],
-        'brightness_l1'             => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l1', 'profile' => '~Intensity.100'],
-        'brightness_l2'             => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l2', 'profile' => '~Intensity.100'],
-        'voltage'                   => ['type' => VARIABLETYPE_FLOAT, 'ident' => 'voltage', 'profile' => '~Volt'],
-        'calibration_time'          => ['type' => VARIABLETYPE_FLOAT, 'profile' => ''],
-        'countdown'                 => ['type' => VARIABLETYPE_INTEGER, 'profile' => ''],
-        'countdown_l1'              => ['type' => VARIABLETYPE_INTEGER, 'profile' => ''],
-        'countdown_l2'              => ['type' => VARIABLETYPE_INTEGER, 'profile' => ''],
-        'update__installed_version' => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Installed Version', 'profile' => ''],
-        'update__latest_version'    => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Latest Version', 'profile' => ''],
-        'update__state'             => ['type' => VARIABLETYPE_STRING, 'name' => 'Update State', 'profile' => ''],
-        'update__progress'          => ['type' => VARIABLETYPE_FLOAT, 'name' => 'Update Progress', 'profile' => '~Progress'],
-        'update__remaining'         => ['type' => VARIABLETYPE_FLOAT, 'name' => 'Update Remaining', 'profile' => '']
+        'last_seen'                  => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Last Seen', 'profile' => '~UnixTimestamp'],
+        'color_mode'                 => ['type' => VARIABLETYPE_STRING, 'name' => 'Color Mode', 'profile' => ''],
+        'update'                     => ['type' => VARIABLETYPE_STRING, 'name' => 'Firmware Update Status', 'profile' => ''],
+        'device_temperature'         => ['type' => VARIABLETYPE_FLOAT, 'name' => 'Device Temperature', 'profile' => '~Temperature'],
+        'brightness'                 => ['type' => VARIABLETYPE_INTEGER, 'ident' => 'brightness', 'profile' => '~Intensity.100'],
+        'brightness_l1'              => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l1', 'profile' => '~Intensity.100'],
+        'brightness_l2'              => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l2', 'profile' => '~Intensity.100'],
+        'voltage'                    => ['type' => VARIABLETYPE_FLOAT, 'ident' => 'voltage', 'profile' => '~Volt'],
+        'calibration_time'           => ['type' => VARIABLETYPE_FLOAT, 'profile' => ''],
+        'countdown'                  => ['type' => VARIABLETYPE_INTEGER, 'profile' => ''],
+        'countdown_l1'               => ['type' => VARIABLETYPE_INTEGER, 'profile' => ''],
+        'countdown_l2'               => ['type' => VARIABLETYPE_INTEGER, 'profile' => ''],
+        'update__installed_version'  => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Installed Version', 'profile' => ''],
+        'update__latest_version'     => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Latest Version', 'profile' => ''],
+        'update__state'              => ['type' => VARIABLETYPE_STRING, 'name' => 'Update State', 'profile' => ''],
+        'update__progress'           => ['type' => VARIABLETYPE_FLOAT, 'name' => 'Update Progress', 'profile' => '~Progress'],
+        'update__remaining'          => ['type' => VARIABLETYPE_FLOAT, 'name' => 'Update Remaining', 'profile' => ''],
+        'no_occupancy_since'         => ['type' => VARIABLETYPE_INTEGER, 'name' => 'No occupancy since', 'profile' => '~Duration']
     ];
 
     /**
@@ -3512,6 +3513,11 @@ abstract class ModulBase extends \IPSModule
         foreach ($filteredFeatures as $feature) {
             $variableName = trim(strtolower($feature['property']));
             $knownVariables[$variableName] = $feature;
+            if ($variableName == 'occupancy') {
+                $knownVariables['no_occupancy_since'] = [
+                    'property'=> 'no_occupancy_since'
+                ];
+            }
         }
 
         $this->SendDebug(__FUNCTION__ . ' Known Variables Array:', json_encode($knownVariables), 0);

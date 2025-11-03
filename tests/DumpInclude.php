@@ -72,6 +72,7 @@ class DumpInclude extends TestCase
         $Topic = $Debug['Config']['MQTTBaseTopic'] . '/' . $Debug['Config']['MQTTTopic']; // Topic aus Debug JSON Config ableiten
         $Payload = $Debug['LastPayload']; // Payload aus Debug JSON laden
         $Payload['exposes'] = $Debug['Exposes']; // Exposes ergänzen
+        $intf->ReceiveData(self::BuildRequest($Topic . '/availability', ['state'=>'online'])); // Daten an die Instanz senden
         $intf->ReceiveData(self::BuildRequest($Topic, $Payload)); // Daten an die Instanz senden
         unset($Payload['exposes']);
         return [$iid, $Debug];
