@@ -4178,7 +4178,7 @@ abstract class ModulBase extends \IPSModule
      */
     private static function getFullRangeProfileName($feature): string
     {
-        $name = 'Z2M.' . $feature['name'];
+        $name = 'Z2M.' . str_replace('&', '_and_', $feature['name']);
         $valueMin = $feature['value_min'] ?? null;
         $valueMax = $feature['value_max'] ?? null;
 
