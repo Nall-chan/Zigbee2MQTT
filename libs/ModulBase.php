@@ -2779,6 +2779,7 @@ abstract class ModulBase extends \IPSModule
 
         // Entferne das doppelte Präfix, falls vorhanden
         $ProfileName = str_replace('Z2M.Z2M_', 'Z2M.', $ProfileName);
+        $ProfileName = str_replace('&', '', $ProfileName);
 
         // State-Mapping prüfen
         if (isset(self::$stateDefinitions[$property])) {
@@ -3815,9 +3816,6 @@ abstract class ModulBase extends \IPSModule
                     $itemFeature['property'] = $property . '_item';
                     $this->registerVariable($itemFeature);
                 }
-
-                // Zentrale EnableAction-Prüfung für list-Variable
-                $this->checkAndEnableAction($property, $feature);
                 break;
 
             default:
@@ -3825,9 +3823,10 @@ abstract class ModulBase extends \IPSModule
                 return;
         }
 
-        // Zentrale EnableAction-Prüfung für die Hauptvariable
-        $this->checkAndEnableAction($property, $feature);
-
+        // Zentrale EnableAction-Prüfung für die Hauptvariable, außer bei composite
+        if ($variableType != 'composite') {
+            $this->checkAndEnableAction($property, $feature);
+        }
         // Zusätzliche Registrierung der color_temp_kelvin Variable, wenn color_temp registriert wird
         if ($property === 'color_temp') {
             $kelvinIdent = $property . '_kelvin';
