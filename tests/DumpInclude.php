@@ -70,6 +70,9 @@ class DumpInclude extends TestCase
         IPS_ApplyChanges($iid);
         $intf->BUFFER_MQTT_SUSPENDED = false; // Instanz zwangsweise aktivieren, da keine MessageSink vorhanden ist.
         $Topic = $Debug['Config']['MQTTBaseTopic'] . '/' . $Debug['Config']['MQTTTopic']; // Topic aus Debug JSON Config ableiten
+        if (isset($Debug['LastPayload']['device'])) {
+            unset($Debug['LastPayload']['device']);
+        }
         $Payload = $Debug['LastPayload']; // Payload aus Debug JSON laden
         $Payload['exposes'] = $Debug['Exposes']; // Exposes ergänzen
         $intf->ReceiveData(self::BuildRequest($Topic . '/availability', ['state'=>'online'])); // Daten an die Instanz senden
@@ -90,5 +93,16 @@ class DumpInclude extends TestCase
             JSON_UNESCAPED_SLASHES
         );
     }
-
+    public static function count_recursive(array $array): int
+    {
+        $count = 0;
+        foreach ($array as $_array) {
+            if (is_countable($_array)) {
+                $count += self::count_recursive($_array);
+            } else {
+                $count += 1;
+            }
+        }
+        return $count;
+    }
 }

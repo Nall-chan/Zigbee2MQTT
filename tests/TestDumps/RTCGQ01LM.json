@@ -498,9 +498,5 @@
             "IsReadOnly": true
         }
     },
-    "missingTranslations": [
-        {
-            "lable": "No Occupancy Since"
-        }
-    ]
+    "missingTranslations": []
 }

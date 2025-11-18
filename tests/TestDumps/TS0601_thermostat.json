@@ -25,7 +25,6 @@
             40464,
             23438,
             42829,
-            56100,
             21383,
             19221,
             19135,
@@ -386,7 +385,13 @@
             "value_min": 0
         }
     ],
-    "LastPayload": [],
+    "LastPayload": {
+        "update": {
+            "installed_version": 87,
+            "latest_version": 87,
+            "state": "idle"
+        }
+    },
     "Childs": {
         "58872": {
             "ParentID": 39055,
@@ -703,35 +708,6 @@
             "VariableCustomPresentation": [],
             "VariableType": 2,
             "VariableValue": 0,
-            "VariableIsLocked": false
-        },
-        "56100": {
-            "ParentID": 39055,
-            "ObjectID": 56100,
-            "ObjectType": 2,
-            "ObjectIdent": "update",
-            "ObjectName": "Update",
-            "ObjectInfo": "",
-            "ObjectIcon": "",
-            "ObjectSummary": "",
-            "ObjectPosition": 0,
-            "ObjectIsReadOnly": false,
-            "ObjectIsHidden": false,
-            "ObjectIsDisabled": false,
-            "ObjectIsLocked": false,
-            "HasChildren": false,
-            "ChildrenIDs": [],
-            "VariableID": 56100,
-            "VariableProfile": "",
-            "VariableAction": 0,
-            "VariableCustomProfile": "",
-            "VariableCustomAction": 0,
-            "VariableUpdated": 1737244923,
-            "VariableChanged": 1737242151,
-            "VariablePresentation": [],
-            "VariableCustomPresentation": [],
-            "VariableType": 0,
-            "VariableValue": true,
             "VariableIsLocked": false
         },
         "21383": {
@@ -1816,18 +1792,5 @@
             "IsReadOnly": false
         }
     },
-    "missingTranslations": [
-        {
-            "lable": "Auto Lock"
-        },
-        {
-            "value": "5+2"
-        },
-        {
-            "value": "6+1"
-        },
-        {
-            "value": "7"
-        }
-    ]
+    "missingTranslations": []
 }
