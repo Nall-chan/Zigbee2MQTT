@@ -582,6 +582,13 @@ abstract class ModulBase extends \IPSModule
                 $this->SendDebug(__FUNCTION__, 'Verarbeite Preset: ' . $ident, 0);
                 return $this->handlePresetVariable($ident, $value);
             },
+            // Behandelt _and_ Keys - WICHTIG: Vor dem Composite Key Check!
+            strpos($ident, '_and_') !== false => function () use ($ident, $value)
+            {
+                $ident = str_replace('_and_', '&', $ident);
+                $this->SendDebug(__FUNCTION__, 'recall action: ' . $ident, 0);
+                return $this->RequestAction($ident, $value);
+            },
             // Behandelt Composite Keys (z.B. color_options__execute_if_off)
             strpos($ident, '__') !== false => function () use ($ident, $value)
             {
@@ -2779,7 +2786,7 @@ abstract class ModulBase extends \IPSModule
 
         // Entferne das doppelte Präfix, falls vorhanden
         $ProfileName = str_replace('Z2M.Z2M_', 'Z2M.', $ProfileName);
-        $ProfileName = str_replace('&', '', $ProfileName);
+        $ProfileName = str_replace('&', '_and_', $ProfileName);
 
         // State-Mapping prüfen
         if (isset(self::$stateDefinitions[$property])) {
@@ -3742,27 +3749,27 @@ abstract class ModulBase extends \IPSModule
         }
 
         // Registrierung der Variable basierend auf dem Variablentyp
-
+        $ident = str_replace('&', '_and_', $property);
         switch ($variableType) {
             case 'bool':
                 $this->SendDebug(__FUNCTION__, 'Registering Boolean Variable: ' . $property, 0);
-                $this->RegisterVariableBoolean($property, $this->Translate($this->convertLabelToName($property)), $profileName);
+                $this->RegisterVariableBoolean($ident, $this->Translate($this->convertLabelToName($property)), $profileName);
                 break;
             case 'int':
                 $this->SendDebug(__FUNCTION__, 'Registering Integer Variable: ' . $property, 0);
-                $this->RegisterVariableInteger($property, $this->Translate($this->convertLabelToName($property)), $profileName);
+                $this->RegisterVariableInteger($ident, $this->Translate($this->convertLabelToName($property)), $profileName);
                 break;
             case 'float':
                 $this->SendDebug(__FUNCTION__, 'Registering Float Variable: ' . $property, 0);
-                $this->RegisterVariableFloat($property, $this->Translate($this->convertLabelToName($property)), $profileName);
+                $this->RegisterVariableFloat($ident, $this->Translate($this->convertLabelToName($property)), $profileName);
                 break;
             case 'string':
                 $this->SendDebug(__FUNCTION__, 'Registering String Variable: ' . $property, 0);
-                $this->RegisterVariableString($property, $this->Translate($this->convertLabelToName($property)), $profileName);
+                $this->RegisterVariableString($ident, $this->Translate($this->convertLabelToName($property)), $profileName);
                 break;
             case 'text':
                 $this->SendDebug(__FUNCTION__, 'Registering Text Variable: ' . $property, 0);
-                $this->RegisterVariableString($property, $this->Translate($this->convertLabelToName($property))); // Kein Profilname übergeben
+                $this->RegisterVariableString($ident, $this->Translate($this->convertLabelToName($property))); // Kein Profilname übergeben
                 break;
                 // Zusätzliche Registrierung für 'composite' Farb-Variablen
             case 'composite':
@@ -3779,7 +3786,8 @@ abstract class ModulBase extends \IPSModule
                     foreach ($feature['features'] as $subFeature) {
                         // Bilde Sub-Properties
                         $subProperty = $subFeature['property'];
-                        $subFeature['property'] = $property . '__' . $subProperty;
+                        $subProperty = str_replace('&', '_and_', $subFeature['property']);
+                        $subFeature['property'] = $ident . '__' . $subProperty;
 
                         // Preset-Handling für Sub-Features
                         if (isset($subFeature['presets'])) {
@@ -3806,14 +3814,14 @@ abstract class ModulBase extends \IPSModule
             case 'list':
                 // Hauptvariable als JSON Array
                 $this->RegisterVariableString(
-                    $property,
+                    $ident,
                     $this->Translate($this->convertLabelToName($property))
                 );
 
                 // Registriere item_type als composite
                 if (isset($feature['item_type'])) {
                     $itemFeature = $feature['item_type'];
-                    $itemFeature['property'] = $property . '_item';
+                    $itemFeature['property'] = $ident . '_item';
                     $this->registerVariable($itemFeature);
                 }
                 break;
@@ -3825,7 +3833,7 @@ abstract class ModulBase extends \IPSModule
 
         // Zentrale EnableAction-Prüfung für die Hauptvariable, außer bei composite
         if ($variableType != 'composite') {
-            $this->checkAndEnableAction($property, $feature);
+            $this->checkAndEnableAction($ident, $feature);
         }
         // Zusätzliche Registrierung der color_temp_kelvin Variable, wenn color_temp registriert wird
         if ($property === 'color_temp') {

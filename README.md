@@ -197,6 +197,10 @@ Bitte den einzelnen Modulen entnehmen:
 
 ## 5. Changelog  
 
+**Version 5.34:**
+
+- Das `&` Zeichen wird bei feature / Property zu `_and_` ersetzt.
+
 **Version 5.33:**
 
 - Bei composite wurde versucht für eine nicht vorhandene Hauptvariable eine Aktion zu setzen.  
