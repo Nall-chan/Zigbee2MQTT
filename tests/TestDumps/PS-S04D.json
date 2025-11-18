@@ -87,11 +87,11 @@
         }
     },
     "Model": "PS-S04D",
-    "ModelUrl": "https:\/\/www.zigbee2mqtt.io\/devices\/PS-S04D.html",
+    "ModelUrl": "https://www.zigbee2mqtt.io/devices/PS-S04D.html",
     "Config": {
         "IEEE": "0x54ef44100146e47d",
         "MQTTBaseTopic": "zigbee2mqtt",
-        "MQTTTopic": "Stube\/Presence-PIR"
+        "MQTTTopic": "Stube/Presence-PIR"
     },
     "Exposes": [
         {
@@ -241,7 +241,7 @@
             "type": "numeric",
             "property": "temperature",
             "description": "Measured temperature value",
-            "unit": "\u00b0C"
+            "unit": "°C"
         },
         {
             "name": "spatial_learning",
@@ -323,7 +323,7 @@
             "type": "numeric",
             "property": "temp_reporting_threshold",
             "description": "Reporting will trigger as temperature change reaches this value when in custom mode.",
-            "unit": "\u00b0C",
+            "unit": "°C",
             "value_max": 3,
             "value_min": 0.2,
             "value_step": 0.1
@@ -729,7 +729,7 @@
             "access": 7,
             "type": "binary",
             "property": "led_disabled_night",
-            "description": "Enables\/disables LED indicator at night",
+            "description": "Enables/disables LED indicator at night",
             "category": "config",
             "value_on": true,
             "value_off": false
@@ -764,8 +764,8 @@
         }
     ],
     "LastPayload": {
-        "spatial_learning":"",
-        "restart_device":"",
+        "spatial_learning": "",
+        "restart_device": "",
         "absence_delay_timer": 10,
         "ai_interference_source_selfidentification": "ON",
         "ai_sensitivity_adaptive": "ON",
@@ -799,7 +799,7 @@
         },
         "detection_range_prefix": 768,
         "device": {
-            "friendlyName": "Stube\/Presence-PIR",
+            "friendlyName": "Stube/Presence-PIR",
             "ieeeAddr": "0x54ef44100146e47d",
             "manufacturerID": 4447,
             "manufacturerName": "Aqara",
@@ -879,7 +879,7 @@
             "ObjectID": 41365,
             "ObjectType": 2,
             "ObjectIdent": "power_outage_count",
-            "ObjectName": "Stromausfall Z\u00e4hler",
+            "ObjectName": "Stromausfall Zähler",
             "ObjectInfo": "",
             "ObjectIcon": "",
             "ObjectSummary": "",
@@ -1266,7 +1266,7 @@
             "ObjectID": 19457,
             "ObjectType": 2,
             "ObjectIdent": "spatial_learning",
-            "ObjectName": "R\u00e4umliches Lernen",
+            "ObjectName": "Räumliches Lernen",
             "ObjectInfo": "",
             "ObjectIcon": "",
             "ObjectSummary": "",
@@ -2482,7 +2482,7 @@
             "ObjectID": 22805,
             "ObjectType": 2,
             "ObjectIdent": "linkquality",
-            "ObjectName": "Verbindungsqualit\u00e4t",
+            "ObjectName": "Verbindungsqualität",
             "ObjectInfo": "",
             "ObjectIcon": "",
             "ObjectSummary": "",
@@ -2636,7 +2636,7 @@
             "ObjectID": 56869,
             "ObjectType": 2,
             "ObjectIdent": "illuminance",
-            "ObjectName": "Beleuchtungsst\u00e4rke",
+            "ObjectName": "Beleuchtungsstärke",
             "ObjectInfo": "",
             "ObjectIcon": "",
             "ObjectSummary": "",
@@ -2838,7 +2838,7 @@
             "ProfileType": 2,
             "Icon": "Temperature",
             "Prefix": "",
-            "Suffix": " \u00b0C",
+            "Suffix": " °C",
             "MinValue": -30,
             "MaxValue": 70,
             "StepSize": 5,

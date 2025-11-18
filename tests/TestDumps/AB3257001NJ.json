@@ -34,7 +34,7 @@
         }
     },
     "Model": "AB3257001NJ",
-    "ModelUrl": "https:\/\/www.zigbee2mqtt.io\/devices\/AB3257001NJ.html",
+    "ModelUrl": "https://www.zigbee2mqtt.io/devices/AB3257001NJ.html",
     "Config": {
         "IEEE": "0x7cb03eaa00afc40c",
         "MQTTBaseTopic": "zigbee2mqtt",
@@ -50,7 +50,7 @@
                     "access": 7,
                     "type": "binary",
                     "property": "state",
-                    "description": "On\/off state of the switch",
+                    "description": "On/off state of the switch",
                     "value_on": "ON",
                     "value_off": "OFF",
                     "value_toggle": "TOGGLE"
@@ -81,7 +81,7 @@
             "ObjectID": 23695,
             "ObjectType": 2,
             "ObjectIdent": "linkquality",
-            "ObjectName": "Verbindungsqualit\u00e4t",
+            "ObjectName": "Verbindungsqualität",
             "ObjectInfo": "",
             "ObjectIcon": "",
             "ObjectSummary": "",
@@ -162,7 +162,7 @@
             "ObjectID": 58352,
             "ObjectType": 2,
             "ObjectIdent": "device_status",
-            "ObjectName": "Verf\u00fcgbarkeit",
+            "ObjectName": "Verfügbarkeit",
             "ObjectInfo": "",
             "ObjectIcon": "",
             "ObjectSummary": "",

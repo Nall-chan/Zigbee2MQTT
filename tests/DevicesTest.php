@@ -85,7 +85,7 @@ class DevicesTest extends DumpInclude
         $this->assertSame(self::count_recursive($Debug['LastPayload']), count(IPS_GetChildrenIDs($iid)) - 1);
         // Weitere Tests möglich
     }
-    
+
     public function testAB3257001NJ()
     {
         [$iid,$Debug] = $this->createTestInstance('AB3257001NJ.json');

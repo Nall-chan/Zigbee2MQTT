@@ -80,6 +80,18 @@ class DumpInclude extends TestCase
         unset($Payload['exposes']);
         return [$iid, $Debug];
     }
+    public static function count_recursive(array $array): int
+    {
+        $count = 0;
+        foreach ($array as $_array) {
+            if (is_countable($_array)) {
+                $count += self::count_recursive($_array);
+            } else {
+                $count += 1;
+            }
+        }
+        return $count;
+    }
     private static function BuildRequest(string $Topic, array $Payload)
     {
         return json_encode(
@@ -92,17 +104,5 @@ class DumpInclude extends TestCase
             ),
             JSON_UNESCAPED_SLASHES
         );
-    }
-    public static function count_recursive(array $array): int
-    {
-        $count = 0;
-        foreach ($array as $_array) {
-            if (is_countable($_array)) {
-                $count += self::count_recursive($_array);
-            } else {
-                $count += 1;
-            }
-        }
-        return $count;
     }
 }
