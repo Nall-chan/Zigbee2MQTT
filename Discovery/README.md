@@ -1,13 +1,16 @@
-[![Version](https://img.shields.io/badge/Symcon-PHPModul-red.svg)](https://www.symcon.de/service/dokumentation/entwicklerbereich/sdk-tools/sdk-php/)
-![Version](https://img.shields.io/badge/Symcon%20Version-7.0%20%3E-blue.svg)
-[![License](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-green.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)  
+[![SDK](https://img.shields.io/badge/Symcon-PHPModul-red.svg)](https://www.symcon.de/service/dokumentation/entwicklerbereich/sdk-tools/sdk-php/)
+[![Module Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FNall-chan%2FZigbee2MQTT%2Frefs%2Fheads%2Fmain%2Flibrary.json&query=%24.version&label=Modul%20Version&color=blue)](https://community.symcon.de/t/modul-zigbee2mqtt-version-5-x/139819)
+[![Symcon Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FNall-chan%2FZigbee2MQTT%2Frefs%2Fheads%2Fmain%2Flibrary.json&query=%24.compatibility.version&suffix=%3E&label=Symcon%20Version&color=green)](https://www.symcon.de/de/service/dokumentation/installation/migrationen/v64-v70-q4-2023/)  
+[![License](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-green.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
 [![Check Style](https://github.com/Nall-chan/Zigbee2MQTT/workflows/Check%20Style/badge.svg)](https://github.com/Nall-chan/Zigbee2MQTT/actions)
 [![Run Tests](https://github.com/Nall-chan/Zigbee2MQTT/workflows/Run%20Tests/badge.svg)](https://github.com/Nall-chan/Zigbee2MQTT/actions)  
 
 # Zigbee2MQTT-Discovery <!-- omit in toc -->
+
 Mit dieser Instanz werden alle mit MQTT-Brokern(Servern) verbundenen Zigbee2MQTT Installationen erkannt.
 
 ## Inhaltsverzeichnis <!-- omit in toc -->
+
 - [1. Voraussetzungen](#1-voraussetzungen)
 - [2. Software-Installation](#2-software-installation)
 - [3. Verwendung der Instanzen](#3-verwendung-der-instanzen)
@@ -19,21 +22,19 @@ Mit dieser Instanz werden alle mit MQTT-Brokern(Servern) verbundenen Zigbee2MQTT
   - [2. Spenden](#2-spenden)
   - [3. Lizenz](#3-lizenz)
 
-
-
 ## 1. Voraussetzungen
 
-* mindestens IPS Version 7.0
-* MQTT-Broker (interner MQTT-Server von Symcon oder externer z.B. Mosquitto)
-* installiertes und lauffähiges [zigbee2mqtt](https://www.zigbee2mqtt.io) 
+- mindestens IPS Version 7.0
+- MQTT-Broker (interner MQTT-Server von Symcon oder externer z.B. Mosquitto)
+- installiertes und lauffähiges [zigbee2mqtt](https://www.zigbee2mqtt.io) 
   
 ## 2. Software-Installation
 
-* Dieses Modul ist Bestandteil der [Zigbee2MQTT-Library](../README.md#3-installation).  
+- Dieses Modul ist Bestandteil der [Zigbee2MQTT-Library](../README.md#3-installation).  
 
 ## 3. Verwendung der Instanzen
 
- Beim Öffnen der Instanz wird automatisch ein Suchlauf an allen in Symcon eingerichteten MQTT Clients und Server gestartet.   
+ Beim Öffnen der Instanz wird automatisch ein Suchlauf an allen in Symcon eingerichteten MQTT Clients und Server gestartet.  
  Alternativ kann ein externer Broker manuell angegeben werden.  
 ![Übersicht Konfigurator](imgs/config1.png)
 ![Übersicht Konfigurator](imgs/config2.png)
