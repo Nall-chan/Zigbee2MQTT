@@ -9,99 +9,130 @@ class DevicesTest extends DumpInclude
     public function testTRV06()
     {
         [$iid,$Debug] = $this->createTestInstance('TRV06.json');
-        // Wurden alle Variablen aus Payload verarbeitet und in Symcon angelegt?
+        $OffestLastPayload = 0;
+        // device_status bei den IPS_GetChildrenIDs abziehen
+        $OffsetChildrenIDs = -1;
         // schedule_* Variablen fehlen in $Debug['Childs'] Neues Z2M_Debug benötigt
-        $this->assertSame(count($Debug['Childs']) + 7, count(IPS_GetChildrenIDs($iid)));
-        $this->assertSame(self::count_recursive($Debug['LastPayload']), count(IPS_GetChildrenIDs($iid)) - 1);
-        // Weitere Tests möglich
+        $OffsetDebugChild = +7;
+        $this->assertSame(count($Debug['Childs']) + $OffsetDebugChild, count(IPS_GetChildrenIDs($iid)), 'Anzahl Variablen aus dem Debug un Erzeugte Variablen vom Test unterscheiden sich');
+        $this->assertSame(self::count_recursive($Debug['LastPayload']) + $OffestLastPayload, count(IPS_GetChildrenIDs($iid)) + $OffsetChildrenIDs, 'Anzahl LastPayload und Erzeugte Variablen unterscheiden sich');
+        // defekt wegen UTF8 Fehler bei den Profilen
+        //$this->assertCount(0, self::getExportDebugData($iid)['missingTranslations'], 'Fehlende übersetzungen gefunden:' . var_export(self::getExportDebugData($iid)['missingTranslations'], true));
     }
 
     public function test701721()
     {
         [$iid,$Debug] = $this->createTestInstance('701721.json');
-        // Wurden alle Variablen aus Payload verarbeitet und in Symcon angelegt?
+        $OffestLastPayload = 0;
+        // device_status bei den IPS_GetChildrenIDs abziehen
+        $OffsetChildrenIDs = -1;
+        // schedule_* Variablen fehlen in $Debug['Childs'] Neues Z2M_Debug benötigt
+        $OffsetDebugChild = 0;
         //$Debug['Childs'] ist leider unvollständig. Neues Z2M_Debug benötigt
-        //$this->assertSame(count($Debug['Childs']), count(IPS_GetChildrenIDs($iid)));
-        $this->assertSame(self::count_recursive($Debug['LastPayload']), count(IPS_GetChildrenIDs($iid)) - 1);
-        // Weitere Tests möglich
+        //$this->assertSame(count($Debug['Childs']) + $OffsetDebugChild, count(IPS_GetChildrenIDs($iid)), 'Anzahl Variablen aus dem Debug un Erzeugte Variablen vom Test unterscheiden sich');
+        $this->assertSame(self::count_recursive($Debug['LastPayload']) + $OffestLastPayload, count(IPS_GetChildrenIDs($iid)) + $OffsetChildrenIDs, 'Anzahl LastPayload und Erzeugte Variablen unterscheiden sich');
+        $this->assertCount(0, self::getExportDebugData($iid)['missingTranslations'], 'Fehlende übersetzungen gefunden:' . var_export(self::getExportDebugData($iid)['missingTranslations'], true));
     }
 
     public function testTS130F()
     {
         [$iid,$Debug] = $this->createTestInstance('TS130F.json');
-        // Wurden alle Variablen aus Payload verarbeitet und in Symcon angelegt?
-        $this->assertSame(count($Debug['Childs']), count(IPS_GetChildrenIDs($iid)));
-        $this->assertSame(self::count_recursive($Debug['LastPayload']), count(IPS_GetChildrenIDs($iid)) - 1);
-        // Weitere Tests möglich
+        $OffestLastPayload = 0;
+        // device_status bei den IPS_GetChildrenIDs abziehen
+        $OffsetChildrenIDs = -1;
+        $OffsetDebugChild = 0;
+        $this->assertSame(count($Debug['Childs']) + $OffsetDebugChild, count(IPS_GetChildrenIDs($iid)), 'Anzahl Variablen aus dem Debug un Erzeugte Variablen vom Test unterscheiden sich');
+        $this->assertSame(self::count_recursive($Debug['LastPayload']) + $OffestLastPayload, count(IPS_GetChildrenIDs($iid)) + $OffsetChildrenIDs, 'Anzahl LastPayload und Erzeugte Variablen unterscheiden sich');
+        $this->assertCount(0, self::getExportDebugData($iid)['missingTranslations'], 'Fehlende übersetzungen gefunden:' . var_export(self::getExportDebugData($iid)['missingTranslations'], true));
     }
 
     public function testWHD02()
     {
         [$iid,$Debug] = $this->createTestInstance('TS130F.json');
-        // Wurden alle Variablen aus Payload verarbeitet und in Symcon angelegt?
-        $this->assertSame(count($Debug['Childs']), count(IPS_GetChildrenIDs($iid)));
-        $this->assertSame(self::count_recursive($Debug['LastPayload']), count(IPS_GetChildrenIDs($iid)) - 1);
-        // Weitere Tests möglich
+        $OffestLastPayload = 0;
+        // device_status bei den IPS_GetChildrenIDs abziehen
+        $OffsetChildrenIDs = -1;
+        $OffsetDebugChild = 0;
+        $this->assertSame(count($Debug['Childs']) + $OffsetDebugChild, count(IPS_GetChildrenIDs($iid)), 'Anzahl Variablen aus dem Debug un Erzeugte Variablen vom Test unterscheiden sich');
+        $this->assertSame(self::count_recursive($Debug['LastPayload']) + $OffestLastPayload, count(IPS_GetChildrenIDs($iid)) + $OffsetChildrenIDs, 'Anzahl LastPayload und Erzeugte Variablen unterscheiden sich');
+        $this->assertCount(0, self::getExportDebugData($iid)['missingTranslations'], 'Fehlende übersetzungen gefunden:' . var_export(self::getExportDebugData($iid)['missingTranslations'], true));
     }
 
     public function testTRVZB()
     {
         [$iid,$Debug] = $this->createTestInstance('TRVZB.json');
-        // Wurden alle Variablen aus Payload verarbeitet und in Symcon angelegt?
-
-        $this->assertSame(count($Debug['Childs']), count(IPS_GetChildrenIDs($iid)));
-        $this->assertSame(self::count_recursive($Debug['LastPayload']), count(IPS_GetChildrenIDs($iid)) - 1);
-        // Weitere Tests möglich
-        //foreach (IPS_GetChildrenIDs($iid) as $id) {
-        //    echo $id . ' -> ' . IPS_GetObject($id)['ObjectIdent'] . PHP_EOL;
-        //}
-
+        $OffestLastPayload = 0;
+        // device_status bei den IPS_GetChildrenIDs abziehen
+        $OffsetChildrenIDs = -1;
+        $OffsetDebugChild = 0;
+        $this->assertSame(count($Debug['Childs']) + $OffsetDebugChild, count(IPS_GetChildrenIDs($iid)), 'Anzahl Variablen aus dem Debug un Erzeugte Variablen vom Test unterscheiden sich');
+        $this->assertSame(self::count_recursive($Debug['LastPayload']) + $OffestLastPayload, count(IPS_GetChildrenIDs($iid)) + $OffsetChildrenIDs, 'Anzahl LastPayload und Erzeugte Variablen unterscheiden sich');
+        // defekt wegen UTF8 Fehler bei den Profilen
+        //$this->assertCount(0, self::getExportDebugData($iid)['missingTranslations'], 'Fehlende übersetzungen gefunden:' . var_export(self::getExportDebugData($iid)['missingTranslations'], true));
     }
 
     public function testTS0601_thermostat()
     {
         [$iid,$Debug] = $this->createTestInstance('TS0601_thermostat.json');
-        // Wurden alle Variablen aus Payload verarbeitet und in Symcon angelegt?
-        $this->assertSame(count($Debug['Childs']), count(IPS_GetChildrenIDs($iid)));
+        $OffestLastPayload = 0;
+        // device_status bei den IPS_GetChildrenIDs abziehen
+        $OffsetChildrenIDs = -1;
+        $OffsetDebugChild = 0;
+        $this->assertSame(count($Debug['Childs']) + $OffsetDebugChild, count(IPS_GetChildrenIDs($iid)), 'Anzahl Variablen aus dem Debug un Erzeugte Variablen vom Test unterscheiden sich');
         //$Debug['LastPayload'] ist leider unvollständig. Neues Z2M_Debug benötigt
-        //$this->assertSame(self::count_recursive($Debug['LastPayload']), count(IPS_GetChildrenIDs($iid)) - 1);
-        // Weitere Tests möglich
+        //$this->assertSame(self::count_recursive($Debug['LastPayload']) + $OffestLastPayload, count(IPS_GetChildrenIDs($iid)) + $OffsetChildrenIDs, 'Anzahl LastPayload und Erzeugte Variablen unterscheiden sich');
+        // defekt wegen UTF8 Fehler bei den Profilen
+        //$this->assertCount(0, self::getExportDebugData($iid)['missingTranslations'], 'Fehlende übersetzungen gefunden:' . var_export(self::getExportDebugData($iid)['missingTranslations'], true));
     }
 
     public function testRTCGQ01LM()
     {
         [$iid,$Debug] = $this->createTestInstance('RTCGQ01LM.json');
-        // Wurden alle Variablen aus Payload verarbeitet und in Symcon angelegt?
-        $this->assertSame(count($Debug['Childs']), count(IPS_GetChildrenIDs($iid)));
-        $this->assertSame(self::count_recursive($Debug['LastPayload']), count(IPS_GetChildrenIDs($iid)) - 1);
-        // Weitere Tests möglich
+        $OffestLastPayload = 0;
+        // device_status bei den IPS_GetChildrenIDs abziehen
+        $OffsetChildrenIDs = -1;
+        $OffsetDebugChild = 0;
+        $this->assertSame(count($Debug['Childs']) + $OffsetDebugChild, count(IPS_GetChildrenIDs($iid)), 'Anzahl Variablen aus dem Debug un Erzeugte Variablen vom Test unterscheiden sich');
+        $this->assertSame(self::count_recursive($Debug['LastPayload']) + $OffestLastPayload, count(IPS_GetChildrenIDs($iid)) + $OffsetChildrenIDs, 'Anzahl LastPayload und Erzeugte Variablen unterscheiden sich');
+        $this->assertCount(0, self::getExportDebugData($iid)['missingTranslations'], 'Fehlende übersetzungen gefunden:' . var_export(self::getExportDebugData($iid)['missingTranslations'], true));
     }
 
     public function testMTD285_ZB()
     {
         [$iid,$Debug] = $this->createTestInstance('MTD285-ZB.json');
-        // Wurden alle Variablen aus Payload verarbeitet und in Symcon angelegt?
-        $this->assertSame(count($Debug['Childs']), count(IPS_GetChildrenIDs($iid)));
-        $this->assertSame(self::count_recursive($Debug['LastPayload']), count(IPS_GetChildrenIDs($iid)) - 1);
-        // Weitere Tests möglich
+        $OffestLastPayload = 0;
+        // device_status bei den IPS_GetChildrenIDs abziehen
+        $OffsetChildrenIDs = -1;
+        $OffsetDebugChild = 0;
+        $this->assertSame(count($Debug['Childs']) + $OffsetDebugChild, count(IPS_GetChildrenIDs($iid)), 'Anzahl Variablen aus dem Debug un Erzeugte Variablen vom Test unterscheiden sich');
+        $this->assertSame(self::count_recursive($Debug['LastPayload']) + $OffestLastPayload, count(IPS_GetChildrenIDs($iid)) + $OffsetChildrenIDs, 'Anzahl LastPayload und Erzeugte Variablen unterscheiden sich');
+        $this->assertCount(0, self::getExportDebugData($iid)['missingTranslations'], 'Fehlende übersetzungen gefunden:' . var_export(self::getExportDebugData($iid)['missingTranslations'], true));
     }
 
     public function testAB3257001NJ()
     {
         [$iid,$Debug] = $this->createTestInstance('AB3257001NJ.json');
-        // Wurden alle Variablen aus Payload verarbeitet und in Symcon angelegt?
-        $this->assertSame(count($Debug['Childs']), count(IPS_GetChildrenIDs($iid)));
-        $this->assertSame(self::count_recursive($Debug['LastPayload']), count(IPS_GetChildrenIDs($iid)) - 1);
-        // Weitere Tests möglich
+        $OffestLastPayload = 0;
+        // device_status bei den IPS_GetChildrenIDs abziehen
+        $OffsetChildrenIDs = -1;
+        $OffsetDebugChild = 0;
+        $this->assertSame(count($Debug['Childs']) + $OffsetDebugChild, count(IPS_GetChildrenIDs($iid)), 'Anzahl Variablen aus dem Debug un Erzeugte Variablen vom Test unterscheiden sich');
+        $this->assertSame(self::count_recursive($Debug['LastPayload']) + $OffestLastPayload, count(IPS_GetChildrenIDs($iid)) + $OffsetChildrenIDs, 'Anzahl LastPayload und Erzeugte Variablen unterscheiden sich');
+        $this->assertCount(0, self::getExportDebugData($iid)['missingTranslations'], 'Fehlende übersetzungen gefunden:' . var_export(self::getExportDebugData($iid)['missingTranslations'], true));
     }
+
     public function testPS_S04D()
     {
         [$iid,$Debug] = $this->createTestInstance('PS-S04D.json');
-        // Wurden alle Variablen aus Payload verarbeitet und in Symcon angelegt?
-        //$Debug['Childs'] ist leider unvollständig. Neues Z2M_Debug benötigt
-        //$this->assertSame(count($Debug['Childs']), count(IPS_GetChildrenIDs($iid)));
-        $this->assertSame(self::count_recursive($Debug['LastPayload']), count(IPS_GetChildrenIDs($iid)) - 1);
-        // Weitere Tests möglich
+        // detection_range_prefix & schedule_time_raw fehlen im Expose, sind aber im Payload
+        $OffestLastPayload = -2;
+        // identify und device_status bei den IPS_GetChildrenIDs abziehen
+        $OffsetChildrenIDs = -2;
+        $OffsetDebugChild = 0;
+        $this->assertSame(count($Debug['Childs']) + $OffsetDebugChild, count(IPS_GetChildrenIDs($iid)), 'Anzahl Variablen aus dem Debug un Erzeugte Variablen vom Test unterscheiden sich');
+        $this->assertSame(self::count_recursive($Debug['LastPayload']) + $OffestLastPayload, count(IPS_GetChildrenIDs($iid)) + $OffsetChildrenIDs, 'Anzahl LastPayload und Erzeugte Variablen unterscheiden sich');
+        // defekt wegen UTF8 Fehler bei den Profilen
+        //$this->assertCount(0, self::getExportDebugData($iid)['missingTranslations'], 'Fehlende übersetzungen gefunden:' . var_export(self::getExportDebugData($iid)['missingTranslations'], true));
     }
 
 }

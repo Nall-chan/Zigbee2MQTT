@@ -197,11 +197,16 @@ Bitte den einzelnen Modulen entnehmen:
 
 ## 5. Changelog  
 
-**Version 5.34:**
+**Version 5.35:**  
+
+- Fehlende Übersetzungen von den Geräten PS-S04D und MTD285-ZB ergänzt.  
+- interne Modul Tests erweitert um fehlende Übersetzungen zu erkennen.  
+  
+**Version 5.34:**  
 
 - Das `&` Zeichen wird bei feature / Property zu `_and_` ersetzt.
 
-**Version 5.33:**
+**Version 5.33:**  
 
 - Bei composite wurde versucht für eine nicht vorhandene Hauptvariable eine Aktion zu setzen.  
 - Das `&` Zeichen wird bei Profilen gefiltert.

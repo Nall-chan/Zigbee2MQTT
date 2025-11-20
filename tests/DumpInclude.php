@@ -80,6 +80,12 @@ class DumpInclude extends TestCase
         unset($Payload['exposes']);
         return [$iid, $Debug];
     }
+
+    public static function getExportDebugData(int $iid): array
+    {
+        return json_decode(base64_decode(substr(Z2M_UIExportDebugData($iid), strlen('data:application/json;base64,'))), true);
+    }
+
     public static function count_recursive(array $array): int
     {
         $count = 0;
