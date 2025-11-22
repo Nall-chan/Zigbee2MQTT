@@ -3281,7 +3281,7 @@ abstract class ModulBase extends \IPSModule
         }
 
         // Eigenes Profil erstellen
-        $fullRangeProfileName = self::getFullRangeProfileName( $expose);
+        $fullRangeProfileName = self::getFullRangeProfileName($expose);
         $min = $expose['value_min'] ?? 0;
         $max = $expose['value_max'] ?? 0;
         $step = $expose['value_step'] ?? 1.0;
