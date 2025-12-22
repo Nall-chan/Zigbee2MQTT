@@ -188,8 +188,12 @@ class phpMQTT
             return false;
         }
 
-        stream_set_timeout($this->socket, 5);
-        stream_set_blocking($this->socket, false);
+        if (!stream_set_timeout($this->socket, 5)) {
+            return false;
+        }
+        if (!stream_set_blocking($this->socket, true)) {
+            return false;
+        }
 
         $i = 0;
         $buffer = '';
@@ -267,11 +271,17 @@ class phpMQTT
             $head .= chr($encodedByte);
         }
 
-        fwrite($this->socket, $head, 2);
-        fwrite($this->socket, $buffer);
+        if (!fwrite($this->socket, $head, 2)) {
+            return false;
+        }
+        if (!fwrite($this->socket, $buffer)) {
+            return false;
+        }
 
         $string = $this->read(4);
-
+        if (!$string) {
+            return false;
+        }
         if (ord($string[0]) >> 4 === 2 && $string[3] === chr(0)) {
             $this->_debugMessage('Connected to Broker');
         } else {

@@ -34,7 +34,7 @@
 
 - mindestens IPS Version 7.0
 - MQTT-Broker (interner MQTT-Server von Symcon oder externer z.B. Mosquitto)
-- installiertes und lauffähiges [zigbee2mqtt](https://www.zigbee2mqtt.io) 
+- installiertes und lauffähiges [zigbee2mqtt](https://www.zigbee2mqtt.io)  
   
 ## 3. Software-Installation
 

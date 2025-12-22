@@ -26,7 +26,7 @@ Anbindung von [zigbee2mqtt](https://www.zigbee2mqtt.io) an IP-Symcon.
 
 - mindestens IPS Version 7.0
 - MQTT-Broker (interner MQTT-Server von Symcon oder externer z.B. Mosquitto)
-- installiertes und lauffähiges [zigbee2mqtt](https://www.zigbee2mqtt.io) 
+- installiertes und lauffähiges [zigbee2mqtt](https://www.zigbee2mqtt.io)
 
 ## 2. Enthaltene Module
 
@@ -121,7 +121,7 @@ Weitere Schritte zur Ersteinrichtung sind unter dem [Zigbee2MQTT-Discovery](Disc
 > - Die Version 5.0 ändert beim Update alle Ident aller Variablen welche zu einer ZigbeeMQTT-Instanz gehören.
 > - Diese Änderung betrifft nur User welche mit Scripten auf Variablen per Ident (z.B. Z2M_Brightness) und nicht per ObjektID (z.B. 12345) zugreifen.
 > - Die Variablen selbst bleiben dabei erhalten, so das sich hier keine ObjektIDs ändern, und entsprechend auch keine Änderungen an Ereignissen, Links, Automationen etc... ergeben.  
-> 
+
 ---
 
 > [!CAUTION] geänderte Variablentypen
@@ -197,6 +197,10 @@ Bitte den einzelnen Modulen entnehmen:
 
 ## 5. Changelog  
 
+**Version 5.36:**  
+
+- phpMQTT Bibliothek aktualisiert um Verbindungsprobleme der Discovery-Instanz zu beheben.  
+  
 **Version 5.35:**  
 
 - Fehlende Übersetzungen von den Geräten PS-S04D und MTD285-ZB ergänzt.  
