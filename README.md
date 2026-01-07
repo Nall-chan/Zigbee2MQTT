@@ -197,6 +197,10 @@ Bitte den einzelnen Modulen entnehmen:
 
 ## 5. Changelog  
 
+**Version 5.37:**  
+
+- Bridge Instanz erkannte aktuelle Z2M Versionen falsch.  
+  
 **Version 5.36:**  
 
 - phpMQTT Bibliothek aktualisiert um Verbindungsprobleme der Discovery-Instanz zu beheben.  
