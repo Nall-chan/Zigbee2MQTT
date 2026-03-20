@@ -2808,8 +2808,13 @@ abstract class ModulBase extends \IPSModule
                 if (
                     ($valueOn === true && $valueOff === false) ||
                     ($valueOn === false && $valueOff === true) ||
-                    (is_string($valueOn) && is_string($valueOff) &&
-                        strtoupper($valueOn) === 'ON' && strtoupper($valueOff) === 'OFF')
+                    (
+                        is_string($valueOn) && is_string($valueOff) &&
+                        (
+                            (strtoupper($valueOn) === 'ON' && strtoupper($valueOff) === 'OFF') ||
+                            (strtoupper($valueOn) === 'TRUE' && strtoupper($valueOff) === 'FALSE')
+                        )
+                    )
                 ) {
                     return '~Switch';
                 } else {

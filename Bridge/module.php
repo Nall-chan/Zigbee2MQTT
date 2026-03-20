@@ -30,7 +30,8 @@ class Zigbee2MQTTBridge extends IPSModule
         5 => 'IPSymconExtension2.js',
         6 => 'IPSymconExtension2.js',
         7 => 'IPSymconExtension2.js',
-        8 => 'IPSymconExtension2.js'
+        8 => 'IPSymconExtension2.js',
+        9 => 'IPSymconExtension2.js'
     ];
     /**
      * Create

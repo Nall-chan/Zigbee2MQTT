@@ -352,7 +352,8 @@ class Zigbee2MQTTConfigurator extends IPSModule
         }
 
         foreach ($IPSDevicesByIEEE as $instanceID => $IEEE) { // Nur die restlichen IEEE Einträge anzeigen welche an unserem Splitter hängen
-            if (IPS_GetInstance($instanceID)['ConnectionID'] != IPS_GetInstance($this->InstanceID)['ConnectionID']) {
+            if ((IPS_GetInstance($instanceID)['ConnectionID'] != IPS_GetInstance($this->InstanceID)['ConnectionID']) ||
+            (IPS_GetProperty($instanceID, self::MQTT_BASE_TOPIC) != $BaseTopic)) {
                 continue;
             }
             $Topic = '';
@@ -684,7 +685,7 @@ class Zigbee2MQTTConfigurator extends IPSModule
     private function GetIPSInstancesByIEEE(): array
     {
         $Devices = [];
-        $InstanceIDList = array_filter(IPS_GetInstanceListByModuleID(self::GUID_MODULE_DEVICE), [$this, 'FilterInstances']);
+        $InstanceIDList = array_filter(IPS_GetInstanceListByModuleID(self::GUID_MODULE_DEVICE), [$this, 'FilterInstancesByConnection']);
         foreach ($InstanceIDList as $InstanceID) {
             $Devices[$InstanceID] = @IPS_GetProperty($InstanceID, 'IEEE');
         }
