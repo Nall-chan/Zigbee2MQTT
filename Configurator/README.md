@@ -25,8 +25,8 @@ Mit dieser Instanz werden die Geräte und Gruppen aus Zigbee2MQTT ausgelesen und
 ## 1. Voraussetzungen
 
 - mindestens IPS Version 7.0
-- MQTT-Broker (interner MQTT-Server von Symcon oder externer z.B. Mosquitto)
-- installiertes und lauffähiges [zigbee2mqtt](https://www.zigbee2mqtt.io) 
+- MQTT-Broker (interner MQTT-Server von Symcon oder externer z.B. Mosquitto)  
+- installiertes und lauffähiges [zigbee2mqtt](https://www.zigbee2mqtt.io)  
   
 ## 2. Software-Installation
 

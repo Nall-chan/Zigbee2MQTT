@@ -34,7 +34,7 @@
 
 - mindestens IPS Version 7.0
 - MQTT-Broker (interner MQTT-Server von Symcon oder externer z.B. Mosquitto)
-- installiertes und lauffähiges [zigbee2mqtt](https://www.zigbee2mqtt.io) 
+- installiertes und lauffähiges [zigbee2mqtt](https://www.zigbee2mqtt.io)  
   
 ## 3. Software-Installation
 
@@ -198,14 +198,15 @@ Die Statusvariablen werden je nach Funktion und Fähigkeiten der Geräte dynamis
 
 ## 7. Aktionen
 
-> [!NOTE] Nutzung von Aktionen mit Ziel Variable:
+> [!NOTE]  
+> **Nutzung von Aktionen mit Ziel Variable:**  
 > Grundsätzlich können alle bedienbaren Statusvariablen als Ziel einer [`Aktion`](https://www.symcon.de/service/dokumentation/konzepte/automationen/ablaufplaene/aktionen/) mit 'Auf Wert schalten' angesteuert werden, so das hier keine speziellen Aktionen benutzt werden müssen.
 
 **Zusätzlich** gibt es Sonderfunktionen in Form von speziellen Aktionen, welche für die Zigbee2MQTT-Geräte und Gruppen Instanzen zur Verfügung stehen, wenn diese als Ziel einer Aktion ausgewählt wurden.
 
 Die möglichen Aktionen werden anhand der Statusvariablen der Instanz angeboten, somit sind nicht alle Aktionen immer verfügbar.  
 
-> [!TIP]
+> [!TIP]  
 > Über das `i` hinter einer Aktion kann eine Erklärung der Aktion angezeigt werden.  
 > Hier als Beispiel das Schrittweise auf/abdimmen.  
 > ![Aktionen](imgs/actions.png)  

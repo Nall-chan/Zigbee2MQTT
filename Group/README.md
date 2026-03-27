@@ -34,7 +34,7 @@
 
 - mindestens IPS Version 7.0
 - MQTT-Broker (interner MQTT-Server von Symcon oder externer z.B. Mosquitto)
-- installiertes und lauffähiges [zigbee2mqtt](https://www.zigbee2mqtt.io) 
+- installiertes und lauffähiges [zigbee2mqtt](https://www.zigbee2mqtt.io)  
   
 ## 3. Software-Installation
 
@@ -188,7 +188,7 @@
    Z2M_CommandEx(int $InstanzId,string $fulltopic, string $value)
    ```
 
-   Mit dies Funktion kann ein belibiger Payload (Datensatz) an Z2M gesendet werden.
+   Mit dies Funktion kann ein beliebiger Payload (Datensatz) an Z2M gesendet werden.
 
    **Beispiel:**
 
@@ -201,7 +201,7 @@
 
 ## 7. Aktionen
 
-__Grundsätzlich können alle bedienbaren Statusvariablen als Ziel einer [`Aktion`](https://www.symcon.de/service/dokumentation/konzepte/automationen/ablaufplaene/aktionen/) mit 'Auf Wert schalten' angesteuert werden, so das hier keine speziellen Aktionen benutzt werden müssen.__
+**Grundsätzlich können alle bedienbaren Statusvariablen als Ziel einer [`Aktion`](https://www.symcon.de/service/dokumentation/konzepte/automationen/ablaufplaene/aktionen/) mit 'Auf Wert schalten' angesteuert werden, so das hier keine speziellen Aktionen benutzt werden müssen.**
 
 **Zusätzlich** gibt es Sonderfunktionen in Form von speziellen Aktionen, welche für die Zigbee2MQTT-Geräte und Gruppen Instanzen zur Verfügung stehen, wenn diese als Ziel einer Aktion ausgewählt wurden.
 
@@ -209,7 +209,7 @@ Die möglichen Aktionen werden anhand der Statusvariablen der Instanz angeboten,
 Über das `i` hinter einer Aktion kann eine Erklärung der Aktion angezeigt werden.
 Hier als Beispiel das Schrittweise auf/abdimmen.  
 
-![Aktionen](../Device/imgs/actions.png) 
+![Aktionen](../Device/imgs/actions.png)  
 
 Liste aller Aktionen:
 

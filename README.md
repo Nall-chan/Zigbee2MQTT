@@ -26,7 +26,7 @@ Anbindung von [zigbee2mqtt](https://www.zigbee2mqtt.io) an IP-Symcon.
 
 - mindestens IPS Version 7.0
 - MQTT-Broker (interner MQTT-Server von Symcon oder externer z.B. Mosquitto)
-- installiertes und lauffähiges [zigbee2mqtt](https://www.zigbee2mqtt.io) 
+- installiertes und lauffähiges [zigbee2mqtt](https://www.zigbee2mqtt.io)
 
 ## 2. Enthaltene Module
 
@@ -59,7 +59,7 @@ Weitere Schritte zur Ersteinrichtung sind unter dem [Zigbee2MQTT-Discovery](Disc
 
 ### 3.2 Update von Modul Version 4.5 auf 5.x
 
-> [!IMPORTANT] WICHTIG  
+> [!IMPORTANT]  
 > **Bitte diese Migrationsanleitung genau lesen und beachten, ein downgrade auf eine alte Modul Version ist nur mit einem Symcon-Backup möglich!**
 
 ### I. Vorbereitung <!-- omit in toc -->
@@ -68,28 +68,29 @@ Weitere Schritte zur Ersteinrichtung sind unter dem [Zigbee2MQTT-Discovery](Disc
 - Diese wird automatisch ab Version 4.5 durch die [Bridge-Instanz](Bridge/README.md)  installiert, sofern diese Instanz angelegt wurde.
 - Alternativ muss die benötigte [Extension in Zigbee2MQTT](#33-installation-der-ip-symcon-extension-in-zigbee2mqtt) manuell ein Update auf Version 4.6 erhalten.
 
-> [!CAUTION] ACHTUNG
+> [!CAUTION]  
 > Ohne aktuelle Extension wird das Modul Update mit Fehlermeldungen durchgeführt, welche zu unerwarteten Fehlverhalten führen kann.
 
 ### II. Modul-Update <!-- omit in toc -->
 
-> [!TIP]  Meldungen kontrollieren
+> [!TIP]  
+> **Meldungen kontrollieren**  
 >
 > - Während des Updates wird empfohlen das Fenster [Meldungen](https://www.symcon.de/de/service/dokumentation/komponenten/verwaltungskonsole/meldungen/) geöffnet zu lassen um eventuelle Fehlermeldungen nachvollziehen zu können.  
 > - Das Update anschließend über den [Modul-Store](https://www.symcon.de/de/service/dokumentation/komponenten/verwaltungskonsole/module-store/) durchführen.  
 
 ---
 
-> [!WARNING] Vorsicht!
-> **geänderte Variablen-Profile**
->
+> [!WARNING]  
+> **geänderte Variablen-Profile**  
 >
 > - Die Variablen welche bei `Helligkeit` vorher einen Wertebereich von 0 - 254 hatten, werden auf das Profil `~Intensity.100` angepasst. Das Modul rechnet ab sofort automatisch den Wertebereich aus Z2M in Prozent um.  
 > - Entsprechende Aktion auf oder Auswertungen des Rohwertes der Variablen sind zu prüfen und gglfs. anzupassen.  
 
 ---
 
-> [!TIP] Alte Variablenprofile löschen
+> [!TIP]  
+> **Alte Variablenprofile löschen**  
 > Folgendes Script kann in Symcon ausgeführt werden, um veraltete Variablenprofile zu löschen.
 >
 > ```php
@@ -116,15 +117,17 @@ Weitere Schritte zur Ersteinrichtung sind unter dem [Zigbee2MQTT-Discovery](Disc
 
 ---
 
-> [!WARNING] geänderte Variablen-Idents
+> [!WARNING]  
+> **geänderte Variablen-Idents**  
 >
 > - Die Version 5.0 ändert beim Update alle Ident aller Variablen welche zu einer ZigbeeMQTT-Instanz gehören.
 > - Diese Änderung betrifft nur User welche mit Scripten auf Variablen per Ident (z.B. Z2M_Brightness) und nicht per ObjektID (z.B. 12345) zugreifen.
 > - Die Variablen selbst bleiben dabei erhalten, so das sich hier keine ObjektIDs ändern, und entsprechend auch keine Änderungen an Ereignissen, Links, Automationen etc... ergeben.  
-> 
+
 ---
 
-> [!CAUTION] geänderte Variablentypen
+> [!CAUTION]  
+> **geänderte Variablentypen**  
 >
 > Folgende Liste enthält alle Variablen wo zuvor eine Variable vom falschen Typ genutzt wurde.
 > Diese werden nicht migriert, sondern bleiben erhalten.
@@ -197,6 +200,19 @@ Bitte den einzelnen Modulen entnehmen:
 
 ## 5. Changelog  
 
+**Version 5.38:**  
+
+- Fehlende Übersetzungen von den Geräten 501.40, BMCT-SLZ, S4SW-001P8EU und WT-A03E ergänzt  
+- Discovery Instanz liefert die ganze Kette für Symcon 9.x  
+  
+**Version 5.37:**  
+
+- Bridge Instanz erkannte aktuelle Z2M Versionen falsch.  
+  
+**Version 5.36:**  
+
+- phpMQTT Bibliothek aktualisiert um Verbindungsprobleme der Discovery-Instanz zu beheben.  
+  
 **Version 5.35:**  
 
 - Fehlende Übersetzungen von den Geräten PS-S04D und MTD285-ZB ergänzt.  

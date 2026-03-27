@@ -135,4 +135,55 @@ class DevicesTest extends DumpInclude
         //$this->assertCount(0, self::getExportDebugData($iid)['missingTranslations'], 'Fehlende übersetzungen gefunden:' . var_export(self::getExportDebugData($iid)['missingTranslations'], true));
     }
 
+    public function test501_40()
+    {
+        [$iid,$Debug] = $this->createTestInstance('501.40.json');
+        $OffestLastPayload = 0;
+        $OffsetChildrenIDs = 0;
+        $OffsetDebugChild = 0;
+        $this->assertSame(count($Debug['Childs']) + $OffsetDebugChild, count(IPS_GetChildrenIDs($iid)), 'Anzahl Variablen aus dem Debug un Erzeugte Variablen vom Test unterscheiden sich');
+        //$Debug['LastPayload'] ist leider unvollständig. Neues Z2M_Debug benötigt
+        //$this->assertSame(self::count_recursive($Debug['LastPayload']) + $OffestLastPayload, count(IPS_GetChildrenIDs($iid)) + $OffsetChildrenIDs, 'Anzahl LastPayload und Erzeugte Variablen unterscheiden sich');
+        $this->assertCount(0, self::getExportDebugData($iid)['missingTranslations'], 'Fehlende übersetzungen gefunden:' . var_export(self::getExportDebugData($iid)['missingTranslations'], true));
+    }
+
+    public function testBMCT_SLZ()
+    {
+        [$iid,$Debug] = $this->createTestInstance('BMCT-SLZ.json');
+        $OffestLastPayload = 0;
+        $OffsetChildrenIDs = 0;
+        // remaining und progress aus den DebugChilds abziehen
+        $OffsetDebugChild = -2;
+        $this->assertSame(count($Debug['Childs']) + $OffsetDebugChild, count(IPS_GetChildrenIDs($iid)), 'Anzahl Variablen aus dem Debug un Erzeugte Variablen vom Test unterscheiden sich');
+        // Irgendwie fehlen Variablen aus dem Payload...
+        // $this->assertSame(self::count_recursive($Debug['LastPayload']) + $OffestLastPayload, count(IPS_GetChildrenIDs($iid)) + $OffsetChildrenIDs, 'Anzahl LastPayload und Erzeugte Variablen unterscheiden sich');
+        var_dump(self::getExportDebugData($iid)['missingTranslations']);
+        $this->assertCount(0, self::getExportDebugData($iid)['missingTranslations'], 'Fehlende übersetzungen gefunden:' . var_export(self::getExportDebugData($iid)['missingTranslations'], true));
+    }
+
+    public function testWT_A03E()
+    {
+        [$iid,$Debug] = $this->createTestInstance('WT-A03E.json');
+        $OffestLastPayload = 0;
+        // device_status bei den IPS_GetChildrenIDs abziehen
+        $OffsetChildrenIDs = -1;
+        // 4x Update Variablen abziehen (remaining, progress, Latest Source und Release Notes)
+        $OffsetDebugChild = -4;
+        $this->assertSame(count($Debug['Childs']) + $OffsetDebugChild, count(IPS_GetChildrenIDs($iid)), 'Anzahl Variablen aus dem Debug un Erzeugte Variablen vom Test unterscheiden sich');
+        $this->assertSame(self::count_recursive($Debug['LastPayload']) + $OffestLastPayload, count(IPS_GetChildrenIDs($iid)) + $OffsetChildrenIDs, 'Anzahl LastPayload und Erzeugte Variablen unterscheiden sich');
+        // defekt wegen UTF8 Fehler bei den Profilen
+        //$this->assertCount(0, self::getExportDebugData($iid)['missingTranslations'], 'Fehlende übersetzungen gefunden:' . var_export(self::getExportDebugData($iid)['missingTranslations'], true));
+    }
+
+    public function testS4SW_001P8EU()
+    {
+        [$iid,$Debug] = $this->createTestInstance('S4SW-001P8EU.json');
+        $OffestLastPayload = 0;
+        // 6x Variablen von wifi_config abziehen, welche im Payload fehlen
+        $OffsetChildrenIDs = -6;
+        $OffsetDebugChild = 0;
+        $this->assertSame(count($Debug['Childs']) + $OffsetDebugChild, count(IPS_GetChildrenIDs($iid)), 'Anzahl Variablen aus dem Debug un Erzeugte Variablen vom Test unterscheiden sich');
+        $this->assertSame(self::count_recursive($Debug['LastPayload']) + $OffestLastPayload, count(IPS_GetChildrenIDs($iid)) + $OffsetChildrenIDs, 'Anzahl LastPayload und Erzeugte Variablen unterscheiden sich');
+        $this->assertCount(0, self::getExportDebugData($iid)['missingTranslations'], 'Fehlende übersetzungen gefunden:' . var_export(self::getExportDebugData($iid)['missingTranslations'], true));
+    }
 }

@@ -41,7 +41,7 @@ Mit dieser Instanz werden alle mit MQTT-Brokern(Servern) verbundenen Zigbee2MQTT
 
 Wird eine Zeile selektiert und die Schaltfläche `Erstellen` betätigt, so wird automatisch eine [Konfigurator](../Configurator/README.md)-Instanz, und bei Angabe eines externen Brokern auch der benötigten MQTT-Client mit  Client Socket, in Symcon angelegt.  
 
-Über den Button `Konfigurieren` wird die weitere Konfiguration in der [Konfigurator](../Configurator/README.md)-Instanz fortgesetzt. 
+Über den Button `Konfigurieren` wird die weitere Konfiguration in der [Konfigurator](../Configurator/README.md)-Instanz fortgesetzt.  
 
 ## 4. Statusvariablen
 
