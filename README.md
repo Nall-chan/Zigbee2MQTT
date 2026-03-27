@@ -203,7 +203,6 @@ Bitte den einzelnen Modulen entnehmen:
 **Version 5.38:**  
 
 - Fehlende Übersetzungen von den Geräten 501.40, BMCT-SLZ, S4SW-001P8EU und WT-A03E ergänzt  
-- Bridge Instanz erkennt bis zu ZH Version 9.x  
 - Discovery Instanz liefert die ganze Kette für Symcon 9.x  
   
 **Version 5.37:**  
