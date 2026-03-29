@@ -135,6 +135,7 @@ class IPSymconExtension {
             powerSource: device.zh.powerSource,
             modelID: device.zh.modelID,
             exposes: exposes,
+            filtered_attributes: device.options?.filtered_attributes ?? [],
         };
     }
 

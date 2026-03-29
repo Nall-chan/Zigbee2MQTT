@@ -410,6 +410,7 @@ abstract class ModulBase extends \IPSModule
         $this->RegisterPropertyString(self::MQTT_BASE_TOPIC, '');
         $this->RegisterPropertyString(self::MQTT_TOPIC, '');
         $this->RegisterAttributeArray(self::ATTRIBUTE_EXPOSES, []);
+        $this->RegisterAttributeArray(self::ATTRIBUTE_FILTERED, []);
         $this->RegisterAttributeFloat(self::ATTRIBUTE_MODUL_VERSION, 5.0);
 
         /** Init Buffers */
@@ -1209,6 +1210,9 @@ abstract class ModulBase extends \IPSModule
     {
         $this->SendDebug(__FUNCTION__ . ' :: Line ' . __LINE__ . ' :: All Exposes', json_encode($exposes), 0);
 
+        // Geraetespezifische filtered_attributes aus Z2M laden
+        $aFiltered = $this->ReadAttributeArray(self::ATTRIBUTE_FILTERED);
+
         // Durchlaufe alle Exposes
         foreach ($exposes as $expose) {
             // Prüfen, ob es sich um eine Gruppe handelt
@@ -1218,6 +1222,13 @@ abstract class ModulBase extends \IPSModule
                 // Features in der Gruppe verarbeiten
                 if (isset($expose['features']) && is_array($expose['features'])) {
                     foreach ($expose['features'] as $feature) {
+                        // Gefilterte Attribute gemaess Z2M-Konfiguration ueberspringen
+                        $sProperty = $feature['property'] ?? '';
+                        if ($sProperty !== '' && in_array($sProperty, $aFiltered, true)) {
+                            $this->SendDebug(__FUNCTION__, 'Skipping filtered attribute: ' . $sProperty, 0);
+                            continue;
+                        }
+
                         $this->SendDebug(__FUNCTION__ . ' :: Line ' . __LINE__ . ' :: Processing feature in group: ', json_encode($feature), 0);
                         // Setze den Gruppentyp als zusätzlichen Wert
                         $feature['group_type'] = $expose['type'];
@@ -1238,6 +1249,13 @@ abstract class ModulBase extends \IPSModule
                     $this->registerVariable($expose);
                 }
             } else {
+                // Gefilterte Attribute gemaess Z2M-Konfiguration ueberspringen
+                $sProperty = $expose['property'] ?? '';
+                if ($sProperty !== '' && in_array($sProperty, $aFiltered, true)) {
+                    $this->SendDebug(__FUNCTION__, 'Skipping filtered attribute: ' . $sProperty, 0);
+                    continue;
+                }
+
                 $this->registerVariable($expose);
                 if (isset($expose['presets'])) {
                     $variableType = $this->getVariableTypeFromProfile($expose['type'], $expose['property'], $expose['unit'] ?? '', $expose['value_step'] ?? null, null);
@@ -3723,6 +3741,11 @@ abstract class ModulBase extends \IPSModule
 
         // Überprüfung auf spezielle Fälle
         if (isset(self::$specialVariables[$feature['property']])) {
+            $aFiltered = $this->ReadAttributeArray(self::ATTRIBUTE_FILTERED);
+            if (in_array($feature['property'], $aFiltered, true)) {
+                $this->SendDebug(__FUNCTION__, 'Skipping filtered special variable: ' . $feature['property'], 0);
+                return;
+            }
             $this->registerSpecialVariable($feature);
             return;
         }
@@ -3796,18 +3819,22 @@ abstract class ModulBase extends \IPSModule
 
                         // Preset-Handling für Sub-Features
                         if (isset($subFeature['presets'])) {
-                            $variableType = $this->getVariableTypeFromProfile(
-                                $subFeature['type'] ?? 'numeric',
-                                $subFeature['property'],
-                                $subFeature['unit'] ?? '',
-                                $subFeature['value_step'] ?? 1.0
-                            );
-                            $this->registerPresetVariables(
-                                $subFeature['presets'],
-                                $subFeature['property'],
-                                $variableType,
-                                $subFeature
-                            );
+                            $aFiltered = $this->ReadAttributeArray(self::ATTRIBUTE_FILTERED);
+                            $subPresetIdent = $subFeature['property'] . '_presets';
+                            if (!in_array($subPresetIdent, $aFiltered, true)) {
+                                $variableType = $this->getVariableTypeFromProfile(
+                                    $subFeature['type'] ?? 'numeric',
+                                    $subFeature['property'],
+                                    $subFeature['unit'] ?? '',
+                                    $subFeature['value_step'] ?? 1.0
+                                );
+                                $this->registerPresetVariables(
+                                    $subFeature['presets'],
+                                    $subFeature['property'],
+                                    $variableType,
+                                    $subFeature
+                                );
+                            }
                         }
 
                         // Rekursiver Aufruf mit einzelnem Feature
@@ -3843,16 +3870,23 @@ abstract class ModulBase extends \IPSModule
         // Zusätzliche Registrierung der color_temp_kelvin Variable, wenn color_temp registriert wird
         if ($property === 'color_temp') {
             $kelvinIdent = $property . '_kelvin';
-            $this->RegisterVariableInteger($kelvinIdent, $this->Translate('Color Temperature Kelvin'), '~TWColor');
-            $variableId = $this->GetIDForIdent($kelvinIdent);
-            // color_temp_kelvin ist eine spezielle UI-Variable, die immer EnableAction haben soll
-            $this->checkAndEnableAction($kelvinIdent, null, true);
+            $aFiltered = $this->ReadAttributeArray(self::ATTRIBUTE_FILTERED);
+            if (!in_array($kelvinIdent, $aFiltered, true)) {
+                $this->RegisterVariableInteger($kelvinIdent, $this->Translate('Color Temperature Kelvin'), '~TWColor');
+                $variableId = $this->GetIDForIdent($kelvinIdent);
+                // color_temp_kelvin ist eine spezielle UI-Variable, die immer EnableAction haben soll
+                $this->checkAndEnableAction($kelvinIdent, null, true);
+            }
         }
         // Preset-Verarbeitung nach der normalen Variablenregistrierung
         if (isset($feature['presets']) && !empty($feature['presets'])) {
-            $variableType = $this->getVariableTypeFromProfile($type, $property, $unit, $step, $groupType);
-            $this->registerPresetVariables($feature['presets'], $feature['property'], $variableType, $feature);
-            $this->SendDebug(__FUNCTION__, 'Registered presets for: ' . $feature['property'], 0);
+            $presetIdent = $property . '_presets';
+            $aFiltered = $this->ReadAttributeArray(self::ATTRIBUTE_FILTERED);
+            if (!in_array($presetIdent, $aFiltered, true)) {
+                $variableType = $this->getVariableTypeFromProfile($type, $property, $unit, $step, $groupType);
+                $this->registerPresetVariables($feature['presets'], $feature['property'], $variableType, $feature);
+                $this->SendDebug(__FUNCTION__, 'Registered presets for: ' . $feature['property'], 0);
+            }
         }
         return;
     }
@@ -3887,20 +3921,33 @@ abstract class ModulBase extends \IPSModule
             return;
         }
 
+        $aFiltered = $this->ReadAttributeArray(self::ATTRIBUTE_FILTERED);
         switch ($feature['name']) {
             case 'color_xy':
+                if (in_array('color', $aFiltered, true)) {
+                    $this->SendDebug(__FUNCTION__, 'Skipping filtered color variable: color', 0);
+                    break;
+                }
                 $this->RegisterVariableInteger('color', $this->Translate($this->convertLabelToName('color')), '~HexColor');
                 // Farbvariablen erhalten IMMER EnableAction, unabhängig von Access-Prüfung
                 $this->checkAndEnableAction('color', null, true);
                 $this->SendDebug(__FUNCTION__ . ' :: Line ' . __LINE__ . ' :: Creating composite color_xy', 'color', 0);
                 break;
             case 'color_hs':
+                if (in_array('color_hs', $aFiltered, true)) {
+                    $this->SendDebug(__FUNCTION__, 'Skipping filtered color variable: color_hs', 0);
+                    break;
+                }
                 $this->RegisterVariableInteger('color_hs', $this->Translate($this->convertLabelToName('color_hs')), '~HexColor');
                 // Farbvariablen erhalten IMMER EnableAction, unabhängig von Access-Prüfung
                 $this->checkAndEnableAction('color_hs', null, true);
                 $this->SendDebug(__FUNCTION__ . ' :: Line ' . __LINE__ . ' :: Creating composite color_hs', 'color_hs', 0);
                 break;
             case 'color_rgb':
+                if (in_array('color_rgb', $aFiltered, true)) {
+                    $this->SendDebug(__FUNCTION__, 'Skipping filtered color variable: color_rgb', 0);
+                    break;
+                }
                 $this->RegisterVariableInteger('color_rgb', $this->Translate($this->convertLabelToName('color_rgb')), '~HexColor');
                 // Farbvariablen erhalten IMMER EnableAction, unabhängig von Access-Prüfung
                 $this->checkAndEnableAction('color_rgb', null, true);

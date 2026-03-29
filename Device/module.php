@@ -163,6 +163,10 @@ class Zigbee2MQTTDevice extends \Zigbee2MQTT\ModulBase
         if (!isset($Result['exposes'])) {
             return false;
         }
+
+        // filtered_attributes aus Z2M-Konfiguration speichern (leeres Array wenn nicht vorhanden)
+        $this->WriteAttributeArray(parent::ATTRIBUTE_FILTERED, $Result['filtered_attributes'] ?? []);
+
         $this->WriteAttributeArray(parent::ATTRIBUTE_EXPOSES, $Result['exposes']);
         $this->mapExposesToVariables($Result['exposes']);
         return true;
