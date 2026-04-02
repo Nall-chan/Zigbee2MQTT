@@ -2284,6 +2284,8 @@ abstract class ModulBase extends \IPSModule
                     return $value;
                 }
                 if (is_string($value)) {
+                    $normalizedValue = strtoupper(trim($value, " \t\n\r\0\x0B\"'"));
+
                     // Exposes-Daten für diesen Identifier abrufen
                     $exposes = $this->ReadAttributeArray(self::ATTRIBUTE_EXPOSES);
                     foreach ($exposes as $expose) {
@@ -2295,22 +2297,26 @@ abstract class ModulBase extends \IPSModule
                                 $feature['type'] === 'binary') {
 
                                 // Prüfen ob der Wert dem value_on entspricht
-                                if ($value == $feature['value_on']) {
+                                if ($value === $feature['value_on']) {
                                     return true;
                                 }
                                 // Prüfen ob der Wert dem value_off entspricht
-                                elseif ($value == $feature['value_off']) {
+                                elseif ($value === $feature['value_off']) {
                                     return false;
                                 }
                             }
                         }
                     }
-                    // Standard ON/OFF Prüfung als Fallback
-                    if (strtoupper($value) === 'ON') {
+                    // Standardprüfung für übliche Bool-Textwerte als Fallback
+                    if (in_array($normalizedValue, ['ON', 'TRUE', 'YES', '1', 'LOCK', 'OPEN'], true)) {
                         return true;
-                    } elseif (strtoupper($value) === 'OFF') {
+                    }
+                    if (in_array($normalizedValue, ['OFF', 'FALSE', 'NO', '0', 'UNLOCK', 'CLOSE', 'CLOSED'], true)) {
                         return false;
                     }
+
+                    $this->SendDebug(__FUNCTION__, 'Unbekannter boolescher Stringwert für ' . $ident . ': ' . json_encode($value) . ' -> false', 0);
+                    return false;
                 }
                 return (bool) $value;
             case 1:
