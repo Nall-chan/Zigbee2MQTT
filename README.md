@@ -200,6 +200,10 @@ Bitte den einzelnen Modulen entnehmen:
 
 ## 5. Changelog  
 
+**Version 5.39:**  
+
+- Fehlende Übersetzungen vom Gerät Senoro.Win v2 ergänzt.  
+  
 **Version 5.38:**  
 
 - Fehlende Übersetzungen von den Geräten 501.40, BMCT-SLZ, S4SW-001P8EU und WT-A03E ergänzt  
