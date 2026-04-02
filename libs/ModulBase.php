@@ -1490,9 +1490,13 @@ abstract class ModulBase extends \IPSModule
         }
 
         $topic = substr($messageData['Topic'], strlen($baseTopic) + 1);
+        $payloadData = json_decode($messageData['Payload'], true);
+        if ($payloadData === null && json_last_error() !== JSON_ERROR_NONE) {
+            $payloadData = json_decode(mb_convert_encoding($messageData['Payload'], 'UTF-8', 'ISO-8859-1'), true);
+        }
         return [
             explode('/', $topic),
-            json_decode(mb_convert_encoding($messageData['Payload'], 'ISO-8859-1', 'UTF-8'), true) // wir nutzen bitte utf8_decode bei IPSModule, und hex2bin ab IPSModuleStrict
+            $payloadData
         ];
     }
 
@@ -2982,13 +2986,11 @@ abstract class ModulBase extends \IPSModule
             // Debug der Original-Einheit
             $this->SendDebug(__FUNCTION__, 'Original unit: ' . bin2hex($unit), 0);
 
-            // Verbesserte UTF-8 Behandlung
-            $unit = mb_convert_encoding($unit, 'UTF-8', 'AUTO');
             $unitTrimmed = str_replace(' ', '', $unit);
 
             // Erweiterte Debug-Ausgaben
-            $this->SendDebug(__FUNCTION__, 'Unit after UTF-8 conversion: ' . bin2hex($unitTrimmed), 0);
-            $this->SendDebug(__FUNCTION__, 'Unit after conversion (readable): ' . $unitTrimmed, 0);
+            $this->SendDebug(__FUNCTION__, 'Unit normalized (hex): ' . bin2hex($unitTrimmed), 0);
+            $this->SendDebug(__FUNCTION__, 'Unit normalized (readable): ' . $unitTrimmed, 0);
             $this->SendDebug(__FUNCTION__, 'FLOAT_UNITS content: ' . json_encode(self::FLOAT_UNITS), 0);
 
             if (in_array($unitTrimmed, self::FLOAT_UNITS, true)) {
@@ -3301,11 +3303,10 @@ abstract class ModulBase extends \IPSModule
         $max = $expose['value_max'] ?? 0;
         $step = $expose['value_step'] ?? 1.0;
 
-        // Verbesserte UTF8-Decodierung für unit
+        // Einheit unverändert verwenden (keine Re-Encoding-Konvertierung)
         $unitWithSpace = '';
         if ($unit !== '') {
-            // Einfache UTF8-Konvertierung für korrekte Darstellung von Sonderzeichen
-            $unitWithSpace = ' ' . mb_convert_encoding($unit, 'ISO-8859-1', 'UTF-8');
+            $unitWithSpace = ' ' . $unit;
         }
 
         // Profil entsprechend Variablentyp erstellen
