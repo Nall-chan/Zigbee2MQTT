@@ -3323,7 +3323,7 @@ abstract class ModulBase extends \IPSModule
         $unitWithSpace = '';
         if ($unit !== '') {
             // Einfache UTF8-Konvertierung für korrekte Darstellung von Sonderzeichen
-            $unitWithSpace = ' ' . mb_convert_encoding($unit, 'ISO-8859-1', 'UTF-8');
+            $unitWithSpace = ' ' .$unit; //. mb_convert_encoding($unit, 'ISO-8859-1', 'UTF-8');
         }
 
         // Profil entsprechend Variablentyp erstellen

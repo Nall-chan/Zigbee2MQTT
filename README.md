@@ -200,6 +200,14 @@ Bitte den einzelnen Modulen entnehmen:
 
 ## 5. Changelog  
 
+**Version 5.40:**  
+
+- Einheiten in Profilen wurden teilweise nicht als UTF8 String an Symcon übergeben.  
+- Explizites Token-Mapping für häufige Zeichenketten bei booleschen Werten. Verhindert false positives bei Erkennung von Strings, wie z.B. `OFF` welches zu true umgewandelt wurde.  
+- Fehlerhafte Typisierung bei mehrdeutigen Features wie der Position (z.B. `position` numerischer vs. Enum-/String-Geräte) wird verhindert.  
+- Gefilterte Attribute aus Z2M werden in Symcon nicht mehr als Variablen angelegt. (Danke an JosVanHaag für den PR)  
+- Fehlende Übersetzungen vom Gerät S8 ergänzt.  
+
 **Version 5.39:**  
 
 - Fehlende Übersetzungen vom Gerät Senoro.Win v2 ergänzt.  
