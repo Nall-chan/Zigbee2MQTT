@@ -1509,13 +1509,14 @@ abstract class ModulBase extends \IPSModule
         }
 
         $topic = substr($messageData['Topic'], strlen($baseTopic) + 1);
-        $payloadData = json_decode($messageData['Payload'], true);
-        if ($payloadData === null && json_last_error() !== JSON_ERROR_NONE) {
-            // Nur konvertieren wenn Payload kein gültiges UTF-8 ist (z.B. Altbestand in ISO-8859-1).
-            if (!mb_check_encoding($messageData['Payload'], 'UTF-8')) {
-                $payloadData = json_decode(mb_convert_encoding($messageData['Payload'], 'UTF-8', 'ISO-8859-1'), true);
-            }
+
+        // Payload vor json_decode immer als UTF-8 sicherstellen
+        $payloadString = (string) $messageData['Payload'];
+        if (!mb_check_encoding($payloadString, 'UTF-8')) {
+            $payloadString = mb_convert_encoding($payloadString, 'UTF-8', 'ISO-8859-1');
         }
+
+        $payloadData = json_decode($payloadString, true);
         return [
             explode('/', $topic),
             $payloadData
