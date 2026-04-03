@@ -1258,7 +1258,7 @@ abstract class ModulBase extends \IPSModule
 
                 $this->registerVariable($expose);
                 if (isset($expose['presets'])) {
-                    $variableType = $this->getVariableTypeFromProfile($expose['type'], $expose['property'], $expose['unit'] ?? '', $expose['value_step'] ?? null, null);
+                    $variableType = $this->getVariableTypeFromProfile($expose['type'], $expose['property'], $expose['unit'] ?? '', $expose['value_step'] ?? 1.0, null);
                     $this->registerPresetVariables($expose['presets'], $expose['property'], $variableType, $expose);
                 }
             }
@@ -2967,10 +2967,8 @@ abstract class ModulBase extends \IPSModule
      * @see in_array()
      * @see fmod()
      */
-    private function getVariableTypeFromProfile(string $type, string $feature, $unit = '', ?float $value_step = 1.0, ?string $groupType = null): string
+    private function getVariableTypeFromProfile(string $type, string $feature, string $unit = '', float $value_step = 1.0, ?string $groupType = null): string
     {
-        $value_step = $value_step ?? 1.0;
-
         // Prüfen, ob ein spezifisches Mapping existiert.
         // Wichtig: Nicht nur auf den Feature-Namen matchen, da z.B. "position"
         // je nach Gerätetyp numerisch (Cover) oder enum (Kontakt) sein kann.

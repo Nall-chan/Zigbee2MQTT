@@ -1,6 +1,6 @@
 /*
  IPSymconExtension
- Version: 5.02
+ Version: 5.40
 */
 
 class MyLogger {
