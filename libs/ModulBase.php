@@ -4167,12 +4167,13 @@ abstract class ModulBase extends \IPSModule
 
         // Prüfe auf vordefinierte States wenn kein state pattern matched
         if (isset(static::$stateDefinitions[$featureId])) {
-            // Registriere gefundenes StateMappingProfil
-            $this->registerStateMappingProfile($featureId);
             $stateConfig = static::$stateDefinitions[$featureId];
             // Stelle sicher, dass ident und profile Keys existieren
             $stateConfig['ident'] = $stateConfig['ident'] ?? $featureId;
             $stateConfig['profile'] = $stateConfig['profile'] ?? '';
+            // EnableAction nur wenn explizit definiert oder access-Flag gesetzt
+            $stateConfig['enableAction'] = $stateConfig['enableAction'] ??
+                (isset($feature['access']) && ($feature['access'] & 0b010) != 0);
             return $stateConfig;
         }
 
