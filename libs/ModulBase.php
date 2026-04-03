@@ -2938,32 +2938,36 @@ abstract class ModulBase extends \IPSModule
      * @see in_array()
      * @see fmod()
      */
-    private function getVariableTypeFromProfile(string $type, string $feature, $unit = '', float $value_step = 1.0, ?string $groupType = null): string
+    private function getVariableTypeFromProfile(string $type, string $feature, $unit = '', ?float $value_step = 1.0, ?string $groupType = null): string
     {
-        // Erst StandardProfile prüfen
-        foreach (self::$VariableUseStandardProfile as $profile) {
-            if ($profile['feature'] === $feature) {
-                switch ($profile['variableType']) {
-                    case VARIABLETYPE_BOOLEAN:
-                        return 'bool';
-                    case VARIABLETYPE_INTEGER:
-                        return 'int';
-                    case VARIABLETYPE_FLOAT:
-                        return 'float';
-                    case VARIABLETYPE_STRING:
-                        return 'string';
-                }
-            }
-        }
-        // Prüfen, ob ein spezifisches Mapping für type und feature existiert
+        $value_step = $value_step ?? 1.0;
+
+        // Prüfen, ob ein spezifisches Mapping existiert.
+        // Wichtig: Nicht nur auf den Feature-Namen matchen, da z.B. "position"
+        // je nach Gerätetyp numerisch (Cover) oder enum (Kontakt) sein kann.
         foreach (self::$VariableUseStandardProfile as $entry) {
-            if ((isset($entry['type']) && ($entry['type'] === $type || $entry['type'] === '')) && $entry['feature'] === $feature) {
-                $this->SendDebug(__FUNCTION__, 'Found specific mapping for type and feature: ' . $entry['variableType'], 0);
-                return $entry['variableType'];
+            if (($entry['feature'] ?? '') !== $feature) {
+                continue;
             }
-            if ((isset($entry['group_type']) && ($entry['group_type'] === $groupType || $entry['group_type'] === '')) && $entry['feature'] === $feature) {
-                $this->SendDebug(__FUNCTION__, 'Found specific mapping for group_type and feature: ' . $entry['variableType'], 0);
-                return $entry['variableType'];
+
+            $typeMatches = !isset($entry['type']) || $entry['type'] === '' || $entry['type'] === $type;
+            $groupMatches = !isset($entry['group_type']) || $entry['group_type'] === '' || $entry['group_type'] === $groupType;
+
+            if (!$typeMatches || !$groupMatches) {
+                continue;
+            }
+
+            $this->SendDebug(__FUNCTION__, 'Found specific mapping: ' . json_encode($entry), 0);
+
+            switch ($entry['variableType']) {
+                case VARIABLETYPE_BOOLEAN:
+                    return 'bool';
+                case VARIABLETYPE_INTEGER:
+                    return 'int';
+                case VARIABLETYPE_FLOAT:
+                    return 'float';
+                case VARIABLETYPE_STRING:
+                    return 'string';
             }
         }
 
