@@ -1466,7 +1466,8 @@ abstract class ModulBase extends \IPSModule
      * @see json_last_error_msg()
      * @see substr()
      * @see strlen()
-     * @see utf8_decode()
+    * @see mb_check_encoding()
+    * @see mb_convert_encoding()
      */
     private function validateAndParseMessage(string $JSONString): array
     {
@@ -1492,12 +1493,53 @@ abstract class ModulBase extends \IPSModule
         $topic = substr($messageData['Topic'], strlen($baseTopic) + 1);
         $payloadData = json_decode($messageData['Payload'], true);
         if ($payloadData === null && json_last_error() !== JSON_ERROR_NONE) {
-            $payloadData = json_decode(mb_convert_encoding($messageData['Payload'], 'UTF-8', 'ISO-8859-1'), true);
+            // Nur konvertieren wenn der Payload kein gültiges UTF-8 ist (z.B. ISO-8859-1 von älteren IPS-Versionen).
+            // Ist der Payload bereits UTF-8, würde mb_convert_encoding Sonderzeichen doppelt kodieren (z.B. °C → Â°C).
+            if (!mb_check_encoding($messageData['Payload'], 'UTF-8')) {
+                $payloadData = json_decode(mb_convert_encoding($messageData['Payload'], 'UTF-8', 'ISO-8859-1'), true);
+            }
         }
+
+        // Schutz gegen bereits entstandene Mojibake-Sequenzen (z. B. "Â°C" statt "°C")
+        if (is_array($payloadData)) {
+            $payloadData = $this->normalizePayloadEncoding($payloadData);
+        }
+
         return [
             explode('/', $topic),
             $payloadData
         ];
+    }
+
+    /**
+     * Normalisiert typische Mojibake-Sequenzen rekursiv in Payload-Daten.
+     */
+    private function normalizePayloadEncoding(array $payload): array
+    {
+        foreach ($payload as $key => $value) {
+            if (is_array($value)) {
+                $payload[$key] = $this->normalizePayloadEncoding($value);
+                continue;
+            }
+
+            if (is_string($value)) {
+                $payload[$key] = $this->normalizeMojibakeString($value);
+            }
+        }
+
+        return $payload;
+    }
+
+    /**
+     * Korrigiert häufige UTF-8/ISO-8859-1 Mojibake-Muster in Strings.
+     */
+    private function normalizeMojibakeString(string $value): string
+    {
+        return str_replace(
+            ['Â°', 'Âµ', 'Â²', 'Â³'],
+            ['°', 'µ', '²', '³'],
+            $value
+        );
     }
 
     /**
@@ -2952,6 +2994,10 @@ abstract class ModulBase extends \IPSModule
     {
         $value_step = $value_step ?? 1.0;
 
+        if (is_string($unit) && $unit !== '') {
+            $unit = $this->normalizeMojibakeString($unit);
+        }
+
         // Prüfen, ob ein spezifisches Mapping existiert.
         // Wichtig: Nicht nur auf den Feature-Namen matchen, da z.B. "position"
         // je nach Gerätetyp numerisch (Cover) oder enum (Kontakt) sein kann.
@@ -3281,7 +3327,7 @@ abstract class ModulBase extends \IPSModule
         // Frühe Typ-Bestimmung
         $type = $expose['type'] ?? '';
         $feature = $expose['property'] ?? '';
-        $unit = isset($expose['unit']) && is_string($expose['unit']) ? $expose['unit'] : '';
+        $unit = isset($expose['unit']) && is_string($expose['unit']) ? $this->normalizeMojibakeString($expose['unit']) : '';
         $value_step = isset($expose['value_step']) ? (float) $expose['value_step'] : 1.0;
 
         // Bestimme Variablentyp
