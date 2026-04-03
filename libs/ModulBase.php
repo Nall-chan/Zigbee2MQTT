@@ -1484,8 +1484,8 @@ abstract class ModulBase extends \IPSModule
      * @see json_last_error_msg()
      * @see substr()
      * @see strlen()
-    * @see mb_check_encoding()
-    * @see mb_convert_encoding()
+     * @see mb_check_encoding()
+     * @see mb_convert_encoding()
      */
     private function validateAndParseMessage(string $JSONString): array
     {
