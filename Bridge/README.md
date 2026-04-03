@@ -1,12 +1,13 @@
-[![Version](https://img.shields.io/badge/Symcon-PHPModul-red.svg)](https://www.symcon.de/service/dokumentation/entwicklerbereich/sdk-tools/sdk-php/)
-![Version](https://img.shields.io/badge/Symcon%20Version-7.0%20%3E-blue.svg)
-[![License](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-green.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)  
+[![SDK](https://img.shields.io/badge/Symcon-PHPModul-red.svg)](https://www.symcon.de/service/dokumentation/entwicklerbereich/sdk-tools/sdk-php/)
+[![Module Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FNall-chan%2FZigbee2MQTT%2Frefs%2Fheads%2Fmain%2Flibrary.json&query=%24.version&label=Modul%20Version&color=blue)](https://community.symcon.de/t/modul-zigbee2mqtt-version-5-x/139819)
+[![Symcon Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FNall-chan%2FZigbee2MQTT%2Frefs%2Fheads%2Fmain%2Flibrary.json&query=%24.compatibility.version&suffix=%3E&label=Symcon%20Version&color=green)](https://www.symcon.de/de/service/dokumentation/installation/migrationen/v64-v70-q4-2023/)  
+[![License](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-green.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
 [![Check Style](https://github.com/Nall-chan/Zigbee2MQTT/workflows/Check%20Style/badge.svg)](https://github.com/Nall-chan/Zigbee2MQTT/actions)
 [![Run Tests](https://github.com/Nall-chan/Zigbee2MQTT/workflows/Run%20Tests/badge.svg)](https://github.com/Nall-chan/Zigbee2MQTT/actions)  
 
 # Zigbee2MQTT-Bridge  <!-- omit in toc -->
-   Modul für alle Systemweiten Funktionen von Zigbee2MQTT
 
+   Modul für alle Systemweiten Funktionen von Zigbee2MQTT
 
 ## Inhaltsverzeichnis <!-- omit in toc -->
 
@@ -24,25 +25,26 @@
 
 ## 1. Funktionsumfang
 
-* Verfügbarkeit von Zigbee2MQTT in Symcon darstellen (Online-Variable)
-* Verwaltung der für das Modul benötigten Extension in Zigbee2MQTT
-* Systemweite Einstellungen in Zigbee2MQTT aus Symcon anpassen
-* Netzwerkbeitritt aus Symcon steuern und darstellen
-* Viele PHP-Funktionen um interne Zigbee2MQTT Funktionen auszuführen (Gruppen verwalten, Geräte umbenennen usw...)
+- Verfügbarkeit von Zigbee2MQTT in Symcon darstellen (Online-Variable)
+- Verwaltung der für das Modul benötigten Extension in Zigbee2MQTT
+- Systemweite Einstellungen in Zigbee2MQTT aus Symcon anpassen
+- Netzwerkbeitritt aus Symcon steuern und darstellen
+- Viele PHP-Funktionen um interne Zigbee2MQTT Funktionen auszuführen (Gruppen verwalten, Geräte umbenennen usw...)
   
 ## 2. Voraussetzungen
 
-* mindestens IPS Version 7.0
-* MQTT-Broker (interner MQTT-Server von Symcon oder externer z.B. Mosquitto)
-* installiertes und lauffähiges [zigbee2mqtt](https://www.zigbee2mqtt.io) 
+- mindestens IPS Version 7.0
+- MQTT-Broker (interner MQTT-Server von Symcon oder externer z.B. Mosquitto)
+- installiertes und lauffähiges [zigbee2mqtt](https://www.zigbee2mqtt.io)  
   
 ## 3. Software-Installation
 
-* Dieses Modul ist Bestandteil der [Zigbee2MQTT-Library](../README.md#3-installation).  
+- Dieses Modul ist Bestandteil der [Zigbee2MQTT-Library](../README.md#3-installation).  
 
 ## 4. Konfiguration
 
    ![Konfiguration Device](imgs/config.png)
+
 | **Nummer** | **Feld**            | **Beschreibung**                                                                                                                                                |
 | ---------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **1**      | **MQTT Base Topic** | Dieses wird vom [Konfigurator](../Configurator/README.md) bei Anlage der Instanz automatisch auf den korrekten Wert gesetzt und sollte auch so belassen werden. |
@@ -74,17 +76,21 @@
 ```php
 bool Z2M_InstallSymconExtension(int $InstanzID);
 ```
+
 Die aktuelle Symcon Erweiterung wird in Z2M installiert.  
 
 ---
+
 ### Z2M_SetLastSeen <!-- omit in toc -->
 
 ```php
 bool Z2M_SetLastSeen(int $InstanzID);
 ```
+
 Die Konfiguration der `last_seen` Einstellung in Z2M wird auf `epoch` verändert, damit die Instanzen in Symcon den Wert korrekt darstellen können.  
 
 ---
+
 ### Z2M_SetPermitJoin <!-- omit in toc -->
 
 ```php
@@ -92,6 +98,7 @@ bool Z2M_SetPermitJoin(int $InstanzID, bool $PermitJoin);
 ```
 
 ---
+
 ### Z2M_SetLogLevel <!-- omit in toc -->
 
 ```php
@@ -99,6 +106,7 @@ bool Z2M_SetLogLevel(int $InstanzID, string $LogLevel);
 ```
 
 ---
+
 ### Z2M_Restart <!-- omit in toc -->
 
 ```php
@@ -106,6 +114,7 @@ bool Z2M_Restart(int $InstanzID);
 ```
 
 ---
+
 ### Z2M_CreateGroup <!-- omit in toc -->
 
 ```php
@@ -113,6 +122,7 @@ bool Z2M_CreateGroup(int $InstanzID, string $GroupName);
 ```
 
 ---
+
 ### Z2M_DeleteGroup <!-- omit in toc -->
 
 ```php
@@ -120,6 +130,7 @@ bool Z2M_DeleteGroup(int $InstanzID, string $GroupName);
 ```
 
 ---
+
 ### Z2M_RenameGroup <!-- omit in toc -->
 
 ```php
@@ -127,6 +138,7 @@ bool Z2M_RenameGroup(int $InstanzID, string $OldName, string $NewName);
 ```
 
 ---
+
 ### Z2M_AddDeviceToGroup <!-- omit in toc -->
 
 ```php
@@ -134,6 +146,7 @@ bool Z2M_AddDeviceToGroup(int $InstanzID, string $GroupName, string $DeviceName)
 ```
 
 ---
+
 ### Z2M_RemoveDeviceFromGroup <!-- omit in toc -->
 
 ```php
@@ -141,6 +154,7 @@ bool Z2M_RemoveDeviceFromGroup(int $InstanzID, string $GroupName, string $Device
 ```
 
 ---
+
 ### Z2M_RemoveAllDevicesFromGroup <!-- omit in toc -->
 
 ```php
@@ -148,6 +162,7 @@ bool Z2M_RemoveAllDevicesFromGroup(int $InstanzID, string $GroupName);
 ```
 
 ---
+
 ### Z2M_Bind <!-- omit in toc -->
 
 ```php
@@ -155,6 +170,7 @@ bool Z2M_Bind(int $InstanzID, string $SourceDevice, string $TargetDevice);
 ```
 
 ---
+
 ### Z2M_Unbind <!-- omit in toc -->
 
 ```php
@@ -162,6 +178,7 @@ bool Z2M_Unbind(int $InstanzID, string $SourceDevice, string $TargetDevice);
 ```
 
 ---
+
 ### Z2M_RequestNetworkmap <!-- omit in toc -->
 
 ```php
@@ -169,6 +186,7 @@ bool Z2M_RequestNetworkmap(int $InstanzID);
 ```
 
 ---
+
 ### Z2M_RenameDevice <!-- omit in toc -->
 
 ```php
@@ -176,6 +194,7 @@ bool Z2M_RenameDevice(int $InstanzID, string $OldDeviceName, string $NewDeviceNa
 ```
 
 ---
+
 ### Z2M_RemoveDevice <!-- omit in toc -->
 
 ```php
@@ -183,6 +202,7 @@ bool Z2M_RemoveDevice(int $InstanzID, string $DeviceName);
 ```
 
 ---
+
 ### Z2M_CheckOTAUpdate <!-- omit in toc -->
 
 ```php
@@ -190,6 +210,7 @@ bool Z2M_CheckOTAUpdate(int $InstanzID, string $DeviceName);
 ```
 
 ---
+
 ### Z2M_PerformOTAUpdate <!-- omit in toc -->
 
 ```php

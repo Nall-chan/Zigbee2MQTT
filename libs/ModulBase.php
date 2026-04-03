@@ -293,33 +293,37 @@ abstract class ModulBase extends \IPSModule
      *   - ident?: string Optional: Benutzerdefinierter Identifier
      */
     protected static $specialVariables = [
-        'last_seen'                 => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Last Seen', 'profile' => '~UnixTimestamp'],
-        'color_mode'                => ['type' => VARIABLETYPE_STRING, 'name' => 'Color Mode', 'profile' => ''],
-        'update'                    => ['type' => VARIABLETYPE_STRING, 'name' => 'Firmware Update Status', 'profile' => ''],
-        'device_temperature'        => ['type' => VARIABLETYPE_FLOAT, 'name' => 'Device Temperature', 'profile' => '~Temperature'],
-        'brightness'                => ['type' => VARIABLETYPE_INTEGER, 'ident' => 'brightness', 'profile' => '~Intensity.100'],
-        'brightness_l1'             => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l1', 'profile' => '~Intensity.100'],
-        'brightness_l2'             => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l2', 'profile' => '~Intensity.100'],
-        'voltage'                   => ['type' => VARIABLETYPE_FLOAT, 'ident' => 'voltage', 'profile' => '~Volt'],
-        'calibration_time'          => ['type' => VARIABLETYPE_FLOAT, 'profile' => ''],
-        'countdown'                 => ['type' => VARIABLETYPE_INTEGER, 'profile' => ''],
-        'countdown_l1'              => ['type' => VARIABLETYPE_INTEGER, 'profile' => ''],
-        'countdown_l2'              => ['type' => VARIABLETYPE_INTEGER, 'profile' => ''],
-        'update__installed_version' => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Installed Version', 'profile' => ''],
-        'update__latest_version'    => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Latest Version', 'profile' => ''],
-        'update__state'             => ['type' => VARIABLETYPE_STRING, 'name' => 'Update State', 'profile' => ''],
-        'update__progress'          => ['type' => VARIABLETYPE_FLOAT, 'name' => 'Update Progress', 'profile' =>'~Progress'],
-        'update__remaining'         => ['type' => VARIABLETYPE_FLOAT, 'name' => 'Update Remaining', 'profile' => '']
+        'last_seen'                  => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Last Seen', 'profile' => '~UnixTimestamp'],
+        'color_mode'                 => ['type' => VARIABLETYPE_STRING, 'name' => 'Color Mode', 'profile' => ''],
+        'update'                     => ['type' => VARIABLETYPE_STRING, 'name' => 'Firmware Update Status', 'profile' => ''],
+        'device_temperature'         => ['type' => VARIABLETYPE_FLOAT, 'name' => 'Device Temperature', 'profile' => '~Temperature'],
+        'brightness'                 => ['type' => VARIABLETYPE_INTEGER, 'ident' => 'brightness', 'profile' => '~Intensity.100'],
+        'brightness_l1'              => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l1', 'profile' => '~Intensity.100'],
+        'brightness_l2'              => ['type' => VARIABLETYPE_INTEGER, 'name' => 'brightness_l2', 'profile' => '~Intensity.100'],
+        'voltage'                    => ['type' => VARIABLETYPE_FLOAT, 'ident' => 'voltage', 'profile' => '~Volt'],
+        'calibration_time'           => ['type' => VARIABLETYPE_FLOAT, 'profile' => ''],
+        'countdown'                  => ['type' => VARIABLETYPE_INTEGER, 'profile' => ''],
+        'countdown_l1'               => ['type' => VARIABLETYPE_INTEGER, 'profile' => ''],
+        'countdown_l2'               => ['type' => VARIABLETYPE_INTEGER, 'profile' => ''],
+        'update__installed_version'  => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Installed Version', 'profile' => ''],
+        'update__latest_version'     => ['type' => VARIABLETYPE_INTEGER, 'name' => 'Latest Version', 'profile' => ''],
+        'update__state'              => ['type' => VARIABLETYPE_STRING, 'name' => 'Update State', 'profile' => ''],
+        'update__progress'           => ['type' => VARIABLETYPE_FLOAT, 'name' => 'Update Progress', 'profile' => '~Progress'],
+        'update__remaining'          => ['type' => VARIABLETYPE_FLOAT, 'name' => 'Update Remaining', 'profile' => ''],
+        'no_occupancy_since'         => ['type' => VARIABLETYPE_INTEGER, 'name' => 'No occupancy since', 'profile' => '~Duration']
     ];
 
     /**
      * @var array $stateDefinitions Array mit Status-Definitionen
      *
      * Definiert Status-Variablen mit festgelegten Wertebereichen
+     * @todo die Struktur nutzt VariablenName als Index. Im Code wird aber sowohl ProfileName als auch Ident bzw. features->property benutzt.
+     * Hier ist also irgendwas falsch.
+     * Fix vom 24.10.2025 auf Ident / features->property, da der ProfileName innerhalb des Array vorhanden ist.
      *
      * Struktur:
      * [
-     *   'VariablenName' => [
+     *   'VarIdent' => [
      *      'type'     => string,   // Typ der Variable (z.B. 'automode', 'valve')
      *      'dataType' => integer,  // IPS Variablentyp (VARIABLETYPE_*)
      *      'values'   => array,    // Erlaubte Werte für die Variable
@@ -578,6 +582,13 @@ abstract class ModulBase extends \IPSModule
                 $this->SendDebug(__FUNCTION__, 'Verarbeite Preset: ' . $ident, 0);
                 return $this->handlePresetVariable($ident, $value);
             },
+            // Behandelt _and_ Keys - WICHTIG: Vor dem Composite Key Check!
+            strpos($ident, '_and_') !== false => function () use ($ident, $value)
+            {
+                $ident = str_replace('_and_', '&', $ident);
+                $this->SendDebug(__FUNCTION__, 'recall action: ' . $ident, 0);
+                return $this->RequestAction($ident, $value);
+            },
             // Behandelt Composite Keys (z.B. color_options__execute_if_off)
             strpos($ident, '__') !== false => function () use ($ident, $value)
             {
@@ -780,7 +791,9 @@ abstract class ModulBase extends \IPSModule
                 '~Intensity.100',
                 10
             );
-            $this->EnableAction('brightness');
+
+            // Zentrale EnableAction-Prüfung für brightness Migration
+            $this->checkAndEnableAction('brightness');
         }
         // Flag für beendete Migration wieder setzen
         $this->BUFFER_MQTT_SUSPENDED = false;
@@ -890,7 +903,7 @@ abstract class ModulBase extends \IPSModule
      */
     public function SetColorExt(int $color, int $TransitionTime): bool
     {
-        return $this->setColor($color, 'cie', 'color', $TransitionTime);
+        return $this->setColor($color, $this->getColorMode(), 'color', $TransitionTime);
     }
 
     /**
@@ -1477,9 +1490,13 @@ abstract class ModulBase extends \IPSModule
         }
 
         $topic = substr($messageData['Topic'], strlen($baseTopic) + 1);
+        $payloadData = json_decode($messageData['Payload'], true);
+        if ($payloadData === null && json_last_error() !== JSON_ERROR_NONE) {
+            $payloadData = json_decode(mb_convert_encoding($messageData['Payload'], 'UTF-8', 'ISO-8859-1'), true);
+        }
         return [
             explode('/', $topic),
-            json_decode(mb_convert_encoding($messageData['Payload'], 'ISO-8859-1', 'UTF-8'), true) // wir nutzen bitte utf8_decode bei IPSModule, und hex2bin ab IPSModuleStrict
+            $payloadData
         ];
     }
 
@@ -1721,7 +1738,9 @@ abstract class ModulBase extends \IPSModule
                     $this->Translate($this->convertLabelToName($key)),
                     $varType['profile']
                 );
-                $this->EnableAction($key);
+
+                // Zentrale EnableAction-Prüfung für neue Variable
+                $this->checkAndEnableAction($key);
             }
 
             $this->SetValue($key, $value);
@@ -1793,11 +1812,8 @@ abstract class ModulBase extends \IPSModule
         // Variable registrieren und Wert setzen
         $variableID = $this->getOrRegisterVariable($ident, $variableProps);
         if ($variableID) {
-            // EnableAction Check auch bei neu angelegten Variablen durchführen
-            if (isset($variableProps['access']) && ($variableProps['access'] & 0b010) != 0) {
-                $this->EnableAction($ident);
-                $this->SendDebug(__FUNCTION__, 'Set EnableAction for ident: ' . $ident . ' to: true', 0);
-            }
+            // Zentrale EnableAction-Prüfung auch bei neu angelegten Variablen
+            $this->checkAndEnableAction($ident, $variableProps);
             $this->SetValue($ident, $value);
         }
 
@@ -2023,17 +2039,21 @@ abstract class ModulBase extends \IPSModule
      *
      * Diese Methode wird aufgerufen, wenn eine Aktion für eine Farbvariable angefordert wird.
      * Sie verarbeitet verschiedene Arten von Farbvariablen basierend auf dem Identifikator der Variable.
+     * Der Identifikator color kann verschiedene Modi abbilden.
+     * Der aktuelle Modus wird aus der Variable color_mode über getColorMode ermittelt.
      *
      * @param string $ident Der Identifikator der Farbvariable.
      * @param mixed $value Der Wert, der mit der Farbvariablen-Aktionsanforderung verbunden ist.
      *
      * @return bool Gibt true zurück, wenn die Aktion erfolgreich verarbeitet wurde, andernfalls false.
      *
-     * @see \Zigbee2MQTT\ModulBase::xyToInt()
+     * @see \Zigbee2MQTT\ColorHelper::getColorMode()
+     * @see \Zigbee2MQTT\ColorHelper::xyToInt()
+     * @see \Zigbee2MQTT\ColorHelper::convertKelvinToMired()
      * @see \Zigbee2MQTT\ModulBase::SendSetCommand()
      * @see \Zigbee2MQTT\ModulBase::SetValueDirect()
      * @see \Zigbee2MQTT\ModulBase::setColor()
-     * @see \Zigbee2MQTT\ModulBase::convertKelvinToMired()
+     * @see \IPSModule::GetValue()
      * @see \IPSModule::SendDebug()
      * @see json_encode()
      * @see is_int()
@@ -2048,22 +2068,31 @@ abstract class ModulBase extends \IPSModule
                 $this->SendDebug(__FUNCTION__, 'Color Value: ' . json_encode($value), 0);
                 if (is_int($value)) { //Schaltaktion aus Symcon
                     if ($this->GetValue('color') !== $value) {
-                        return $this->setColor($value, 'cie');
+                        $mode = $this->getColorMode();
+                        return $this->setColor($value, $mode);
                     }
                     return false;
                 } elseif (is_array($value)) { //Datenempfang
                     // Prüfen auf x/y Werte im color Array
                     if (isset($value['color']) && isset($value['color']['x']) && isset($value['color']['y'])) {
+                        //  x/y Werte innerhalb color
                         $brightness = $value['brightness'] ?? 254;
                         $this->SendDebug(__FUNCTION__, 'Processing color with brightness: ' . $brightness, 0);
-
                         // Umrechnung der x und y Werte in einen HEX-Wert mit Helligkeit
                         $hexValue = $this->xyToInt($value['color']['x'], $value['color']['y'], $brightness);
                         $this->SetValueDirect('color', $hexValue);
                     } elseif (isset($value['x']) && isset($value['y'])) {
                         // Direkte x/y Werte
                         $brightness = $value['brightness'] ?? 254;
+                        $this->SendDebug(__FUNCTION__, 'Processing color with brightness: ' . $brightness, 0);
+                        // Umrechnung der x und y Werte in einen HEX-Wert mit Helligkeit
                         $hexValue = $this->xyToInt($value['x'], $value['y'], $brightness);
+                        $this->SetValueDirect('color', $hexValue);
+                    } elseif (isset($value['hue']) && isset($value['saturation'])) {
+                        $brightness = $value['brightness'] ?? 254;
+                        $this->SendDebug(__FUNCTION__, 'Processing color with brightness: ' . $brightness, 0);
+                        // Umrechnung der H und S Werte in einen HEX-Wert mit Helligkeit
+                        $hexValue = $this->HSVToInt($value['hue'], $value['saturation'], $brightness);
                         $this->SetValueDirect('color', $hexValue);
                     }
                     return true;
@@ -2259,6 +2288,8 @@ abstract class ModulBase extends \IPSModule
                     return $value;
                 }
                 if (is_string($value)) {
+                    $normalizedValue = strtoupper(trim($value, " \t\n\r\0\x0B\"'"));
+
                     // Exposes-Daten für diesen Identifier abrufen
                     $exposes = $this->ReadAttributeArray(self::ATTRIBUTE_EXPOSES);
                     foreach ($exposes as $expose) {
@@ -2270,22 +2301,26 @@ abstract class ModulBase extends \IPSModule
                                 $feature['type'] === 'binary') {
 
                                 // Prüfen ob der Wert dem value_on entspricht
-                                if ($value == $feature['value_on']) {
+                                if ($value === $feature['value_on']) {
                                     return true;
                                 }
                                 // Prüfen ob der Wert dem value_off entspricht
-                                elseif ($value == $feature['value_off']) {
+                                elseif ($value === $feature['value_off']) {
                                     return false;
                                 }
                             }
                         }
                     }
-                    // Standard ON/OFF Prüfung als Fallback
-                    if (strtoupper($value) === 'ON') {
+                    // Standardprüfung für übliche Bool-Textwerte als Fallback
+                    if (in_array($normalizedValue, ['ON', 'TRUE', 'YES', '1', 'LOCK', 'OPEN'], true)) {
                         return true;
-                    } elseif (strtoupper($value) === 'OFF') {
+                    }
+                    if (in_array($normalizedValue, ['OFF', 'FALSE', 'NO', '0', 'UNLOCK', 'CLOSE', 'CLOSED'], true)) {
                         return false;
                     }
+
+                    $this->SendDebug(__FUNCTION__, 'Unbekannter boolescher Stringwert für ' . $ident . ': ' . json_encode($value) . ' -> false', 0);
+                    return false;
                 }
                 return (bool) $value;
             case 1:
@@ -2761,11 +2796,11 @@ abstract class ModulBase extends \IPSModule
 
         // Entferne das doppelte Präfix, falls vorhanden
         $ProfileName = str_replace('Z2M.Z2M_', 'Z2M.', $ProfileName);
+        $ProfileName = str_replace('&', '_and_', $ProfileName);
 
         // State-Mapping prüfen
-        if (isset(self::$stateDefinitions[$ProfileName])) {
-            $this->registerStateMappingProfile($ProfileName);
-            return $ProfileName;
+        if (isset(self::$stateDefinitions[$property])) {
+            return $this->registerStateMappingProfile($property);
         }
 
         // Enum-Profil-Logik
@@ -2783,8 +2818,13 @@ abstract class ModulBase extends \IPSModule
                 if (
                     ($valueOn === true && $valueOff === false) ||
                     ($valueOn === false && $valueOff === true) ||
-                    (is_string($valueOn) && is_string($valueOff) &&
-                        strtoupper($valueOn) === 'ON' && strtoupper($valueOff) === 'OFF')
+                    (
+                        is_string($valueOn) && is_string($valueOff) &&
+                        (
+                            (strtoupper($valueOn) === 'ON' && strtoupper($valueOff) === 'OFF') ||
+                            (strtoupper($valueOn) === 'TRUE' && strtoupper($valueOff) === 'FALSE')
+                        )
+                    )
                 ) {
                     return '~Switch';
                 } else {
@@ -2908,32 +2948,36 @@ abstract class ModulBase extends \IPSModule
      * @see in_array()
      * @see fmod()
      */
-    private function getVariableTypeFromProfile(string $type, string $feature, $unit = '', float $value_step = 1.0, ?string $groupType = null): string
+    private function getVariableTypeFromProfile(string $type, string $feature, $unit = '', ?float $value_step = 1.0, ?string $groupType = null): string
     {
-        // Erst StandardProfile prüfen
-        foreach (self::$VariableUseStandardProfile as $profile) {
-            if ($profile['feature'] === $feature) {
-                switch ($profile['variableType']) {
-                    case VARIABLETYPE_BOOLEAN:
-                        return 'bool';
-                    case VARIABLETYPE_INTEGER:
-                        return 'int';
-                    case VARIABLETYPE_FLOAT:
-                        return 'float';
-                    case VARIABLETYPE_STRING:
-                        return 'string';
-                }
-            }
-        }
-        // Prüfen, ob ein spezifisches Mapping für type und feature existiert
+        $value_step = $value_step ?? 1.0;
+
+        // Prüfen, ob ein spezifisches Mapping existiert.
+        // Wichtig: Nicht nur auf den Feature-Namen matchen, da z.B. "position"
+        // je nach Gerätetyp numerisch (Cover) oder enum (Kontakt) sein kann.
         foreach (self::$VariableUseStandardProfile as $entry) {
-            if ((isset($entry['type']) && ($entry['type'] === $type || $entry['type'] === '')) && $entry['feature'] === $feature) {
-                $this->SendDebug(__FUNCTION__, 'Found specific mapping for type and feature: ' . $entry['variableType'], 0);
-                return $entry['variableType'];
+            if (($entry['feature'] ?? '') !== $feature) {
+                continue;
             }
-            if ((isset($entry['group_type']) && ($entry['group_type'] === $groupType || $entry['group_type'] === '')) && $entry['feature'] === $feature) {
-                $this->SendDebug(__FUNCTION__, 'Found specific mapping for group_type and feature: ' . $entry['variableType'], 0);
-                return $entry['variableType'];
+
+            $typeMatches = !isset($entry['type']) || $entry['type'] === '' || $entry['type'] === $type;
+            $groupMatches = !isset($entry['group_type']) || $entry['group_type'] === '' || $entry['group_type'] === $groupType;
+
+            if (!$typeMatches || !$groupMatches) {
+                continue;
+            }
+
+            $this->SendDebug(__FUNCTION__, 'Found specific mapping: ' . json_encode($entry), 0);
+
+            switch ($entry['variableType']) {
+                case VARIABLETYPE_BOOLEAN:
+                    return 'bool';
+                case VARIABLETYPE_INTEGER:
+                    return 'int';
+                case VARIABLETYPE_FLOAT:
+                    return 'float';
+                case VARIABLETYPE_STRING:
+                    return 'string';
             }
         }
 
@@ -2942,13 +2986,11 @@ abstract class ModulBase extends \IPSModule
             // Debug der Original-Einheit
             $this->SendDebug(__FUNCTION__, 'Original unit: ' . bin2hex($unit), 0);
 
-            // Verbesserte UTF-8 Behandlung
-            $unit = mb_convert_encoding($unit, 'UTF-8', 'AUTO');
             $unitTrimmed = str_replace(' ', '', $unit);
 
             // Erweiterte Debug-Ausgaben
-            $this->SendDebug(__FUNCTION__, 'Unit after UTF-8 conversion: ' . bin2hex($unitTrimmed), 0);
-            $this->SendDebug(__FUNCTION__, 'Unit after conversion (readable): ' . $unitTrimmed, 0);
+            $this->SendDebug(__FUNCTION__, 'Unit normalized (hex): ' . bin2hex($unitTrimmed), 0);
+            $this->SendDebug(__FUNCTION__, 'Unit normalized (readable): ' . $unitTrimmed, 0);
             $this->SendDebug(__FUNCTION__, 'FLOAT_UNITS content: ' . json_encode(self::FLOAT_UNITS), 0);
 
             if (in_array($unitTrimmed, self::FLOAT_UNITS, true)) {
@@ -3261,11 +3303,10 @@ abstract class ModulBase extends \IPSModule
         $max = $expose['value_max'] ?? 0;
         $step = $expose['value_step'] ?? 1.0;
 
-        // Verbesserte UTF8-Decodierung für unit
+        // Einheit unverändert verwenden (keine Re-Encoding-Konvertierung)
         $unitWithSpace = '';
         if ($unit !== '') {
-            // Einfache UTF8-Konvertierung für korrekte Darstellung von Sonderzeichen
-            $unitWithSpace = ' ' . mb_convert_encoding($unit, 'ISO-8859-1', 'UTF-8');
+            $unitWithSpace = ' ' . $unit;
         }
 
         // Profil entsprechend Variablentyp erstellen
@@ -3496,6 +3537,11 @@ abstract class ModulBase extends \IPSModule
         foreach ($filteredFeatures as $feature) {
             $variableName = trim(strtolower($feature['property']));
             $knownVariables[$variableName] = $feature;
+            if ($variableName == 'occupancy') {
+                $knownVariables['no_occupancy_since'] = [
+                    'property'=> 'no_occupancy_since'
+                ];
+            }
         }
 
         $this->SendDebug(__FUNCTION__ . ' Known Variables Array:', json_encode($knownVariables), 0);
@@ -3671,9 +3717,17 @@ abstract class ModulBase extends \IPSModule
                     return;
             }
 
-            if (isset($stateConfig['enableAction']) && $stateConfig['enableAction']) {
-                $this->EnableAction($stateConfig['ident']);
-                $this->SendDebug(__FUNCTION__, 'Enabled action for ' . $featureProperty . ' (writable state)', 0);
+            // Zentrale EnableAction-Prüfung für State-Variablen
+            // Prüfe erst auf explizite enableAction-Definition in stateConfig
+            if (isset($stateConfig['enableAction'])) {
+                // Explizit definierter enableAction-Wert hat Vorrang
+                if ($stateConfig['enableAction']) {
+                    $this->checkAndEnableAction($stateConfig['ident'], is_array($feature) ? $feature : null, true);
+                }
+                // Wenn explizit false, dann kein EnableAction - auch nicht über Access-Rechte
+            } else {
+                // Kein expliziter enableAction-Wert, verwende Access-basierte Prüfung
+                $this->checkAndEnableAction($stateConfig['ident'], is_array($feature) ? $feature : null);
             }
             return;
         }
@@ -3711,27 +3765,27 @@ abstract class ModulBase extends \IPSModule
         }
 
         // Registrierung der Variable basierend auf dem Variablentyp
-
+        $ident = str_replace('&', '_and_', $property);
         switch ($variableType) {
             case 'bool':
                 $this->SendDebug(__FUNCTION__, 'Registering Boolean Variable: ' . $property, 0);
-                $this->RegisterVariableBoolean($property, $this->Translate($this->convertLabelToName($property)), $profileName);
+                $this->RegisterVariableBoolean($ident, $this->Translate($this->convertLabelToName($property)), $profileName);
                 break;
             case 'int':
                 $this->SendDebug(__FUNCTION__, 'Registering Integer Variable: ' . $property, 0);
-                $this->RegisterVariableInteger($property, $this->Translate($this->convertLabelToName($property)), $profileName);
+                $this->RegisterVariableInteger($ident, $this->Translate($this->convertLabelToName($property)), $profileName);
                 break;
             case 'float':
                 $this->SendDebug(__FUNCTION__, 'Registering Float Variable: ' . $property, 0);
-                $this->RegisterVariableFloat($property, $this->Translate($this->convertLabelToName($property)), $profileName);
+                $this->RegisterVariableFloat($ident, $this->Translate($this->convertLabelToName($property)), $profileName);
                 break;
             case 'string':
                 $this->SendDebug(__FUNCTION__, 'Registering String Variable: ' . $property, 0);
-                $this->RegisterVariableString($property, $this->Translate($this->convertLabelToName($property)), $profileName);
+                $this->RegisterVariableString($ident, $this->Translate($this->convertLabelToName($property)), $profileName);
                 break;
             case 'text':
                 $this->SendDebug(__FUNCTION__, 'Registering Text Variable: ' . $property, 0);
-                $this->RegisterVariableString($property, $this->Translate($this->convertLabelToName($property))); // Kein Profilname übergeben
+                $this->RegisterVariableString($ident, $this->Translate($this->convertLabelToName($property))); // Kein Profilname übergeben
                 break;
                 // Zusätzliche Registrierung für 'composite' Farb-Variablen
             case 'composite':
@@ -3748,7 +3802,8 @@ abstract class ModulBase extends \IPSModule
                     foreach ($feature['features'] as $subFeature) {
                         // Bilde Sub-Properties
                         $subProperty = $subFeature['property'];
-                        $subFeature['property'] = $property . '__' . $subProperty;
+                        $subProperty = str_replace('&', '_and_', $subFeature['property']);
+                        $subFeature['property'] = $ident . '__' . $subProperty;
 
                         // Preset-Handling für Sub-Features
                         if (isset($subFeature['presets'])) {
@@ -3775,19 +3830,15 @@ abstract class ModulBase extends \IPSModule
             case 'list':
                 // Hauptvariable als JSON Array
                 $this->RegisterVariableString(
-                    $property,
+                    $ident,
                     $this->Translate($this->convertLabelToName($property))
                 );
 
                 // Registriere item_type als composite
                 if (isset($feature['item_type'])) {
                     $itemFeature = $feature['item_type'];
-                    $itemFeature['property'] = $property . '_item';
+                    $itemFeature['property'] = $ident . '_item';
                     $this->registerVariable($itemFeature);
-                }
-
-                if (isset($feature['access']) && ($feature['access'] & 0b010) != 0) {
-                    $this->EnableAction($property);
                 }
                 break;
 
@@ -3796,17 +3847,17 @@ abstract class ModulBase extends \IPSModule
                 return;
         }
 
-        if (isset($feature['access']) && ($feature['access'] & 0b010) != 0) {
-            $this->EnableAction($property);
-            $this->SendDebug(__FUNCTION__, 'Set EnableAction for ident: ' . $property . ' to: true', 0);
+        // Zentrale EnableAction-Prüfung für die Hauptvariable, außer bei composite
+        if ($variableType != 'composite') {
+            $this->checkAndEnableAction($ident, $feature);
         }
         // Zusätzliche Registrierung der color_temp_kelvin Variable, wenn color_temp registriert wird
         if ($property === 'color_temp') {
             $kelvinIdent = $property . '_kelvin';
             $this->RegisterVariableInteger($kelvinIdent, $this->Translate('Color Temperature Kelvin'), '~TWColor');
             $variableId = $this->GetIDForIdent($kelvinIdent);
-            $this->EnableAction($kelvinIdent);
-
+            // color_temp_kelvin ist eine spezielle UI-Variable, die immer EnableAction haben soll
+            $this->checkAndEnableAction($kelvinIdent, null, true);
         }
         // Preset-Verarbeitung nach der normalen Variablenregistrierung
         if (isset($feature['presets']) && !empty($feature['presets'])) {
@@ -3850,17 +3901,20 @@ abstract class ModulBase extends \IPSModule
         switch ($feature['name']) {
             case 'color_xy':
                 $this->RegisterVariableInteger('color', $this->Translate($this->convertLabelToName('color')), '~HexColor');
-                $this->EnableAction('color');
+                // Farbvariablen erhalten IMMER EnableAction, unabhängig von Access-Prüfung
+                $this->checkAndEnableAction('color', null, true);
                 $this->SendDebug(__FUNCTION__ . ' :: Line ' . __LINE__ . ' :: Creating composite color_xy', 'color', 0);
                 break;
             case 'color_hs':
                 $this->RegisterVariableInteger('color_hs', $this->Translate($this->convertLabelToName('color_hs')), '~HexColor');
-                $this->EnableAction('color_hs');
+                // Farbvariablen erhalten IMMER EnableAction, unabhängig von Access-Prüfung
+                $this->checkAndEnableAction('color_hs', null, true);
                 $this->SendDebug(__FUNCTION__ . ' :: Line ' . __LINE__ . ' :: Creating composite color_hs', 'color_hs', 0);
                 break;
             case 'color_rgb':
                 $this->RegisterVariableInteger('color_rgb', $this->Translate($this->convertLabelToName('color_rgb')), '~HexColor');
-                $this->EnableAction('color_rgb');
+                // Farbvariablen erhalten IMMER EnableAction, unabhängig von Access-Prüfung
+                $this->checkAndEnableAction('color_rgb', null, true);
                 $this->SendDebug(__FUNCTION__ . ' :: Line ' . __LINE__ . ' :: Creating composite color_rgb', 'color_rgb', 0);
                 break;
             default:
@@ -3930,10 +3984,8 @@ abstract class ModulBase extends \IPSModule
             $this->RegisterVariableInteger($presetIdent, $this->Translate($formattedLabel . ' Presets'), $profileName);
         }
 
-        // Aktiviere Aktion wenn beschreibbar
-        if (isset($feature['access']) && ($feature['access'] & 0b010) != 0) {
-            $this->EnableAction($presetIdent);
-        }
+        // Zentrale EnableAction-Prüfung für Preset-Variable
+        $this->checkAndEnableAction($presetIdent, $feature);
     }
 
     /**
@@ -3996,12 +4048,8 @@ abstract class ModulBase extends \IPSModule
                 break;
         }
 
-        // Prüfe Access-Rechte aus dem Feature-Array oder den knownVariables
-        if ((isset($feature['access']) && ($feature['access'] & 0b010) != 0) ||
-            (isset($this->getKnownVariables()[$ident]['access']) && ($this->getKnownVariables()[$ident]['access'] & 0b010) != 0)) {
-            $this->EnableAction($ident);
-            $this->SendDebug(__FUNCTION__, 'Set EnableAction for ident: ' . $ident . ' to: true', 0);
-        }
+        // Zentrale EnableAction-Prüfung für spezielle Variable
+        $this->checkAndEnableAction($ident, $feature);
 
         return;
     }
@@ -4012,6 +4060,7 @@ abstract class ModulBase extends \IPSModule
      * Prüft und liefert die Konfiguration für State-basierte Features.
      *
      * Diese Methode analysiert ein Feature und bestimmt, ob es sich um ein State-Feature handelt.
+     *
      * Sie prüft drei Szenarien:
      * 1. Vordefinierte States aus stateDefinitions
      * 2. Enum-Typ States (z.B. "state" mit definierten Werten)
@@ -4027,14 +4076,19 @@ abstract class ModulBase extends \IPSModule
      * - dataType: IPS Variablentyp (z.B. VARIABLETYPE_BOOLEAN, VARIABLETYPE_STRING)
      * - values: Mögliche Zustände (z.B. ['ON', 'OFF'] oder ['OPEN', 'CLOSE', 'STOP'])
      * - profile: Zu verwendenes IPS-Profil (z.B. '~Switch' oder 'Z2M.state.hash')
-     * - enableAction: Ob Aktionen erlaubt sind (basierend auf access)
      * - ident: Normalisierter Identifikator
+     * - enableAction: Optional - Nur bei explizit definierten States aus stateDefinitions
+     *
+     * Hinweis: EnableAction wird nur zurückgegeben wenn explizit in stateDefinitions
+     * definiert. Ansonsten wird EnableAction zentral in registerVariable() über
+     * checkAndEnableAction() basierend auf Access-Rechten bestimmt.
      *
      * @param string $featureId Feature-Identifikator (z.B. 'state', 'state_left')
      * @param array|null $feature Optionales Feature-Array mit weiteren Eigenschaften:
-     *                           - access: Zugriffsrechte (0b010 für Schreibzugriff)
      *                           - type: Datentyp ('enum', 'binary')
      *                           - values: Array möglicher Enum-Werte
+     *                           Hinweis: Access-Rechte werden für EnableAction-Entscheidung
+     *                           an registerVariable() weitergegeben
      *
      * @return array|null Array mit State-Konfiguration oder null wenn kein State-Feature
      *
@@ -4042,20 +4096,22 @@ abstract class ModulBase extends \IPSModule
      * ```php
      * // Standard boolean state
      * $config = $this->getStateConfiguration('state');
-     * // Ergebnis: ['type' => 'switch', 'dataType' => VARIABLETYPE_BOOLEAN, 'profile' => '~Switch', ...]
+     * // Ergebnis: ['type' => 'switch', 'dataType' => VARIABLETYPE_BOOLEAN, 'profile' => '~Switch', 'ident' => 'state']
      *
      * // Enum state mit Profilerstellung
      * $config = $this->getStateConfiguration('state', [
      *     'type' => 'enum',
      *     'values' => ['OPEN', 'CLOSE', 'STOP']
      * ]);
-     * // Ergebnis: ['type' => 'enum', 'dataType' => VARIABLETYPE_STRING, 'profile' => 'Z2M.state.hash', ...]
+     * // Ergebnis: ['type' => 'enum', 'dataType' => VARIABLETYPE_STRING, 'profile' => 'Z2M.state.hash', 'ident' => 'state']
      *
      * // Vordefinierter state
      * $config = $this->getStateConfiguration('valve_state');
-     * // Ergebnis: Konfiguration aus stateDefinitions
+     * // Ergebnis: Konfiguration aus stateDefinitions (inklusive enableAction falls definiert)
      * ```
      *
+     * @see \Zigbee2MQTT\ModulBase::registerVariable() Verwendet die Konfiguration und trifft EnableAction-Entscheidung
+     * @see \Zigbee2MQTT\ModulBase::checkAndEnableAction() Zentrale EnableAction-Logik
      * @see \IPSModule::SendDebug()
      * @see preg_match()
      */
@@ -4069,7 +4125,11 @@ abstract class ModulBase extends \IPSModule
 
             // Prüfe ZUERST auf vordefinierte States
             if (isset(static::$stateDefinitions[$featureId])) {
-                return static::$stateDefinitions[$featureId];
+                $stateConfig = static::$stateDefinitions[$featureId];
+                // Stelle sicher, dass ident und profile Keys existieren
+                $stateConfig['ident'] = $stateConfig['ident'] ?? $featureId;
+                $stateConfig['profile'] = $stateConfig['profile'] ?? '';
+                return $stateConfig;
             }
 
             // Dann auf enum type
@@ -4085,13 +4145,12 @@ abstract class ModulBase extends \IPSModule
                 // Profil anlegen
                 $profileName = $this->registerEnumProfile($enumFeature, 'Z2M.' . $featureId);
 
-                // Daten zur Variavblenregistrierung zurückgeben
+                // Daten zur Variablenregistrierung zurückgeben
                 return [
                     'type'         => 'enum',
                     'dataType'     => VARIABLETYPE_STRING,
                     'values'       => $feature['values'],
                     'profile'      => $profileName,
-                    'enableAction' => (isset($feature['access']) && ($feature['access'] & 0b010) != 0),
                     'ident'        => $featureId
                 ];
             }
@@ -4102,7 +4161,6 @@ abstract class ModulBase extends \IPSModule
                 'dataType'     => VARIABLETYPE_BOOLEAN,
                 'values'       => ['ON', 'OFF'],
                 'profile'      => '~Switch',
-                'enableAction' => (isset($feature['access']) && ($feature['access'] & 0b010) != 0),
                 'ident'        => $featureId
             ];
         }
@@ -4137,7 +4195,7 @@ abstract class ModulBase extends \IPSModule
      */
     private static function getFullRangeProfileName($feature): string
     {
-        $name = 'Z2M.' . $feature['name'];
+        $name = 'Z2M.' . str_replace('&', '_and_', $feature['name']);
         $valueMin = $feature['value_min'] ?? null;
         $valueMax = $feature['value_max'] ?? null;
 
@@ -4163,11 +4221,11 @@ abstract class ModulBase extends \IPSModule
      * @see \Zigbee2MQTT\ModulBase::RegisterProfileStringEx()
      * @see \IPSModule::SendDebug()
      */
-    private function registerStateMappingProfile(string $ProfileName): ?string
+    private function registerStateMappingProfile(string $featureProperty): ?string
     {
-        $stateInfo = self::$stateDefinitions[$ProfileName];
+        $stateInfo = self::$stateDefinitions[$featureProperty];
         $this->RegisterProfileStringEx(
-            $ProfileName,
+            $stateInfo['profile'],
             '',
             '',
             '',
@@ -4177,8 +4235,8 @@ abstract class ModulBase extends \IPSModule
             ]
         );
 
-        $this->SendDebug(__FUNCTION__, 'State mapping profile created for: ' . $ProfileName, 0);
-        return $ProfileName;
+        $this->SendDebug(__FUNCTION__, 'State mapping profile created for: ' . $stateInfo['profile'], 0);
+        return $stateInfo['profile'];
     }
 
     /**
@@ -4217,5 +4275,53 @@ abstract class ModulBase extends \IPSModule
             $this->SetValueDirect($presetIdent, $value);
             $this->SendDebug(__FUNCTION__, "Updated $presetIdent with value: " . (is_array($value) ? json_encode($value) : $value), 0);
         }
+    }
+
+    /**
+     * checkAndEnableAction
+     *
+     * Zentrale Hilfsfunktion zur konsistenten EnableAction-Prüfung
+     *
+     * Diese Methode implementiert die einheitliche Logik für EnableAction basierend auf:
+     * 1. Access-Rechte aus Feature-Array (0b010 Flag für Schreibzugriff)
+     * 2. Access-Rechte aus knownVariables
+     * 3. Spezielle Variablen (color_temp_kelvin)
+     *
+     * @param string $ident Identifikator der Variable
+     * @param array|null $feature Optional: Feature-Array mit Access-Informationen
+     * @param bool $forceEnable Optional: Erzwingt EnableAction (für spezielle Variablen)
+     *
+     * @return void
+     *
+     * @see \Zigbee2MQTT\ModulBase::getKnownVariables()
+     * @see \IPSModule::EnableAction()
+     * @see \IPSModule::SendDebug()
+     */
+    private function checkAndEnableAction(string $ident, ?array $feature = null, bool $forceEnable = false): void
+    {
+        // Spezielle Variablen oder erzwungene Aktivierung
+        if ($forceEnable) {
+            $this->EnableAction($ident);
+            $this->SendDebug(__FUNCTION__, 'Enabled action for ' . $ident . ' (forced/special variable)', 0);
+            return;
+        }
+
+        // Prüfe Access-Rechte aus Feature-Array
+        if (isset($feature['access']) && ($feature['access'] & 0b010) != 0) {
+            $this->EnableAction($ident);
+            $this->SendDebug(__FUNCTION__, 'Enabled action for ' . $ident . ' (has write access from feature)', 0);
+            return;
+        }
+
+        // Prüfe Access-Rechte aus knownVariables
+        $knownVariables = $this->getKnownVariables();
+        if (isset($knownVariables[$ident]['access']) && ($knownVariables[$ident]['access'] & 0b010) != 0) {
+            $this->EnableAction($ident);
+            $this->SendDebug(__FUNCTION__, 'Enabled action for ' . $ident . ' (has write access from known variables)', 0);
+            return;
+        }
+
+        // Keine Berechtigung gefunden
+        $this->SendDebug(__FUNCTION__, 'Skipped EnableAction for ' . $ident . ' (no write access)', 0);
     }
 }

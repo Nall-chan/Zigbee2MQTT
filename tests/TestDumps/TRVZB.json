@@ -32,7 +32,6 @@
             15530,
             32656,
             29712,
-            53868,
             50505,
             17054,
             58284,
@@ -41,7 +40,10 @@
             21754,
             20724,
             52666,
-            56216
+            56216,
+            19221,
+            48563,
+            48415
         ],
         "InstanceID": 38856,
         "ConnectionID": 12467,
@@ -355,6 +357,93 @@
         }
     },
     "Childs": {
+        "19221": {
+            "ParentID": 38856,
+            "ObjectID": 19221,
+            "ObjectType": 2,
+            "ObjectIdent": "update__installed_version",
+            "ObjectName": "Update: Installierte Version",
+            "ObjectInfo": "",
+            "ObjectIcon": "",
+            "ObjectSummary": "",
+            "ObjectPosition": 0,
+            "ObjectIsReadOnly": false,
+            "ObjectIsHidden": false,
+            "ObjectIsDisabled": false,
+            "ObjectIsLocked": false,
+            "HasChildren": false,
+            "ChildrenIDs": [],
+            "VariableID": 19221,
+            "VariableProfile": "",
+            "VariableAction": 0,
+            "VariableCustomProfile": "",
+            "VariableCustomAction": 0,
+            "VariableUpdated": 1761312413,
+            "VariableChanged": 1750421169,
+            "VariablePresentation": [],
+            "VariableCustomPresentation": [],
+            "VariableType": 1,
+            "VariableValue": 4609,
+            "VariableIsLocked": false
+        },
+        "48563": {
+            "ParentID": 38856,
+            "ObjectID": 48563,
+            "ObjectType": 2,
+            "ObjectIdent": "update__latest_version",
+            "ObjectName": "Update: Neueste Version",
+            "ObjectInfo": "",
+            "ObjectIcon": "",
+            "ObjectSummary": "",
+            "ObjectPosition": 0,
+            "ObjectIsReadOnly": false,
+            "ObjectIsHidden": false,
+            "ObjectIsDisabled": false,
+            "ObjectIsLocked": false,
+            "HasChildren": false,
+            "ChildrenIDs": [],
+            "VariableID": 48563,
+            "VariableProfile": "",
+            "VariableAction": 0,
+            "VariableCustomProfile": "",
+            "VariableCustomAction": 0,
+            "VariableUpdated": 1761312413,
+            "VariableChanged": 1750421169,
+            "VariablePresentation": [],
+            "VariableCustomPresentation": [],
+            "VariableType": 1,
+            "VariableValue": 4609,
+            "VariableIsLocked": false
+        },
+        "48415": {
+            "ParentID": 38856,
+            "ObjectID": 48415,
+            "ObjectType": 2,
+            "ObjectIdent": "update__state",
+            "ObjectName": "Update: Status",
+            "ObjectInfo": "",
+            "ObjectIcon": "",
+            "ObjectSummary": "",
+            "ObjectPosition": 0,
+            "ObjectIsReadOnly": false,
+            "ObjectIsHidden": false,
+            "ObjectIsDisabled": false,
+            "ObjectIsLocked": false,
+            "HasChildren": false,
+            "ChildrenIDs": [],
+            "VariableID": 48415,
+            "VariableProfile": "",
+            "VariableAction": 0,
+            "VariableCustomProfile": "",
+            "VariableCustomAction": 0,
+            "VariableUpdated": 1761312413,
+            "VariableChanged": 1750421169,
+            "VariablePresentation": [],
+            "VariableCustomPresentation": [],
+            "VariableType": 3,
+            "VariableValue": "idle",
+            "VariableIsLocked": false
+        },
         "56925": {
             "ParentID": 38856,
             "ObjectID": 56925,
@@ -812,33 +901,6 @@
             "VariableChanged": 1737996054,
             "VariableType": 1,
             "VariableValue": 1737996054,
-            "VariableIsLocked": false
-        },
-        "53868": {
-            "ParentID": 38856,
-            "ObjectID": 53868,
-            "ObjectType": 2,
-            "ObjectIdent": "update",
-            "ObjectName": "Update",
-            "ObjectInfo": "",
-            "ObjectIcon": "",
-            "ObjectSummary": "",
-            "ObjectPosition": 0,
-            "ObjectIsReadOnly": false,
-            "ObjectIsHidden": false,
-            "ObjectIsDisabled": false,
-            "ObjectIsLocked": false,
-            "HasChildren": false,
-            "ChildrenIDs": [],
-            "VariableID": 53868,
-            "VariableProfile": "",
-            "VariableAction": 0,
-            "VariableCustomProfile": "",
-            "VariableCustomAction": 0,
-            "VariableUpdated": 1737996054,
-            "VariableChanged": 1737953704,
-            "VariableType": 3,
-            "VariableValue": "{\"installed_version\":4609,\"latest_version\":4609,\"state\":\"idle\"}",
             "VariableIsLocked": false
         },
         "50505": {
@@ -1405,27 +1467,5 @@
             "IsReadOnly": false
         }
     },
-    "missingTranslations": [
-        {
-            "lable": "Weekly Schedule Sunday"
-        },
-        {
-            "lable": "Weekly Schedule Monday"
-        },
-        {
-            "lable": "Weekly Schedule Tuesday"
-        },
-        {
-            "lable": "Weekly Schedule Wednesday"
-        },
-        {
-            "lable": "Weekly Schedule Thursday"
-        },
-        {
-            "lable": "Weekly Schedule Friday"
-        },
-        {
-            "lable": "Weekly Schedule Saturday"
-        }
-    ]
+    "missingTranslations": []
 }

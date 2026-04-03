@@ -71,6 +71,68 @@ trait ColorHelper
     }
 
     /**
+     * HSVToInt
+     *
+     * @param  int $hue
+     * @param  int $saturation
+     * @param  int $bri oder value
+     * @return int Integer-Wert der Farbe
+     */
+    protected function HSVToInt($hue, $saturation, int $bri = 254): int
+    {
+        $hue /= 360;
+        $saturation /= 100;
+        // Normalisierung der Brightness (0-1)
+        $value = $bri / 255;
+        $i = floor($hue * 6);
+        $f = $hue * 6 - $i;
+        $p = $value * (1 - $saturation);
+        $q = $value * (1 - $f * $saturation);
+        $t = $value * (1 - (1 - $f) * $saturation);
+        switch ($i % 6) {
+            case 0: $r = $value;
+                $g = $t;
+                $b = $p;
+                break;
+            case 1: $r = $q;
+                $g = $value;
+                $b = $p;
+                break;
+            case 2: $r = $p;
+                $g = $value;
+                $b = $t;
+                break;
+            case 3: $r = $p;
+                $g = $q;
+                $b = $value;
+                break;
+            case 4: $r = $t;
+                $g = $p;
+                $b = $value;
+                break;
+            case 5: $r = $value;
+                $g = $p;
+                $b = $q;
+                break;
+        }
+        // Debug für Zwischenwerte
+        $this->SendDebug(__FUNCTION__ . ' :: Pre-Scale', "R: $r G: $g B: $b", 0);
+
+        // RGB Werte auf 0-255 skalieren und begrenzen
+        $r = max(0, min(255, round($r * 255)));
+        $g = max(0, min(255, round($g * 255)));
+        $b = max(0, min(255, round($b * 255)));
+
+        $this->SendDebug(__FUNCTION__ . ' :: RGB', "R: $r G: $g B: $b", 0);
+
+        // Integer-Wert berechnen
+        $color = ($r << 16) | ($g << 8) | $b;
+        $this->SendDebug(__FUNCTION__ . ' :: colorINT', $color, 0);
+
+        return $color;
+    }
+
+    /**
      * RGBToHSV
      *
      * @param  int $R red
@@ -313,6 +375,33 @@ trait ColorHelper
             $toDevice ? 'device value' : 'percent'
         ), 0);
         return $result;
+    }
+
+    /**
+     * getColorMode
+     *
+     * Für Geräte welche verschiedene Modi in der Variable color_mode speichern und nur eine color Variable haben.
+     *
+     * @return string Liefert den Typ für die Funktion setColor
+     *
+     * @see \Zigbee2MQTT\ModulBase::handleColorVariable
+     * @see \Zigbee2MQTT\ModulBase::setColor
+     * @see \IPSModule::GetValue()
+     */
+    protected function getColorMode(): string
+    {
+        $mode = @$this->GetValue('color_mode');
+        switch ($mode) {
+            case 'HS':
+                return 'hs';
+            case 'HSL':
+                return 'hsl';
+            case 'HSV':
+                return 'hsv';
+            default:
+                return 'cie';
+        }
+
     }
 
     /**

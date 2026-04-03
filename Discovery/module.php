@@ -187,6 +187,10 @@ class Zigbee2MQTTDiscovery extends IPSModule
                         [
                             'moduleID'      => IPS_GetInstance($SplitterId)['ModuleInfo']['ModuleID'],
                             'configuration' => json_decode(IPS_GetConfiguration($SplitterId), true)
+                        ],
+                        [
+                            'moduleID'      => IPS_GetInstance(IPS_GetInstance($SplitterId)['ConnectionID'])['ModuleInfo']['ModuleID'],
+                            'configuration' => json_decode(IPS_GetConfiguration(IPS_GetInstance($SplitterId)['ConnectionID']), true)
                         ]
                     ];
                     $Values[] = $value;

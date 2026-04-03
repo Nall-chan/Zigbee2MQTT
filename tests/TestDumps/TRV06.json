@@ -15,6 +15,7 @@
         "ObjectIsLocked": false,
         "HasChildren": true,
         "ChildrenIDs": [
+            12548,
             48057,
             19834,
             24338,
@@ -253,6 +254,38 @@
         "system_mode": "off"
     },
     "Childs": {
+        "12548": {
+            "ParentID": 35861,
+            "ObjectID": 12548,
+            "ObjectType": 2,
+            "ObjectIdent": "device_status",
+            "ObjectName": "Verfügbarkeit",
+            "ObjectInfo": "",
+            "ObjectIcon": "",
+            "ObjectSummary": "",
+            "ObjectPosition": 0,
+            "ObjectIsReadOnly": false,
+            "ObjectIsHidden": false,
+            "ObjectIsDisabled": false,
+            "ObjectIsLocked": false,
+            "HasChildren": false,
+            "ChildrenIDs": [],
+            "VariableID": 12548,
+            "VariableProfile": "Z2M.DeviceStatus",
+            "VariableAction": 0,
+            "VariableCustomProfile": "",
+            "VariableCustomAction": 0,
+            "VariableUpdated": 1762177931,
+            "VariableChanged": 1740930939,
+            "VariablePresentation": {
+                "PRESENTATION": "{4153A8D4-5C33-C65F-C1F3-7B61AAF99B1C}",
+                "PROFILE": "Z2M.DeviceStatus"
+            },
+            "VariableCustomPresentation": [],
+            "VariableType": 0,
+            "VariableValue": true,
+            "VariableIsLocked": false
+        },
         "48057": {
             "ParentID": 21658,
             "ObjectID": 48057,
@@ -347,38 +380,6 @@
             "VariableCustomPresentation": [],
             "VariableType": 0,
             "VariableValue": true,
-            "VariableIsLocked": false
-        },
-        "18405": {
-            "ParentID": 21658,
-            "ObjectID": 18405,
-            "ObjectType": 2,
-            "ObjectIdent": "t_r_v_error",
-            "ObjectName": "Fehler",
-            "ObjectInfo": "",
-            "ObjectIcon": "",
-            "ObjectSummary": "",
-            "ObjectPosition": 0,
-            "ObjectIsReadOnly": false,
-            "ObjectIsHidden": false,
-            "ObjectIsDisabled": false,
-            "ObjectIsLocked": false,
-            "HasChildren": false,
-            "ChildrenIDs": [],
-            "VariableID": 18405,
-            "VariableProfile": "Z2M.error",
-            "VariableAction": 0,
-            "VariableCustomProfile": "",
-            "VariableCustomAction": 0,
-            "VariableUpdated": 1737020908,
-            "VariableChanged": 0,
-            "VariablePresentation": {
-                "PROFILE": "Z2M.error",
-                "PRESENTATION": "{4153A8D4-5C33-C65F-C1F3-7B61AAF99B1C}"
-            },
-            "VariableCustomPresentation": [],
-            "VariableType": 1,
-            "VariableValue": 0,
             "VariableIsLocked": false
         },
         "10672": {
