@@ -75,7 +75,7 @@ Die Statusvariablen werden je nach Funktion und Fähigkeiten der Geräte dynamis
 
    Mit dieser Funktion können alle Aktionen einer Variable ausgelöst werden.  
 
-   [!IMPORTANT] Bei der Nutzung von RequestAction innerhalb eines Aktionsskript darf nicht die Variable übergeben werden, welche dieses Aktionsskript nutzt.  Sonst wird eine Endlosschleife ausgelöst.  Anstatt RequestAction sind die Z2M_Command oder Z2M_WriteValue* Instanzfuntionen zu benutzen.  
+   [!IMPORTANT] Bei der Nutzung von RequestAction innerhalb eines Aktionsskript darf nicht die Variable übergeben werden, welche dieses Aktionsskript nutzt.  Sonst wird eine Endlosschleife ausgelöst.  Anstatt RequestAction sind die Z2M_Command oder Z2M_WriteValue* Instanz-Funktionen zu benutzen.  
 
    **Beispiel:**
 
@@ -158,15 +158,70 @@ Die Statusvariablen werden je nach Funktion und Fähigkeiten der Geräte dynamis
    Z2M_WriteValueString(12345, 'effect', 'blink'); // Effekt Blinken ausführen
    ```
 
+   ---
+
+### Z2M_ReadValue <!-- omit in toc -->
+
+   ```php
+   bool Z2M_ReadValue(int $InstanzId, int $Property);
+   ```
+
+   Mit dieser Funktion wird eine Leseanfrage für eine bestimmte Eigenschaft an das Gerät gesendet.  
+
+   **Beispiel:**
+
+   Property `wifi_status` der Instanz 12345
+
+   ```php
+   Z2M_ReadValue(12345, 'wifi_status'); // Lese WiFi-Status
+   ```
+
+   ---
+
+### Z2M_SendGetCommand <!-- omit in toc -->
+
+   ```php
+   bool Z2M_SendGetCommand(int $InstanzId)
+   ```
+
+   Mit dieser Funktion wird eine Leseanfrage für alle bekannten Eigenschaft an das Gerät gesendet.
+
+   **Beispiel:**
+
+   ```php
+      Z2M_SendGetCommand(12345);
+   ```
+
+   Sendet eine Leseanfrage für alle bekannten Eigenschaft an das Gerät der Instanz 12345.
+
+---
+
+### Z2M_SendSetCommand <!-- omit in toc -->
+
+   ```php
+   bool Z2M_SendSetCommand(int $InstanzId, array $Payload)
+   ```
+
+   Mit dieser Funktion kann ein beliebiger Payload (Datensatz) an das Gerät gesendet werden.
+
+   **Beispiel:**
+
+   ```php
+   $Payload['brightness_step_onoff'] = 10;
+   Z2M_Command(12345, $Payload);
+   ```
+
+   Sendet `brightness_step_onoff` mit dem Wert 10 an das Gerät, welches entsprechend die Helligkeit um den Rohwert 10 erhöht und, falls es vorher ausgeschaltet war, eingeschaltet wird.
+
 ---
 
 ### Z2M_Command <!-- omit in toc -->
 
    ```php
-   Z2M_Command(int $InstanzId, string $Topic, string $Value)
+   bool Z2M_Command(int $InstanzId, string $Topic, string $Value)
    ```
 
-   Mit dies Funktion kann ein belibiger Payload (Datensatz) an das Gerät (Geräte-Topic) gesendet werden.
+   Mit dieser Funktion kann ein beliebiger Payload (Datensatz) an das Gerät (Geräte-Topic) gesendet werden.
 
    **Beispiel:**
 
@@ -182,10 +237,10 @@ Die Statusvariablen werden je nach Funktion und Fähigkeiten der Geräte dynamis
 ### Z2M_CommandEx <!-- omit in toc -->
 
    ```php
-   Z2M_CommandEx(int $InstanzId,string $fulltopic, string $value)
+   bool Z2M_CommandEx(int $InstanzId,string $fulltopic, string $value)
    ```
 
-   Mit dies Funktion kann ein belibiger Payload (Datensatz) an Z2M gesendet werden.
+   Mit dieser Funktion kann ein beliebiger Payload (Datensatz) an Z2M gesendet werden.
 
    **Beispiel:**
 

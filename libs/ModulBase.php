@@ -17,7 +17,7 @@ require_once __DIR__ . '/ColorHelper.php';
  * Basisklasse für Geräte (Devices module.php) und Gruppen (Groups module.php)
  *
  * Pseudo Variablen, welche über BufferHelper und die Magic-Functions __get und __set
- * direkt typensichere Werte, Arrays und Objekte in einem Instanz-Buffer schreiben und lesen können.
+ * direkt typsichere Werte, Arrays und Objekte in einem Instanz-Buffer schreiben und lesen können.
  * @property bool $BUFFER_MQTT_SUSPENDED Zugriff auf den Buffer für laufende Migration
  * @property bool $BUFFER_PROCESSING_MIGRATION Zugriff auf den Buffer für MQTT Nachrichten nicht verarbeiten
  * @property string $lastPayload Zugriff auf den Buffer welcher das Letzte Payload enthält (für Download-Button)
@@ -675,7 +675,7 @@ abstract class ModulBase extends \IPSModule
         if (!$topics) {
             return '';
         }
-        // Behandelt Verfügbarkeitsstatus
+        // Behandelt Verfügbarkeit-Status
         if ($this->handleAvailability($topics, $payload)) {
             return '';
         }
@@ -863,6 +863,35 @@ abstract class ModulBase extends \IPSModule
     }
 
     /**
+     * Z2M_ReadValue Instanz Funktion
+     *
+     * Leseanforderung für ein Value an das Gerät senden.
+     *
+     * @param  string $Property
+     * @return bool
+     *
+     * @throws \Exception Bei Fehlern während des Sendens
+     *
+     * @see \IPSModule::ReadPropertyString()
+     * @see \IPSModule::SendDebug()
+     * @see \Zigbee2MQTT\SendData::SendData()
+     * @see json_encode()
+     */
+    public function ReadValue(string $Property)
+    {
+        $Payload = [$Property => ''];
+
+        // MQTT-Topic für den Get-Befehl generieren
+        $Topic = '/' . $this->ReadPropertyString(self::MQTT_TOPIC) . '/get';
+
+        // Debug-Ausgabe des zu sendenden Payloads
+        $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__ . ' :: zu sendendes Payload: ', json_encode($Payload), 0);
+
+        // Sende die Daten an das Gerät
+        return $this->SendData($Topic, $Payload, 0);
+    }
+
+    /**
      * SendSetCommand
      *
      * Sendet einen Set-Befehl an das Gerät über MQTT
@@ -878,13 +907,85 @@ abstract class ModulBase extends \IPSModule
      *
      * @see \IPSModule::ReadPropertyString()
      * @see \IPSModule::SendDebug()
-     * @see \Zigbee2MQTT\ModulBase::SendData()
+     * @see \Zigbee2MQTT\SendData::SendData()
      * @see json_encode()
      */
     public function SendSetCommand(array $Payload): bool
     {
         // MQTT-Topic für den Set-Befehl generieren
         $Topic = '/' . $this->ReadPropertyString(self::MQTT_TOPIC) . '/set';
+
+        // Debug-Ausgabe des zu sendenden Payloads
+        $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__ . ' :: zu sendendes Payload: ', json_encode($Payload), 0);
+
+        // Sende die Daten an das Gerät
+        return $this->SendData($Topic, $Payload, 0);
+    }
+
+    /**
+     * SendGetCommand
+     *
+     * Sendet einen Get-Befehl an das Gerät über MQTT
+     *
+     * Diese Methode generiert das MQTT-Topic für den Get-Befehl basierend auf der Konfiguration
+     * und sendet ein Array mit allen Features/Propertys über SendData an das Gerät.
+     *
+     * @return bool True wenn die Daten versendet werden konnten, sonst false
+     *
+     * @throws \Exception Bei Fehlern während des Sendens
+     *
+     * @see \IPSModule::ReadPropertyString()
+     * @see Zigbee2MQTT\AttributeArrayHelper::ReadAttributeArray()
+     * @see \IPSModule::SendDebug()
+     * @see \Zigbee2MQTT\SendData::SendData()
+     * @see json_encode()
+     * @see in_array()
+     */
+    public function SendGetCommand(): bool
+    {
+        // MQTT-Topic für den Get-Befehl generieren
+        $Topic = '/' . $this->ReadPropertyString(self::MQTT_TOPIC) . '/get';
+
+        // Geraetespezifische filtered_attributes aus Z2M laden
+        $aFiltered = $this->ReadAttributeArray(self::ATTRIBUTE_FILTERED);
+
+        // Payload bauen
+        $Payload = [];
+        $exposes = $this->ReadAttributeArray(self::ATTRIBUTE_EXPOSES);
+        foreach ($exposes as $expose) {
+            // Config Features werden nur über den Namen des Config property abgefragt und nicht einzeln.
+            if (isset($expose['category']) && ($expose['category'] == 'config')) {
+                // Gefilterte Attribute gemaess Z2M-Konfiguration ueberspringen
+                $sProperty = $expose['property'] ?? '';
+                if ($sProperty !== '' && \in_array($sProperty, $aFiltered, true)) {
+                    $this->SendDebug(__FUNCTION__, 'Skipping filtered attribute: ' . $sProperty, 0);
+                    continue;
+                }
+                $Payload[$sProperty] = '';
+                continue;
+            }
+            // Einzelne Features durchgehen (z.B. Endpoints state_1 usw...)
+            if (isset($expose['features']) && \is_array($expose['features'])) {
+                foreach ($expose['features'] as $feature) {
+                    // Gefilterte Attribute gemaess Z2M-Konfiguration ueberspringen
+                    $sProperty = $feature['property'] ?? '';
+                    if ($sProperty !== '' && \in_array($sProperty, $aFiltered, true)) {
+                        $this->SendDebug(__FUNCTION__, 'Skipping filtered attribute: ' . $sProperty, 0);
+                        continue;
+                    }
+                    $Payload[$sProperty] = '';
+                }
+                continue;
+            }
+            // Rest
+            // Gefilterte Attribute gemaess Z2M-Konfiguration ueberspringen
+            $sProperty = $expose['property'] ?? '';
+            if ($sProperty !== '' && \in_array($sProperty, $aFiltered, true)) {
+                $this->SendDebug(__FUNCTION__, 'Skipping filtered attribute: ' . $sProperty, 0);
+                continue;
+            }
+            $Payload[$sProperty] = '';
+        }
 
         // Debug-Ausgabe des zu sendenden Payloads
         $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__ . ' :: zu sendendes Payload: ', json_encode($Payload), 0);
@@ -1107,11 +1208,11 @@ abstract class ModulBase extends \IPSModule
      * Diese Methode setzt den Wert einer Variable direkt mit minimaler Verarbeitung:
      * - Keine Profile-Verarbeitung
      * - Keine Spezialbehandlung von States
-     * - Basale Typkonvertierung für grundlegende Datentypen
+     * - Basale Konvertierung der Typen für grundlegende Datentypen
      *
      * Verarbeitung:
      * 1. Array-Werte werden zu JSON konvertiert
-     * 2. Grundlegende Typkonvertierung (bool, int, float, string)
+     * 2. Grundlegende Konvertierung des Typs (bool, int, float, string)
      * 3. Debug-Ausgaben für Fehleranalyse
      *
      * @param string $ident Der Identifikator der Variable, deren Wert gesetzt werden soll
@@ -1272,7 +1373,7 @@ abstract class ModulBase extends \IPSModule
      *
      * @return array|false Enthält die Antwort als Array, oder false im Fehlerfall.
      *
-     * @see \Zigbee2MQTT\ModulBase::SendData()
+     * @see \Zigbee2MQTT\SendData::SendData()
      * @see \IPSModule::ReadPropertyString()
      * @see \IPSModule::LogMessage()
      */
@@ -3646,7 +3747,7 @@ abstract class ModulBase extends \IPSModule
      *
      * @return void
      *
-     * @throws Exception Bei ungültigen Feature-Informationen
+     * @throws \Exception Bei ungültigen Feature-Informationen
      *
      * Beispiele:
      * ```php

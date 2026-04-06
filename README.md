@@ -200,6 +200,12 @@ Bitte den einzelnen Modulen entnehmen:
 
 ## 5. Changelog  
 
+**Version 5.41:**  
+
+- Diverse Übersetzungen ergänzt.  
+- Neue Funktion Z2M_ReadValue und Z2M_SendGetCommand.  
+- Diverse spezielle Funktionen im globalen Namensraum aufrufen, um Compiler-Optimierung zu ermöglichen.  
+
 **Version 5.40:**  
 
 - Einheiten in Profilen wurden teilweise nicht als UTF8 String an Symcon übergeben.  
