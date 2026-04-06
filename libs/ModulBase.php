@@ -598,13 +598,13 @@ abstract class ModulBase extends \IPSModule
                 return $this->SendSetCommand($payload);
             },
             // Behandelt String-Variablen ohne Rückmeldung
-            in_array($ident, self::$stringVariablesNoResponse) => function () use ($ident, $value)
+            \in_array($ident, self::$stringVariablesNoResponse) => function () use ($ident, $value)
             {
                 $this->SendDebug(__FUNCTION__, 'Verarbeite String ohne Rückmeldung: ' . $ident, 0);
                 return $this->handleStringVariableNoResponse($ident, (string) $value);
             },
             // Behandelt Farbvariablen (exakte Namen prüfen)
-            in_array($ident, ['color', 'color_hs', 'color_rgb', 'color_temp_kelvin']) => function () use ($ident, $value)
+            \in_array($ident, ['color', 'color_hs', 'color_rgb', 'color_temp_kelvin']) => function () use ($ident, $value)
             {
                 $this->SendDebug(__FUNCTION__, 'Verarbeite Farbvariable: ' . $ident, 0);
                 return $this->handleColorVariable($ident, $value);
@@ -680,7 +680,7 @@ abstract class ModulBase extends \IPSModule
             return '';
         }
         // Leere Payloads brauchte nur handleAvailability
-        if (is_null($payload)) {
+        if (\is_null($payload)) {
             return '';
         }
 
@@ -768,7 +768,7 @@ abstract class ModulBase extends \IPSModule
                 // Überspringen
                 continue;
             }
-            if (in_array($obj['ObjectIdent'], self::SKIP_IDENTS)) {
+            if (\in_array($obj['ObjectIdent'], self::SKIP_IDENTS)) {
                 // Überspringen
                 continue;
             }
@@ -1059,7 +1059,7 @@ abstract class ModulBase extends \IPSModule
         $this->SendDebug(__FUNCTION__, 'Verarbeite Variable: ' . $ident . ' mit Wert: ' . json_encode($value), 0);
 
         // Array Spezialbehandlung für
-        if (is_array($value)) {
+        if (\is_array($value)) {
             // Color-Arrays
             if (strtolower($ident) === 'color') {
                 $this->handleColorVariable($ident, $value);
@@ -1154,7 +1154,7 @@ abstract class ModulBase extends \IPSModule
         }
 
         // Typ-Prüfung und Konvertierung
-        if (is_array($value)) {
+        if (\is_array($value)) {
             $this->SendDebug(__FUNCTION__, 'Array-Wert erkannt, konvertiere zu JSON', 0);
             $value = json_encode($value);
         }
@@ -1179,7 +1179,7 @@ abstract class ModulBase extends \IPSModule
                 break;
         }
 
-        $this->SendDebug(__FUNCTION__, sprintf('Setze Variable: %s, Typ: %s, Wert: %s', $ident, $debugVarType, json_encode($value)), 0);
+        $this->SendDebug(__FUNCTION__, \sprintf('Setze Variable: %s, Typ: %s, Wert: %s', $ident, $debugVarType, json_encode($value)), 0);
         // Setze den Wert der Variable
         parent::SetValue($ident, $value);
     }
@@ -1216,15 +1216,15 @@ abstract class ModulBase extends \IPSModule
         // Durchlaufe alle Exposes
         foreach ($exposes as $expose) {
             // Prüfen, ob es sich um eine Gruppe handelt
-            if (isset($expose['type']) && in_array($expose['type'], ['light', 'switch', 'lock', 'cover', 'climate', 'fan', 'text'])) {
+            if (isset($expose['type']) && \in_array($expose['type'], ['light', 'switch', 'lock', 'cover', 'climate', 'fan', 'text'])) {
                 $this->SendDebug(__FUNCTION__ . ' :: Line ' . __LINE__ . ' :: Found group: ', $expose['type'], 0);
 
                 // Features in der Gruppe verarbeiten
-                if (isset($expose['features']) && is_array($expose['features'])) {
+                if (isset($expose['features']) && \is_array($expose['features'])) {
                     foreach ($expose['features'] as $feature) {
                         // Gefilterte Attribute gemaess Z2M-Konfiguration ueberspringen
                         $sProperty = $feature['property'] ?? '';
-                        if ($sProperty !== '' && in_array($sProperty, $aFiltered, true)) {
+                        if ($sProperty !== '' && \in_array($sProperty, $aFiltered, true)) {
                             $this->SendDebug(__FUNCTION__, 'Skipping filtered attribute: ' . $sProperty, 0);
                             continue;
                         }
@@ -1251,7 +1251,7 @@ abstract class ModulBase extends \IPSModule
             } else {
                 // Gefilterte Attribute gemaess Z2M-Konfiguration ueberspringen
                 $sProperty = $expose['property'] ?? '';
-                if ($sProperty !== '' && in_array($sProperty, $aFiltered, true)) {
+                if ($sProperty !== '' && \in_array($sProperty, $aFiltered, true)) {
                     $this->SendDebug(__FUNCTION__, 'Skipping filtered attribute: ' . $sProperty, 0);
                     continue;
                 }
@@ -1345,20 +1345,20 @@ abstract class ModulBase extends \IPSModule
         foreach ($payload as $key => $value) {
 
             // Composite-Keys überspringen, die in SKIP_COMPOSITES definiert sind und auf oberster Ebene gesetzt sind
-            if ($prefix === '' && in_array($key, self::SKIP_COMPOSITES) && is_array($value)) {
+            if ($prefix === '' && \in_array($key, self::SKIP_COMPOSITES) && \is_array($value)) {
                 $this->SendDebug(__FUNCTION__, "Überspringe Composite-Key auf oberster Ebene: $key", 0);
                 continue;
             }
 
             // Spezialbehandlung für color-Properties, da zur Farbberechnung nicht als flatten benötigt
-            if ($key === 'color' && is_array($value)) {
+            if ($key === 'color' && \is_array($value)) {
                 // Übernehme die color-Properties direkt ins color-Array
                 $result['color'] = $value;
                 continue;
             }
 
             $newKey = $prefix ? $prefix . '__' . $key : $key;
-            if (is_array($value)) {
+            if (\is_array($value)) {
                 $result = array_merge($result, $this->flattenPayload($value, $newKey));
             } else {
                 $result[$newKey] = $value;
@@ -1397,13 +1397,13 @@ abstract class ModulBase extends \IPSModule
         $current = &$result;
 
         // Alle Teile außer dem letzten durchgehen
-        for ($i = 0; $i < count($parts) - 1; $i++) {
+        for ($i = 0; $i < \count($parts) - 1; $i++) {
             $current[$parts[$i]] = [];
             $current = &$current[$parts[$i]];
         }
 
         // Letzten Wert setzen
-        $current[$parts[count($parts) - 1]] = $value;
+        $current[$parts[\count($parts) - 1]] = $value;
 
         return $result;
     }
@@ -1507,7 +1507,7 @@ abstract class ModulBase extends \IPSModule
             return [false, false];
         }
 
-        $topic = substr($messageData['Topic'], strlen($baseTopic) + 1);
+        $topic = substr($messageData['Topic'], \strlen($baseTopic) + 1);
 
         /**
          * @deprecated utf8_decode (deprecated sind in Symcon deaktivert)
@@ -1641,10 +1641,10 @@ abstract class ModulBase extends \IPSModule
         // Payload-Daten verarbeiten
         foreach ($flattenedPayload as $key => $value) {
             if ($value === null) {
-                $this->SendDebug(__FUNCTION__, sprintf('Skip empty value for key=%s', $key), 0);
+                $this->SendDebug(__FUNCTION__, \sprintf('Skip empty value for key=%s', $key), 0);
                 continue;
             }
-            $this->SendDebug(__FUNCTION__, sprintf('Verarbeite: Key=%s, Value=%s', $key, is_array($value) ? json_encode($value) : (is_bool($value) ? ($value ? 'TRUE' : 'FALSE') : (string) $value)), 0);
+            $this->SendDebug(__FUNCTION__, \sprintf('Verarbeite: Key=%s, Value=%s', $key, \is_array($value) ? json_encode($value) : (\is_bool($value) ? ($value ? 'TRUE' : 'FALSE') : (string) $value)), 0);
 
             if (!$this->processSpecialVariable($key, $value)) {
                 $this->processVariable($key, $value);
@@ -1728,17 +1728,17 @@ abstract class ModulBase extends \IPSModule
         if ($this->isCompositeKey($key)) {
             // Bestimme den Variablentyp basierend auf dem Wert
             $varType = match (true) {
-                is_bool($value) => [
+                \is_bool($value) => [
                     'type'         => VARIABLETYPE_BOOLEAN,
                     'profile'      => '~Switch',
                     'registerFunc' => 'RegisterVariableBoolean'
                 ],
-                is_int($value) => [
+                \is_int($value) => [
                     'type'         => VARIABLETYPE_INTEGER,
                     'profile'      => '', // Hier ggf. ein passendes Profil wählen
                     'registerFunc' => 'RegisterVariableInteger'
                 ],
-                is_float($value) => [
+                \is_float($value) => [
                     'type'         => VARIABLETYPE_FLOAT,
                     'profile'      => '', // Hier ggf. ein passendes Profil wählen
                     'registerFunc' => 'RegisterVariableFloat'
@@ -1768,13 +1768,13 @@ abstract class ModulBase extends \IPSModule
         }
 
         // Wenn Value ein Array ist und color im Key vorkommt, spezielle Behandlung
-        if (is_array($value) && strpos($key, 'color') === 0) {
+        if (\is_array($value) && strpos($key, 'color') === 0) {
             $this->handleColorVariable($key, $value);
             return;
         }
 
         // Wenn Value ein Array ist und einen 'composite' Key enthält
-        if (is_array($value) && isset($value['composite'])) {
+        if (\is_array($value) && isset($value['composite'])) {
             foreach ($value['composite'] as $compositeKey => $compositeValue) {
                 $this->processVariable($compositeKey, $compositeValue);
             }
@@ -1782,7 +1782,7 @@ abstract class ModulBase extends \IPSModule
         }
 
         // Wenn Value ein Array ist und list im Type vorkommt
-        if (is_array($value) && isset($value['type']) && $value['type'] === 'list') {
+        if (\is_array($value) && isset($value['type']) && $value['type'] === 'list') {
             // Speichere komplette Liste als JSON
             $this->SetValueDirect($key, json_encode($value));
 
@@ -1819,7 +1819,7 @@ abstract class ModulBase extends \IPSModule
         $variableProps = $knownVariables[$lowerKey];
 
         // Array-Werte verarbeiten
-        if (is_array($value)) {
+        if (\is_array($value)) {
             $this->processArrayValue($ident, $value);
             return;
         }
@@ -1843,7 +1843,7 @@ abstract class ModulBase extends \IPSModule
             $this->SetValue($presetIdent, $value);
         }
         // Liste verarbeiten
-        if (is_array($value) && isset($value['type']) && $value['type'] === 'list') {
+        if (\is_array($value) && isset($value['type']) && $value['type'] === 'list') {
             // Speichere komplette Liste als JSON
             $this->SetValueDirect($key, json_encode($value));
 
@@ -1937,7 +1937,7 @@ abstract class ModulBase extends \IPSModule
         }
 
         // Bei Boolean-Werten prüfen, ob es ein spezielles Mapping gibt
-        if (is_bool($value)) {
+        if (\is_bool($value)) {
             $exposes = $this->ReadAttributeArray(self::ATTRIBUTE_EXPOSES);
             foreach ($exposes as $expose) {
                 $features = isset($expose['features']) ? $expose['features'] : [$expose];
@@ -2027,7 +2027,7 @@ abstract class ModulBase extends \IPSModule
         if (isset(static::$stateDefinitions[$ident])) {
             $stateInfo = static::$stateDefinitions[$ident];
             if (isset($stateInfo['values'])) {
-                $index = is_bool($value) ? (int) $value : $value;
+                $index = \is_bool($value) ? (int) $value : $value;
                 if (isset($stateInfo['values'][$index])) {
                     $payload = [$ident => $stateInfo['values'][$index]];
                     $this->SendDebug(__FUNCTION__, 'Vordefinierter State-Payload wird gesendet: ' . json_encode($payload), 0);
@@ -2086,13 +2086,13 @@ abstract class ModulBase extends \IPSModule
             'color' => function () use ($value)
             {
                 $this->SendDebug(__FUNCTION__, 'Color Value: ' . json_encode($value), 0);
-                if (is_int($value)) { //Schaltaktion aus Symcon
+                if (\is_int($value)) { //Schaltaktion aus Symcon
                     if ($this->GetValue('color') !== $value) {
                         $mode = $this->getColorMode();
                         return $this->setColor($value, $mode);
                     }
                     return false;
-                } elseif (is_array($value)) { //Datenempfang
+                } elseif (\is_array($value)) { //Datenempfang
                     // Prüfen auf x/y Werte im color Array
                     if (isset($value['color']) && isset($value['color']['x']) && isset($value['color']['y'])) {
                         //  x/y Werte innerhalb color
@@ -2138,7 +2138,7 @@ abstract class ModulBase extends \IPSModule
                 $payload = [$payloadKey => $convertedValue];
 
                 // Debug Ausgabe
-                $this->SendDebug(__FUNCTION__, sprintf('Converting %dK to %d Mired', $value, $convertedValue), 0);
+                $this->SendDebug(__FUNCTION__, \sprintf('Converting %dK to %d Mired', $value, $convertedValue), 0);
 
                 // Sende Payload an Gerät
                 if (!$this->SendSetCommand($payload)) {
@@ -2303,11 +2303,11 @@ abstract class ModulBase extends \IPSModule
 
         switch ($varType) {
             case 0:
-                if (is_bool($value)) {
+                if (\is_bool($value)) {
                     $this->SendDebug(__FUNCTION__, 'Wert ist bereits bool: ' . json_encode($value), 0);
                     return $value;
                 }
-                if (is_string($value)) {
+                if (\is_string($value)) {
                     $normalizedValue = strtoupper(trim($value, " \t\n\r\0\x0B\"'"));
 
                     // Exposes-Daten für diesen Identifier abrufen
@@ -2332,10 +2332,10 @@ abstract class ModulBase extends \IPSModule
                         }
                     }
                     // Standardprüfung für übliche Bool-Textwerte als Fallback
-                    if (in_array($normalizedValue, ['ON', 'TRUE', 'YES', '1', 'LOCK', 'OPEN'], true)) {
+                    if (\in_array($normalizedValue, ['ON', 'TRUE', 'YES', '1', 'LOCK', 'OPEN'], true)) {
                         return true;
                     }
-                    if (in_array($normalizedValue, ['OFF', 'FALSE', 'NO', '0', 'UNLOCK', 'CLOSE', 'CLOSED'], true)) {
+                    if (\in_array($normalizedValue, ['OFF', 'FALSE', 'NO', '0', 'UNLOCK', 'CLOSE', 'CLOSED'], true)) {
                         return false;
                     }
 
@@ -2568,13 +2568,13 @@ abstract class ModulBase extends \IPSModule
         $adjustedValue = $this->adjustSpecialValue($ident, $value);
 
         // Debug-Ausgabe des verarbeiteten Wertes
-        $debugValue = is_array($adjustedValue) ? json_encode($adjustedValue) : $adjustedValue;
+        $debugValue = \is_array($adjustedValue) ? json_encode($adjustedValue) : $adjustedValue;
         $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__ . ' :: ', $key . ' verarbeitet: ' . $key . ' => ' . $debugValue, 0);
 
         // Wert setzen
         $this->SetValueDirect($ident, $adjustedValue);
 
-        $this->SendDebug(__FUNCTION__, sprintf('SetValueDirect aufgerufen für %s mit Wert: %s (Typ: %s)', $ident, is_array($adjustedValue) ? json_encode($adjustedValue) : $adjustedValue, gettype($adjustedValue)), 0);
+        $this->SendDebug(__FUNCTION__, \sprintf('SetValueDirect aufgerufen für %s mit Wert: %s (Typ: %s)', $ident, \is_array($adjustedValue) ? json_encode($adjustedValue) : $adjustedValue, gettype($adjustedValue)), 0);
         // Allgemeine Aktualisierung von Preset-Variablen
         $this->updatePresetVariable($ident, $adjustedValue);
         return true;
@@ -2630,7 +2630,7 @@ abstract class ModulBase extends \IPSModule
      */
     private function adjustSpecialValue(string $ident, mixed $value): mixed
     {
-        $debugValue = is_array($value) ? json_encode($value) : $value;
+        $debugValue = \is_array($value) ? json_encode($value) : $value;
         $this->SendDebug(__FUNCTION__, 'Processing special variable: ' . $ident . ' with value: ' . $debugValue, 0);
         switch ($ident) {
             case 'last_seen':
@@ -2705,7 +2705,7 @@ abstract class ModulBase extends \IPSModule
     private function convertOnOffValue($value, bool $toBool = true): mixed
     {
         if ($toBool) {
-            if (is_string($value)) {
+            if (\is_string($value)) {
                 return strtoupper($value) === 'ON';
             }
             return (bool) $value;
@@ -2839,7 +2839,7 @@ abstract class ModulBase extends \IPSModule
                     ($valueOn === true && $valueOff === false) ||
                     ($valueOn === false && $valueOff === true) ||
                     (
-                        is_string($valueOn) && is_string($valueOff) &&
+                        \is_string($valueOn) && \is_string($valueOff) &&
                         (
                             (strtoupper($valueOn) === 'ON' && strtoupper($valueOff) === 'OFF') ||
                             (strtoupper($valueOn) === 'TRUE' && strtoupper($valueOff) === 'FALSE')
@@ -2999,7 +2999,7 @@ abstract class ModulBase extends \IPSModule
         }
 
         // Prüfen, ob die Einheit in den Float-Einheiten enthalten ist
-        if (!empty($unit) && is_string($unit)) {
+        if (!empty($unit) && \is_string($unit)) {
             // Debug der Original-Einheit
             $this->SendDebug(__FUNCTION__, 'Original unit: ' . bin2hex($unit), 0);
 
@@ -3011,7 +3011,7 @@ abstract class ModulBase extends \IPSModule
             $this->SendDebug(__FUNCTION__, 'Unit normalized (readable): ' . $unitTrimmed, 0);
             $this->SendDebug(__FUNCTION__, 'FLOAT_UNITS content: ' . json_encode(self::FLOAT_UNITS), 0);
 
-            if (in_array($unitTrimmed, self::FLOAT_UNITS, true)) {
+            if (\in_array($unitTrimmed, self::FLOAT_UNITS, true)) {
                 // Wenn unit in FLOAT_UNITS und step eine Ganzzahl ist -> integer
                 if ($value_step != 1.0 && fmod($value_step, 1) === 0.0) {
                     $this->SendDebug(__FUNCTION__, 'Unit in FLOAT_UNITS but step is integer, returning integer', 0);
@@ -3299,7 +3299,7 @@ abstract class ModulBase extends \IPSModule
         // Frühe Typ-Bestimmung
         $type = $expose['type'] ?? '';
         $feature = $expose['property'] ?? '';
-        $unit = isset($expose['unit']) && is_string($expose['unit']) ? $expose['unit'] : '';
+        $unit = isset($expose['unit']) && \is_string($expose['unit']) ? $expose['unit'] : '';
         $value_step = isset($expose['value_step']) ? (float) $expose['value_step'] : 1.0;
 
         // Bestimme Variablentyp
@@ -3450,7 +3450,7 @@ abstract class ModulBase extends \IPSModule
 
         // Prüfe ob Expose-Attribute existiert und Daten enthält
         $exposes = $this->ReadAttributeArray(self::ATTRIBUTE_EXPOSES);
-        if (count($exposes)) {
+        if (\count($exposes)) {
             return true;
         }
 
@@ -3521,7 +3521,7 @@ abstract class ModulBase extends \IPSModule
     private function getKnownVariables(): array
     {
         $data = array_values($this->ReadAttributeArray(self::ATTRIBUTE_EXPOSES));
-        if (!count($data)) {
+        if (!\count($data)) {
             $this->SendDebug(__FUNCTION__, 'Fehlende exposes oder features.', 0);
             return [];
         }
@@ -3621,7 +3621,7 @@ abstract class ModulBase extends \IPSModule
         $translations = $this->missingTranslations;
         $missingKVP = [$type => $value];
         // Füge den neuen Begriff hinzu, wenn er noch nicht existiert
-        if (!in_array($missingKVP, $translations)) {
+        if (!\in_array($missingKVP, $translations)) {
             $translations[] = $missingKVP;
             $this->missingTranslations = $translations;
         }
@@ -3699,7 +3699,7 @@ abstract class ModulBase extends \IPSModule
             return;
         }
 
-        $featureProperty = is_array($feature) ? $feature['property'] : $feature;
+        $featureProperty = \is_array($feature) ? $feature['property'] : $feature;
 
         // Frühe Validierung der Property
         if (empty($featureProperty)) {
@@ -3710,7 +3710,7 @@ abstract class ModulBase extends \IPSModule
         $this->SendDebug(__FUNCTION__ . ' Registriere Variable für Property: ', $featureProperty, 0);
 
         // Übergebe das komplette Feature-Array für Access-Check
-        $stateConfig = $this->getStateConfiguration($featureProperty, is_array($feature) ? $feature : null);
+        $stateConfig = $this->getStateConfiguration($featureProperty, \is_array($feature) ? $feature : null);
         if ($stateConfig !== null) {
             $formattedLabel = $this->convertLabelToName($featureProperty);
 
@@ -3740,12 +3740,12 @@ abstract class ModulBase extends \IPSModule
             if (isset($stateConfig['enableAction'])) {
                 // Explizit definierter enableAction-Wert hat Vorrang
                 if ($stateConfig['enableAction']) {
-                    $this->checkAndEnableAction($stateConfig['ident'], is_array($feature) ? $feature : null, true);
+                    $this->checkAndEnableAction($stateConfig['ident'], \is_array($feature) ? $feature : null, true);
                 }
                 // Wenn explizit false, dann kein EnableAction - auch nicht über Access-Rechte
             } else {
                 // Kein expliziter enableAction-Wert, verwende Access-basierte Prüfung
-                $this->checkAndEnableAction($stateConfig['ident'], is_array($feature) ? $feature : null);
+                $this->checkAndEnableAction($stateConfig['ident'], \is_array($feature) ? $feature : null);
             }
             return;
         }
@@ -3753,7 +3753,7 @@ abstract class ModulBase extends \IPSModule
         // Überprüfung auf spezielle Fälle
         if (isset(self::$specialVariables[$feature['property']])) {
             $aFiltered = $this->ReadAttributeArray(self::ATTRIBUTE_FILTERED);
-            if (in_array($feature['property'], $aFiltered, true)) {
+            if (\in_array($feature['property'], $aFiltered, true)) {
                 $this->SendDebug(__FUNCTION__, 'Skipping filtered special variable: ' . $feature['property'], 0);
                 return;
             }
@@ -3832,7 +3832,7 @@ abstract class ModulBase extends \IPSModule
                         if (isset($subFeature['presets'])) {
                             $aFiltered = $this->ReadAttributeArray(self::ATTRIBUTE_FILTERED);
                             $subPresetIdent = $subFeature['property'] . '_presets';
-                            if (!in_array($subPresetIdent, $aFiltered, true)) {
+                            if (!\in_array($subPresetIdent, $aFiltered, true)) {
                                 $variableType = $this->getVariableTypeFromProfile(
                                     $subFeature['type'] ?? 'numeric',
                                     $subFeature['property'],
@@ -3882,7 +3882,7 @@ abstract class ModulBase extends \IPSModule
         if ($property === 'color_temp') {
             $kelvinIdent = $property . '_kelvin';
             $aFiltered = $this->ReadAttributeArray(self::ATTRIBUTE_FILTERED);
-            if (!in_array($kelvinIdent, $aFiltered, true)) {
+            if (!\in_array($kelvinIdent, $aFiltered, true)) {
                 $this->RegisterVariableInteger($kelvinIdent, $this->Translate('Color Temperature Kelvin'), '~TWColor');
                 $variableId = $this->GetIDForIdent($kelvinIdent);
                 // color_temp_kelvin ist eine spezielle UI-Variable, die immer EnableAction haben soll
@@ -3893,7 +3893,7 @@ abstract class ModulBase extends \IPSModule
         if (isset($feature['presets']) && !empty($feature['presets'])) {
             $presetIdent = $property . '_presets';
             $aFiltered = $this->ReadAttributeArray(self::ATTRIBUTE_FILTERED);
-            if (!in_array($presetIdent, $aFiltered, true)) {
+            if (!\in_array($presetIdent, $aFiltered, true)) {
                 $variableType = $this->getVariableTypeFromProfile($type, $property, $unit, $step, $groupType);
                 $this->registerPresetVariables($feature['presets'], $feature['property'], $variableType, $feature);
                 $this->SendDebug(__FUNCTION__, 'Registered presets for: ' . $feature['property'], 0);
@@ -3935,7 +3935,7 @@ abstract class ModulBase extends \IPSModule
         $aFiltered = $this->ReadAttributeArray(self::ATTRIBUTE_FILTERED);
         switch ($feature['name']) {
             case 'color_xy':
-                if (in_array('color', $aFiltered, true)) {
+                if (\in_array('color', $aFiltered, true)) {
                     $this->SendDebug(__FUNCTION__, 'Skipping filtered color variable: color', 0);
                     break;
                 }
@@ -3945,7 +3945,7 @@ abstract class ModulBase extends \IPSModule
                 $this->SendDebug(__FUNCTION__ . ' :: Line ' . __LINE__ . ' :: Creating composite color_xy', 'color', 0);
                 break;
             case 'color_hs':
-                if (in_array('color_hs', $aFiltered, true)) {
+                if (\in_array('color_hs', $aFiltered, true)) {
                     $this->SendDebug(__FUNCTION__, 'Skipping filtered color variable: color_hs', 0);
                     break;
                 }
@@ -3955,7 +3955,7 @@ abstract class ModulBase extends \IPSModule
                 $this->SendDebug(__FUNCTION__ . ' :: Line ' . __LINE__ . ' :: Creating composite color_hs', 'color_hs', 0);
                 break;
             case 'color_rgb':
-                if (in_array('color_rgb', $aFiltered, true)) {
+                if (\in_array('color_rgb', $aFiltered, true)) {
                     $this->SendDebug(__FUNCTION__, 'Skipping filtered color variable: color_rgb', 0);
                     break;
                 }
@@ -4066,7 +4066,7 @@ abstract class ModulBase extends \IPSModule
         }
 
         $ident = $feature['property'];
-        $this->SendDebug(__FUNCTION__, sprintf('Checking special case for %s: %s', $ident, json_encode($feature)), 0);
+        $this->SendDebug(__FUNCTION__, \sprintf('Checking special case for %s: %s', $ident, json_encode($feature)), 0);
 
         if (!isset(self::$specialVariables[$ident])) {
             return;
@@ -4319,7 +4319,7 @@ abstract class ModulBase extends \IPSModule
         if (@$this->GetIDForIdent($presetIdent) !== false) {
             // Variable existiert, also aktualisieren wir direkt ihren Wert
             $this->SetValueDirect($presetIdent, $value);
-            $this->SendDebug(__FUNCTION__, "Updated $presetIdent with value: " . (is_array($value) ? json_encode($value) : $value), 0);
+            $this->SendDebug(__FUNCTION__, "Updated $presetIdent with value: " . (\is_array($value) ? json_encode($value) : $value), 0);
         }
     }
 

@@ -11,7 +11,7 @@ namespace Zigbee2MQTT;
  */
 
 /*
-    Licence
+    License
 
     Copyright (c) 2010 Blue Rhinos Consulting | Andrew Milsted
     andrew@bluerhinos.co.uk | http://www.bluerhinos.co.uk
@@ -166,7 +166,7 @@ class phpMQTT
             $this->password = $password;
         }
 
-        if (!is_null($this->sslContextOptions)) {
+        if (!\is_null($this->sslContextOptions)) {
             $socketContext = stream_context_create($this->sslContextOptions);
             $this->socket = @stream_socket_client('tls://' . $this->address . ':' . $this->port, $errno, $errstr, 5, STREAM_CLIENT_CONNECT, $socketContext);
         } elseif ($this->cafile) {
@@ -198,19 +198,19 @@ class phpMQTT
         $i = 0;
         $buffer = '';
 
-        $buffer .= chr(0x00);
+        $buffer .= \chr(0x00);
         $i++; // Length MSB
-        $buffer .= chr(0x04);
+        $buffer .= \chr(0x04);
         $i++; // Length LSB
-        $buffer .= chr(0x4d);
+        $buffer .= \chr(0x4d);
         $i++; // M
-        $buffer .= chr(0x51);
+        $buffer .= \chr(0x51);
         $i++; // Q
-        $buffer .= chr(0x54);
+        $buffer .= \chr(0x54);
         $i++; // T
-        $buffer .= chr(0x54);
+        $buffer .= \chr(0x54);
         $i++; // T
-        $buffer .= chr(0x04);
+        $buffer .= \chr(0x04);
         $i++; // // Protocol Level
 
         //No Will
@@ -235,13 +235,13 @@ class phpMQTT
             $var += 64;
         }    //Add password to header
 
-        $buffer .= chr($var);
+        $buffer .= \chr($var);
         $i++;
 
         //Keep alive
-        $buffer .= chr($this->keepalive >> 8);
+        $buffer .= \chr($this->keepalive >> 8);
         $i++;
-        $buffer .= chr($this->keepalive & 0xff);
+        $buffer .= \chr($this->keepalive & 0xff);
         $i++;
 
         $buffer .= $this->strwritestring($this->clientid, $i);
@@ -259,7 +259,7 @@ class phpMQTT
             $buffer .= $this->strwritestring($this->password, $i);
         }
 
-        $head = chr(0x10);
+        $head = \chr(0x10);
 
         while ($i > 0) {
             $encodedByte = $i % 128;
@@ -268,7 +268,7 @@ class phpMQTT
             if ($i > 0) {
                 $encodedByte |= 128;
             }
-            $head .= chr($encodedByte);
+            $head .= \chr($encodedByte);
         }
 
         if (!fwrite($this->socket, $head, 2)) {
@@ -282,14 +282,14 @@ class phpMQTT
         if (!$string) {
             return false;
         }
-        if (ord($string[0]) >> 4 === 2 && $string[3] === chr(0)) {
+        if (\ord($string[0]) >> 4 === 2 && $string[3] === \chr(0)) {
             $this->_debugMessage('Connected to Broker');
         } else {
             $this->_errorMessage(
-                sprintf(
+                \sprintf(
                     "Connection failed! (Error: 0x%02x 0x%02x)\n",
-                    ord($string[0]),
-                    ord($string[3])
+                    \ord($string[0]),
+                    \ord($string[3])
                 )
             );
             return false;
@@ -322,7 +322,7 @@ class phpMQTT
         while (!feof($this->socket) && $togo > 0) {
             $fread = fread($this->socket, $togo);
             $string .= $fread;
-            $togo = $int - strlen($string);
+            $togo = $int - \strlen($string);
         }
 
         return $string;
@@ -368,14 +368,14 @@ class phpMQTT
         $i = 0;
         $buffer = '';
         $id = $this->msgid;
-        $buffer .= chr($id >> 8);
+        $buffer .= \chr($id >> 8);
         $i++;
-        $buffer .= chr($id % 256);
+        $buffer .= \chr($id % 256);
         $i++;
 
         foreach ($topics as $topic => $qos) {
             $buffer .= $this->strwritestring($topic, $i);
-            $buffer .= chr($qos);
+            $buffer .= \chr($qos);
             $i++;
             $this->topics[$topic] = $qos;
         }
@@ -384,14 +384,14 @@ class phpMQTT
         //$qos
         $cmd += ($qos << 1);
 
-        $head = chr($cmd);
+        $head = \chr($cmd);
         $head .= $this->setmsglength($i);
-        fwrite($this->socket, $head, strlen($head));
+        fwrite($this->socket, $head, \strlen($head));
 
         $this->_fwrite($buffer);
         $string = $this->read(2);
 
-        $bytes = ord(substr($string, 1, 1));
+        $bytes = \ord(substr($string, 1, 1));
         $this->read($bytes);
     }
 
@@ -404,8 +404,8 @@ class phpMQTT
      */
     public function ping(): void
     {
-        $head = chr(0xc0);
-        $head .= chr(0x00);
+        $head = \chr(0xc0);
+        $head .= \chr(0x00);
         fwrite($this->socket, $head, 2);
         $this->timesinceping = time();
         $this->_debugMessage('ping sent');
@@ -421,8 +421,8 @@ class phpMQTT
     public function disconnect(): void
     {
         $head = ' ';
-        $head[0] = chr(0xe0);
-        $head[1] = chr(0x00);
+        $head[0] = \chr(0xe0);
+        $head[1] = \chr(0x00);
         fwrite($this->socket, $head, 2);
     }
 
@@ -460,14 +460,14 @@ class phpMQTT
 
         if ($qos) {
             $id = $this->msgid++;
-            $buffer .= chr($id >> 8);
+            $buffer .= \chr($id >> 8);
             $i++;
-            $buffer .= chr($id % 256);
+            $buffer .= \chr($id % 256);
             $i++;
         }
 
         $buffer .= $content;
-        $i += strlen($content);
+        $i += \strlen($content);
 
         $head = ' ';
         $cmd = 0x30;
@@ -478,10 +478,10 @@ class phpMQTT
             ++$cmd;
         }
 
-        $head[0] = chr($cmd);
+        $head[0] = \chr($cmd);
         $head .= $this->setmsglength($i);
 
-        fwrite($this->socket, $head, strlen($head));
+        fwrite($this->socket, $head, \strlen($head));
         $this->_fwrite($buffer);
     }
 
@@ -496,7 +496,7 @@ class phpMQTT
      */
     public function message($msg)
     {
-        $tlen = (ord($msg[0]) << 8) + ord($msg[1]);
+        $tlen = (\ord($msg[0]) << 8) + \ord($msg[1]);
         $topic = substr($msg, 2, $tlen);
         $msg = substr($msg, ($tlen + 2));
         $found = false;
@@ -550,7 +550,7 @@ class phpMQTT
             $this->_debugMessage('eof receive going to reconnect for good measure');
             fclose($this->socket);
             $this->connect_auto(false);
-            if (count($this->topics)) {
+            if (\count($this->topics)) {
                 $this->subscribe($this->topics);
             }
         }
@@ -562,9 +562,9 @@ class phpMQTT
                 usleep(100000);
             }
         } else {
-            $cmd = (int) (ord($byte) / 16);
+            $cmd = (int) (\ord($byte) / 16);
             $this->_debugMessage(
-                sprintf(
+                \sprintf(
                     'Received CMD: %d (%s)',
                     $cmd,
                     isset(static::$known_commands[$cmd]) === true ? static::$known_commands[$cmd] : 'Unknown'
@@ -574,7 +574,7 @@ class phpMQTT
             $multiplier = 1;
             $value = 0;
             do {
-                $digit = ord($this->read(1));
+                $digit = \ord($this->read(1));
                 $value += ($digit & 127) * $multiplier;
                 $multiplier *= 128;
             } while (($digit & 128) !== 0);
@@ -587,7 +587,7 @@ class phpMQTT
                 switch ($cmd) {
                     case 3: //Publish MSG
                         $return = $this->message($string);
-                        if (is_bool($return) === false) {
+                        if (\is_bool($return) === false) {
                             return $return;
                         }
                         break;
@@ -604,7 +604,7 @@ class phpMQTT
             $this->_debugMessage('not seen a packet in a while, disconnecting/reconnecting');
             fclose($this->socket);
             $this->connect_auto(false);
-            if (count($this->topics)) {
+            if (\count($this->topics)) {
                 $this->subscribe($this->topics);
             }
         }
@@ -623,15 +623,15 @@ class phpMQTT
      */
     public function printstr($string): void
     {
-        $strlen = strlen($string);
+        $strlen = \strlen($string);
         for ($j = 0; $j < $strlen; $j++) {
-            $num = ord($string[$j]);
+            $num = \ord($string[$j]);
             if ($num > 31) {
                 $chr = $string[$j];
             } else {
                 $chr = ' ';
             }
-            printf("%4d: %08b : 0x%02x : %s \n", $j, $num, $num, $chr);
+            \printf("%4d: %08b : 0x%02x : %s \n", $j, $num, $num, $chr);
         }
     }
 
@@ -645,7 +645,7 @@ class phpMQTT
      */
     protected function _fwrite($buffer)
     {
-        $buffer_length = strlen($buffer);
+        $buffer_length = \strlen($buffer);
         for ($written = 0; $written < $buffer_length; $written += $fwrite) {
             $fwrite = fwrite($this->socket, substr($buffer, $written));
             if ($fwrite === false) {
@@ -669,7 +669,7 @@ class phpMQTT
         $multiplier = 1;
         $value = 0;
         do {
-            $digit = ord($msg[$i]);
+            $digit = \ord($msg[$i]);
             $value += ($digit & 127) * $multiplier;
             $multiplier *= 128;
             $i++;
@@ -694,7 +694,7 @@ class phpMQTT
             if ($len > 0) {
                 $digit |= 0x80;
             }
-            $string .= chr($digit);
+            $string .= \chr($digit);
         } while ($len > 0);
         return $string;
     }
@@ -708,11 +708,11 @@ class phpMQTT
      */
     protected function strwritestring($str, &$i): string
     {
-        $len = strlen($str);
+        $len = \strlen($str);
         $msb = $len >> 8;
         $lsb = $len % 256;
-        $ret = chr($msb);
-        $ret .= chr($lsb);
+        $ret = \chr($msb);
+        $ret .= \chr($lsb);
         $ret .= $str;
         $i += ($len + 2);
         return $ret;

@@ -77,7 +77,7 @@ trait SendData
             $Result = $this->WaitForTransactionEnd($TransactionId, $Timeout);
             $this->SendDebug(__FUNCTION__ . ' :Result', json_encode($Result), 0);
             if ($Result === false) {
-                trigger_error(sprintf($this->Translate('Zigbee2MQTT did not response on Topic %s'), $Topic), E_USER_NOTICE);
+                trigger_error(\sprintf($this->Translate('Zigbee2MQTT did not response on Topic %s'), $Topic), E_USER_NOTICE);
                 return false;
             }
             return $Result;
@@ -102,7 +102,7 @@ trait SendData
             if (!isset($Buffer[$TransactionId])) {
                 return false;
             }
-            if (count($Buffer[$TransactionId])) {
+            if (\count($Buffer[$TransactionId])) {
                 $this->RemoveTransaction($TransactionId);
                 unset($Buffer[$TransactionId]['transaction']);
                 return $Buffer[$TransactionId];
@@ -112,7 +112,6 @@ trait SendData
         $this->RemoveTransaction($TransactionId);
         return false;
     }
-    //################# SENDQUEUE
 
     /**
      * AddTransaction
