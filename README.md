@@ -200,8 +200,9 @@ Bitte den einzelnen Modulen entnehmen:
 
 ## 5. Changelog  
 
-**Version 5.41:**  
+**Version 5.42:**  
 
+- Bridge Instanz konnte den Namen der bereits installierten Erweiterung nicht korrekt erkennen und übernehmen.  
 - Diverse Übersetzungen ergänzt.  
 - Neue Funktion Z2M_ReadValue und Z2M_SendGetCommand.  
 - Diverse spezielle Funktionen im globalen Namensraum aufrufen, um Compiler-Optimierung zu ermöglichen.  
