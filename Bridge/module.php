@@ -218,7 +218,7 @@ class Zigbee2MQTTBridge extends IPSModule
                     $this->UpdateTransaction($Payload);
                     break;
                 }
-                if (count($Topics)) {
+                if (is_array($Topics)) {
                     if ($Topics[0] == 'networkmap') {
                         if ($Payload['status'] == 'ok') {
                             $this->RegisterVariableString($Payload['data']['type'], $this->Translate('Network Map'));
@@ -282,6 +282,9 @@ class Zigbee2MQTTBridge extends IPSModule
                 }
                 break;
             case 'extensions':
+                if (!is_array($Payload)) {
+                    break;
+                }
                 $foundExtension = false;
                 $Version = 'unknown';
                 foreach ($Payload as $Extension) {
@@ -291,8 +294,8 @@ class Zigbee2MQTTBridge extends IPSModule
                             continue;
                         }
                         $foundExtension = true;
-                        $this->ExtensionName = $Extension['name'];
-                        $this->SendDebug('Found Extension', $this->ExtensionName, 0);
+                        $this->ExtensionFilename = $Extension['name'];
+                        $this->SendDebug('Found Extension', $this->ExtensionFilename, 0);
                         preg_match('/Version: (.*)/', $Extension['code'], $matches);
                         if (isset($matches[1])) {
                             $Version = $matches[1];
@@ -395,9 +398,9 @@ class Zigbee2MQTTBridge extends IPSModule
             return false;
 
         }
-        $ExtensionName = $this->ExtensionName == '' ? 'IPSymconExtension.js' : $this->ExtensionName;
+        $ExtensionFilename = $this->ExtensionFilename == '' ? 'IPSymconExtension.js' : $this->ExtensionFilename;
         $Topic = '/bridge/request/extension/save';
-        $Payload = ['name'=>$ExtensionName, 'code'=>file_get_contents(dirname(__DIR__) . '/libs/' . self::EXTENSION_ZH_VERSION[(int) $this->installedZhVersion])];
+        $Payload = ['name'=>$ExtensionFilename, 'code'=>file_get_contents(dirname(__DIR__) . '/libs/' . self::EXTENSION_ZH_VERSION[(int) $this->installedZhVersion])];
         $Result = $this->SendData($Topic, $Payload);
         if (isset($Result['error'])) {
             trigger_error($Result['error'], E_USER_NOTICE);

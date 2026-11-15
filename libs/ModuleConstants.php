@@ -47,4 +47,6 @@ trait Constants
     protected const GUID_MODULE_GROUP = '{11BF3773-E940-469B-9DD7-FB9ACD7199A2}';
     /** @var string summary of ATTRIBUTE_EXPOSES */
     protected const ATTRIBUTE_EXPOSES = 'Exposes';
+    /** @var string Attribut fuer geraetespezifische filtered_attributes aus Z2M */
+    protected const ATTRIBUTE_FILTERED = 'FilteredAttributes';
 }

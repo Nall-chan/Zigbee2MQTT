@@ -17,12 +17,13 @@ Features 5.0:
         ✅ Download eines JSON Archives mit dem letzten Payload, der expose JSON und der vorhandenen Variablen inkl. Profile der Instanz.
     ✅ Composite Variablen ergänzen.
     ✅ OTA Update Variablen zerlegen.    
-    🟨 Dokumentation vor Release noch einmal überarbeiten mit den letzten Änderungen und Screenshots.
-    
+    ✅ Dokumentation vor Release noch einmal überarbeiten mit den letzten Änderungen und Screenshots.
+    ✅ Testfunktionen ergänzen das expose JSON und Payloads mit phpunit getestet werden können.
+
 Features 5.x:
     🟨 OTA Updates über Bridge Instanz prüfen, darstellen, anbieten?
     🟨 Oder eigene OTA Instanz?
-    🟨 Testfunktionen ergänzen das expose JSON und Payloads mit phpunit getestet werden können.
+    🟥 Konzept vorbereiten für Darstellungen.
     🟩 Diverse Code Optimierungen laut @Burki24
     🟨 Instanz sollte sich alle erstellen Profile merken, und beim löschen aufräumen
         Problem -> InstanzBuffer ist dort nicht mehr verfügbar.

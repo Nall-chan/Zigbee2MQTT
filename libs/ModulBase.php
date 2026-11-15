@@ -17,7 +17,7 @@ require_once __DIR__ . '/ColorHelper.php';
  * Basisklasse für Geräte (Devices module.php) und Gruppen (Groups module.php)
  *
  * Pseudo Variablen, welche über BufferHelper und die Magic-Functions __get und __set
- * direkt typensichere Werte, Arrays und Objekte in einem Instanz-Buffer schreiben und lesen können.
+ * direkt typsichere Werte, Arrays und Objekte in einem Instanz-Buffer schreiben und lesen können.
  * @property bool $BUFFER_MQTT_SUSPENDED Zugriff auf den Buffer für laufende Migration
  * @property bool $BUFFER_PROCESSING_MIGRATION Zugriff auf den Buffer für MQTT Nachrichten nicht verarbeiten
  * @property string $lastPayload Zugriff auf den Buffer welcher das Letzte Payload enthält (für Download-Button)
@@ -99,6 +99,7 @@ abstract class ModulBase extends \IPSModule
         'm³',
         'cm³',
         'mm³',
+        'm³/h',
         'g',
         'kg',
         'mg',
@@ -122,6 +123,7 @@ abstract class ModulBase extends \IPSModule
         'mol/l',
         'N',
         'Pa',
+        'hPa',
         'kPa',
         'MPa',
         'GPa',
@@ -148,8 +150,7 @@ abstract class ModulBase extends \IPSModule
         'dB',
         'dBA',
         'dBC',
-        'dB/m',
-        'm³/h'
+        'dB/m'
     ];
 
     /**
@@ -411,6 +412,7 @@ abstract class ModulBase extends \IPSModule
         $this->RegisterPropertyString(self::MQTT_BASE_TOPIC, '');
         $this->RegisterPropertyString(self::MQTT_TOPIC, '');
         $this->RegisterAttributeArray(self::ATTRIBUTE_EXPOSES, []);
+        $this->RegisterAttributeArray(self::ATTRIBUTE_FILTERED, []);
         $this->RegisterAttributeFloat(self::ATTRIBUTE_MODUL_VERSION, 5.0);
 
         /** Init Buffers */
@@ -598,13 +600,13 @@ abstract class ModulBase extends \IPSModule
                 return $this->SendSetCommand($payload);
             },
             // Behandelt String-Variablen ohne Rückmeldung
-            in_array($ident, self::$stringVariablesNoResponse) => function () use ($ident, $value)
+            \in_array($ident, self::$stringVariablesNoResponse) => function () use ($ident, $value)
             {
                 $this->SendDebug(__FUNCTION__, 'Verarbeite String ohne Rückmeldung: ' . $ident, 0);
                 return $this->handleStringVariableNoResponse($ident, (string) $value);
             },
             // Behandelt Farbvariablen (exakte Namen prüfen)
-            in_array($ident, ['color', 'color_hs', 'color_rgb', 'color_temp_kelvin']) => function () use ($ident, $value)
+            \in_array($ident, ['color', 'color_hs', 'color_rgb', 'color_temp_kelvin']) => function () use ($ident, $value)
             {
                 $this->SendDebug(__FUNCTION__, 'Verarbeite Farbvariable: ' . $ident, 0);
                 return $this->handleColorVariable($ident, $value);
@@ -675,12 +677,12 @@ abstract class ModulBase extends \IPSModule
         if (!$topics) {
             return '';
         }
-        // Behandelt Verfügbarkeitsstatus
+        // Behandelt Verfügbarkeit-Status
         if ($this->handleAvailability($topics, $payload)) {
             return '';
         }
         // Leere Payloads brauchte nur handleAvailability
-        if (is_null($payload)) {
+        if (\is_null($payload)) {
             return '';
         }
 
@@ -768,7 +770,7 @@ abstract class ModulBase extends \IPSModule
                 // Überspringen
                 continue;
             }
-            if (in_array($obj['ObjectIdent'], self::SKIP_IDENTS)) {
+            if (\in_array($obj['ObjectIdent'], self::SKIP_IDENTS)) {
                 // Überspringen
                 continue;
             }
@@ -863,6 +865,35 @@ abstract class ModulBase extends \IPSModule
     }
 
     /**
+     * Z2M_ReadValue Instanz Funktion
+     *
+     * Leseanforderung für ein Value an das Gerät senden.
+     *
+     * @param  string $Property
+     * @return bool
+     *
+     * @throws \Exception Bei Fehlern während des Sendens
+     *
+     * @see \IPSModule::ReadPropertyString()
+     * @see \IPSModule::SendDebug()
+     * @see \Zigbee2MQTT\SendData::SendData()
+     * @see json_encode()
+     */
+    public function ReadValue(string $Property)
+    {
+        $Payload = [$Property => ''];
+
+        // MQTT-Topic für den Get-Befehl generieren
+        $Topic = '/' . $this->ReadPropertyString(self::MQTT_TOPIC) . '/get';
+
+        // Debug-Ausgabe des zu sendenden Payloads
+        $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__ . ' :: zu sendendes Payload: ', json_encode($Payload), 0);
+
+        // Sende die Daten an das Gerät
+        return $this->SendData($Topic, $Payload, 0);
+    }
+
+    /**
      * SendSetCommand
      *
      * Sendet einen Set-Befehl an das Gerät über MQTT
@@ -878,13 +909,85 @@ abstract class ModulBase extends \IPSModule
      *
      * @see \IPSModule::ReadPropertyString()
      * @see \IPSModule::SendDebug()
-     * @see \Zigbee2MQTT\ModulBase::SendData()
+     * @see \Zigbee2MQTT\SendData::SendData()
      * @see json_encode()
      */
     public function SendSetCommand(array $Payload): bool
     {
         // MQTT-Topic für den Set-Befehl generieren
         $Topic = '/' . $this->ReadPropertyString(self::MQTT_TOPIC) . '/set';
+
+        // Debug-Ausgabe des zu sendenden Payloads
+        $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__ . ' :: zu sendendes Payload: ', json_encode($Payload), 0);
+
+        // Sende die Daten an das Gerät
+        return $this->SendData($Topic, $Payload, 0);
+    }
+
+    /**
+     * SendGetCommand
+     *
+     * Sendet einen Get-Befehl an das Gerät über MQTT
+     *
+     * Diese Methode generiert das MQTT-Topic für den Get-Befehl basierend auf der Konfiguration
+     * und sendet ein Array mit allen Features/Propertys über SendData an das Gerät.
+     *
+     * @return bool True wenn die Daten versendet werden konnten, sonst false
+     *
+     * @throws \Exception Bei Fehlern während des Sendens
+     *
+     * @see \IPSModule::ReadPropertyString()
+     * @see Zigbee2MQTT\AttributeArrayHelper::ReadAttributeArray()
+     * @see \IPSModule::SendDebug()
+     * @see \Zigbee2MQTT\SendData::SendData()
+     * @see json_encode()
+     * @see in_array()
+     */
+    public function SendGetCommand(): bool
+    {
+        // MQTT-Topic für den Get-Befehl generieren
+        $Topic = '/' . $this->ReadPropertyString(self::MQTT_TOPIC) . '/get';
+
+        // Geraetespezifische filtered_attributes aus Z2M laden
+        $aFiltered = $this->ReadAttributeArray(self::ATTRIBUTE_FILTERED);
+
+        // Payload bauen
+        $Payload = [];
+        $exposes = $this->ReadAttributeArray(self::ATTRIBUTE_EXPOSES);
+        foreach ($exposes as $expose) {
+            // Config Features werden nur über den Namen des Config property abgefragt und nicht einzeln.
+            if (isset($expose['category']) && ($expose['category'] == 'config')) {
+                // Gefilterte Attribute gemaess Z2M-Konfiguration ueberspringen
+                $sProperty = $expose['property'] ?? '';
+                if ($sProperty !== '' && \in_array($sProperty, $aFiltered, true)) {
+                    $this->SendDebug(__FUNCTION__, 'Skipping filtered attribute: ' . $sProperty, 0);
+                    continue;
+                }
+                $Payload[$sProperty] = '';
+                continue;
+            }
+            // Einzelne Features durchgehen (z.B. Endpoints state_1 usw...)
+            if (isset($expose['features']) && \is_array($expose['features'])) {
+                foreach ($expose['features'] as $feature) {
+                    // Gefilterte Attribute gemaess Z2M-Konfiguration ueberspringen
+                    $sProperty = $feature['property'] ?? '';
+                    if ($sProperty !== '' && \in_array($sProperty, $aFiltered, true)) {
+                        $this->SendDebug(__FUNCTION__, 'Skipping filtered attribute: ' . $sProperty, 0);
+                        continue;
+                    }
+                    $Payload[$sProperty] = '';
+                }
+                continue;
+            }
+            // Rest
+            // Gefilterte Attribute gemaess Z2M-Konfiguration ueberspringen
+            $sProperty = $expose['property'] ?? '';
+            if ($sProperty !== '' && \in_array($sProperty, $aFiltered, true)) {
+                $this->SendDebug(__FUNCTION__, 'Skipping filtered attribute: ' . $sProperty, 0);
+                continue;
+            }
+            $Payload[$sProperty] = '';
+        }
 
         // Debug-Ausgabe des zu sendenden Payloads
         $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__ . ' :: zu sendendes Payload: ', json_encode($Payload), 0);
@@ -1059,7 +1162,7 @@ abstract class ModulBase extends \IPSModule
         $this->SendDebug(__FUNCTION__, 'Verarbeite Variable: ' . $ident . ' mit Wert: ' . json_encode($value), 0);
 
         // Array Spezialbehandlung für
-        if (is_array($value)) {
+        if (\is_array($value)) {
             // Color-Arrays
             if (strtolower($ident) === 'color') {
                 $this->handleColorVariable($ident, $value);
@@ -1107,11 +1210,11 @@ abstract class ModulBase extends \IPSModule
      * Diese Methode setzt den Wert einer Variable direkt mit minimaler Verarbeitung:
      * - Keine Profile-Verarbeitung
      * - Keine Spezialbehandlung von States
-     * - Basale Typkonvertierung für grundlegende Datentypen
+     * - Basale Konvertierung der Typen für grundlegende Datentypen
      *
      * Verarbeitung:
      * 1. Array-Werte werden zu JSON konvertiert
-     * 2. Grundlegende Typkonvertierung (bool, int, float, string)
+     * 2. Grundlegende Konvertierung des Typs (bool, int, float, string)
      * 3. Debug-Ausgaben für Fehleranalyse
      *
      * @param string $ident Der Identifikator der Variable, deren Wert gesetzt werden soll
@@ -1154,7 +1257,7 @@ abstract class ModulBase extends \IPSModule
         }
 
         // Typ-Prüfung und Konvertierung
-        if (is_array($value)) {
+        if (\is_array($value)) {
             $this->SendDebug(__FUNCTION__, 'Array-Wert erkannt, konvertiere zu JSON', 0);
             $value = json_encode($value);
         }
@@ -1179,7 +1282,7 @@ abstract class ModulBase extends \IPSModule
                 break;
         }
 
-        $this->SendDebug(__FUNCTION__, sprintf('Setze Variable: %s, Typ: %s, Wert: %s', $ident, $debugVarType, json_encode($value)), 0);
+        $this->SendDebug(__FUNCTION__, \sprintf('Setze Variable: %s, Typ: %s, Wert: %s', $ident, $debugVarType, json_encode($value)), 0);
         // Setze den Wert der Variable
         parent::SetValue($ident, $value);
     }
@@ -1210,15 +1313,25 @@ abstract class ModulBase extends \IPSModule
     {
         $this->SendDebug(__FUNCTION__ . ' :: Line ' . __LINE__ . ' :: All Exposes', json_encode($exposes), 0);
 
+        // Geraetespezifische filtered_attributes aus Z2M laden
+        $aFiltered = $this->ReadAttributeArray(self::ATTRIBUTE_FILTERED);
+
         // Durchlaufe alle Exposes
         foreach ($exposes as $expose) {
             // Prüfen, ob es sich um eine Gruppe handelt
-            if (isset($expose['type']) && in_array($expose['type'], ['light', 'switch', 'lock', 'cover', 'climate', 'fan', 'text'])) {
+            if (isset($expose['type']) && \in_array($expose['type'], ['light', 'switch', 'lock', 'cover', 'climate', 'fan', 'text'])) {
                 $this->SendDebug(__FUNCTION__ . ' :: Line ' . __LINE__ . ' :: Found group: ', $expose['type'], 0);
 
                 // Features in der Gruppe verarbeiten
-                if (isset($expose['features']) && is_array($expose['features'])) {
+                if (isset($expose['features']) && \is_array($expose['features'])) {
                     foreach ($expose['features'] as $feature) {
+                        // Gefilterte Attribute gemaess Z2M-Konfiguration ueberspringen
+                        $sProperty = $feature['property'] ?? '';
+                        if ($sProperty !== '' && \in_array($sProperty, $aFiltered, true)) {
+                            $this->SendDebug(__FUNCTION__, 'Skipping filtered attribute: ' . $sProperty, 0);
+                            continue;
+                        }
+
                         $this->SendDebug(__FUNCTION__ . ' :: Line ' . __LINE__ . ' :: Processing feature in group: ', json_encode($feature), 0);
                         // Setze den Gruppentyp als zusätzlichen Wert
                         $feature['group_type'] = $expose['type'];
@@ -1239,9 +1352,16 @@ abstract class ModulBase extends \IPSModule
                     $this->registerVariable($expose);
                 }
             } else {
+                // Gefilterte Attribute gemaess Z2M-Konfiguration ueberspringen
+                $sProperty = $expose['property'] ?? '';
+                if ($sProperty !== '' && \in_array($sProperty, $aFiltered, true)) {
+                    $this->SendDebug(__FUNCTION__, 'Skipping filtered attribute: ' . $sProperty, 0);
+                    continue;
+                }
+
                 $this->registerVariable($expose);
                 if (isset($expose['presets'])) {
-                    $variableType = $this->getVariableTypeFromProfile($expose['type'], $expose['property'], $expose['unit'] ?? '', $expose['value_step'] ?? null, null);
+                    $variableType = $this->getVariableTypeFromProfile($expose['type'], $expose['property'], $expose['unit'] ?? '', $expose['value_step'] ?? 1.0, null);
                     $this->registerPresetVariables($expose['presets'], $expose['property'], $variableType, $expose);
                 }
             }
@@ -1255,7 +1375,7 @@ abstract class ModulBase extends \IPSModule
      *
      * @return array|false Enthält die Antwort als Array, oder false im Fehlerfall.
      *
-     * @see \Zigbee2MQTT\ModulBase::SendData()
+     * @see \Zigbee2MQTT\SendData::SendData()
      * @see \IPSModule::ReadPropertyString()
      * @see \IPSModule::LogMessage()
      */
@@ -1328,20 +1448,20 @@ abstract class ModulBase extends \IPSModule
         foreach ($payload as $key => $value) {
 
             // Composite-Keys überspringen, die in SKIP_COMPOSITES definiert sind und auf oberster Ebene gesetzt sind
-            if ($prefix === '' && in_array($key, self::SKIP_COMPOSITES) && is_array($value)) {
+            if ($prefix === '' && \in_array($key, self::SKIP_COMPOSITES) && \is_array($value)) {
                 $this->SendDebug(__FUNCTION__, "Überspringe Composite-Key auf oberster Ebene: $key", 0);
                 continue;
             }
 
             // Spezialbehandlung für color-Properties, da zur Farbberechnung nicht als flatten benötigt
-            if ($key === 'color' && is_array($value)) {
+            if ($key === 'color' && \is_array($value)) {
                 // Übernehme die color-Properties direkt ins color-Array
                 $result['color'] = $value;
                 continue;
             }
 
             $newKey = $prefix ? $prefix . '__' . $key : $key;
-            if (is_array($value)) {
+            if (\is_array($value)) {
                 $result = array_merge($result, $this->flattenPayload($value, $newKey));
             } else {
                 $result[$newKey] = $value;
@@ -1380,13 +1500,13 @@ abstract class ModulBase extends \IPSModule
         $current = &$result;
 
         // Alle Teile außer dem letzten durchgehen
-        for ($i = 0; $i < count($parts) - 1; $i++) {
+        for ($i = 0; $i < \count($parts) - 1; $i++) {
             $current[$parts[$i]] = [];
             $current = &$current[$parts[$i]];
         }
 
         // Letzten Wert setzen
-        $current[$parts[count($parts) - 1]] = $value;
+        $current[$parts[\count($parts) - 1]] = $value;
 
         return $result;
     }
@@ -1490,10 +1610,16 @@ abstract class ModulBase extends \IPSModule
             return [false, false];
         }
 
-        $topic = substr($messageData['Topic'], strlen($baseTopic) + 1);
+        $topic = substr($messageData['Topic'], \strlen($baseTopic) + 1);
+
+        /**
+         * @deprecated utf8_decode (deprecated sind in Symcon deaktivert)
+         * @depends Symcon Module-SPK  Nutzung von utf8_decode bei IPSModule, und hex2bin ab IPSModuleStrict.
+         */
+        $payloadData = json_decode(utf8_decode($messageData['Payload']), true);
         return [
             explode('/', $topic),
-            json_decode(mb_convert_encoding($messageData['Payload'], 'ISO-8859-1', 'UTF-8'), true) // wir nutzen bitte utf8_decode bei IPSModule, und hex2bin ab IPSModuleStrict
+            $payloadData
         ];
     }
 
@@ -1617,11 +1743,12 @@ abstract class ModulBase extends \IPSModule
 
         // Payload-Daten verarbeiten
         foreach ($flattenedPayload as $key => $value) {
+            $key = (string) $key;
             if ($value === null) {
-                $this->SendDebug(__FUNCTION__, sprintf('Skip empty value for key=%s', $key), 0);
+                $this->SendDebug(__FUNCTION__, \sprintf('Skip empty value for key=%s', $key), 0);
                 continue;
             }
-            $this->SendDebug(__FUNCTION__, sprintf('Verarbeite: Key=%s, Value=%s', $key, is_array($value) ? json_encode($value) : (is_bool($value) ? ($value ? 'TRUE' : 'FALSE') : (string) $value)), 0);
+            $this->SendDebug(__FUNCTION__, \sprintf('Verarbeite: Key=%s, Value=%s', $key, \is_array($value) ? json_encode($value) : (\is_bool($value) ? ($value ? 'TRUE' : 'FALSE') : (string) $value)), 0);
 
             if (!$this->processSpecialVariable($key, $value)) {
                 $this->processVariable($key, $value);
@@ -1705,17 +1832,17 @@ abstract class ModulBase extends \IPSModule
         if ($this->isCompositeKey($key)) {
             // Bestimme den Variablentyp basierend auf dem Wert
             $varType = match (true) {
-                is_bool($value) => [
+                \is_bool($value) => [
                     'type'         => VARIABLETYPE_BOOLEAN,
                     'profile'      => '~Switch',
                     'registerFunc' => 'RegisterVariableBoolean'
                 ],
-                is_int($value) => [
+                \is_int($value) => [
                     'type'         => VARIABLETYPE_INTEGER,
                     'profile'      => '', // Hier ggf. ein passendes Profil wählen
                     'registerFunc' => 'RegisterVariableInteger'
                 ],
-                is_float($value) => [
+                \is_float($value) => [
                     'type'         => VARIABLETYPE_FLOAT,
                     'profile'      => '', // Hier ggf. ein passendes Profil wählen
                     'registerFunc' => 'RegisterVariableFloat'
@@ -1745,13 +1872,13 @@ abstract class ModulBase extends \IPSModule
         }
 
         // Wenn Value ein Array ist und color im Key vorkommt, spezielle Behandlung
-        if (is_array($value) && strpos($key, 'color') === 0) {
+        if (\is_array($value) && strpos($key, 'color') === 0) {
             $this->handleColorVariable($key, $value);
             return;
         }
 
         // Wenn Value ein Array ist und einen 'composite' Key enthält
-        if (is_array($value) && isset($value['composite'])) {
+        if (\is_array($value) && isset($value['composite'])) {
             foreach ($value['composite'] as $compositeKey => $compositeValue) {
                 $this->processVariable($compositeKey, $compositeValue);
             }
@@ -1759,7 +1886,7 @@ abstract class ModulBase extends \IPSModule
         }
 
         // Wenn Value ein Array ist und list im Type vorkommt
-        if (is_array($value) && isset($value['type']) && $value['type'] === 'list') {
+        if (\is_array($value) && isset($value['type']) && $value['type'] === 'list') {
             // Speichere komplette Liste als JSON
             $this->SetValueDirect($key, json_encode($value));
 
@@ -1796,7 +1923,7 @@ abstract class ModulBase extends \IPSModule
         $variableProps = $knownVariables[$lowerKey];
 
         // Array-Werte verarbeiten
-        if (is_array($value)) {
+        if (\is_array($value)) {
             $this->processArrayValue($ident, $value);
             return;
         }
@@ -1820,7 +1947,7 @@ abstract class ModulBase extends \IPSModule
             $this->SetValue($presetIdent, $value);
         }
         // Liste verarbeiten
-        if (is_array($value) && isset($value['type']) && $value['type'] === 'list') {
+        if (\is_array($value) && isset($value['type']) && $value['type'] === 'list') {
             // Speichere komplette Liste als JSON
             $this->SetValueDirect($key, json_encode($value));
 
@@ -1914,7 +2041,7 @@ abstract class ModulBase extends \IPSModule
         }
 
         // Bei Boolean-Werten prüfen, ob es ein spezielles Mapping gibt
-        if (is_bool($value)) {
+        if (\is_bool($value)) {
             $exposes = $this->ReadAttributeArray(self::ATTRIBUTE_EXPOSES);
             foreach ($exposes as $expose) {
                 $features = isset($expose['features']) ? $expose['features'] : [$expose];
@@ -2004,7 +2131,7 @@ abstract class ModulBase extends \IPSModule
         if (isset(static::$stateDefinitions[$ident])) {
             $stateInfo = static::$stateDefinitions[$ident];
             if (isset($stateInfo['values'])) {
-                $index = is_bool($value) ? (int) $value : $value;
+                $index = \is_bool($value) ? (int) $value : $value;
                 if (isset($stateInfo['values'][$index])) {
                     $payload = [$ident => $stateInfo['values'][$index]];
                     $this->SendDebug(__FUNCTION__, 'Vordefinierter State-Payload wird gesendet: ' . json_encode($payload), 0);
@@ -2063,13 +2190,13 @@ abstract class ModulBase extends \IPSModule
             'color' => function () use ($value)
             {
                 $this->SendDebug(__FUNCTION__, 'Color Value: ' . json_encode($value), 0);
-                if (is_int($value)) { //Schaltaktion aus Symcon
+                if (\is_int($value)) { //Schaltaktion aus Symcon
                     if ($this->GetValue('color') !== $value) {
                         $mode = $this->getColorMode();
                         return $this->setColor($value, $mode);
                     }
                     return false;
-                } elseif (is_array($value)) { //Datenempfang
+                } elseif (\is_array($value)) { //Datenempfang
                     // Prüfen auf x/y Werte im color Array
                     if (isset($value['color']) && isset($value['color']['x']) && isset($value['color']['y'])) {
                         //  x/y Werte innerhalb color
@@ -2115,7 +2242,7 @@ abstract class ModulBase extends \IPSModule
                 $payload = [$payloadKey => $convertedValue];
 
                 // Debug Ausgabe
-                $this->SendDebug(__FUNCTION__, sprintf('Converting %dK to %d Mired', $value, $convertedValue), 0);
+                $this->SendDebug(__FUNCTION__, \sprintf('Converting %dK to %d Mired', $value, $convertedValue), 0);
 
                 // Sende Payload an Gerät
                 if (!$this->SendSetCommand($payload)) {
@@ -2280,11 +2407,13 @@ abstract class ModulBase extends \IPSModule
 
         switch ($varType) {
             case 0:
-                if (is_bool($value)) {
+                if (\is_bool($value)) {
                     $this->SendDebug(__FUNCTION__, 'Wert ist bereits bool: ' . json_encode($value), 0);
                     return $value;
                 }
-                if (is_string($value)) {
+                if (\is_string($value)) {
+                    $normalizedValue = strtoupper(trim($value, " \t\n\r\0\x0B\"'"));
+
                     // Exposes-Daten für diesen Identifier abrufen
                     $exposes = $this->ReadAttributeArray(self::ATTRIBUTE_EXPOSES);
                     foreach ($exposes as $expose) {
@@ -2296,22 +2425,26 @@ abstract class ModulBase extends \IPSModule
                                 $feature['type'] === 'binary') {
 
                                 // Prüfen ob der Wert dem value_on entspricht
-                                if ($value == $feature['value_on']) {
+                                if ($value === $feature['value_on']) {
                                     return true;
                                 }
                                 // Prüfen ob der Wert dem value_off entspricht
-                                elseif ($value == $feature['value_off']) {
+                                elseif ($value === $feature['value_off']) {
                                     return false;
                                 }
                             }
                         }
                     }
-                    // Standard ON/OFF Prüfung als Fallback
-                    if (strtoupper($value) === 'ON') {
+                    // Standardprüfung für übliche Bool-Textwerte als Fallback
+                    if (\in_array($normalizedValue, ['ON', 'TRUE', 'YES', '1', 'LOCK', 'OPEN'], true)) {
                         return true;
-                    } elseif (strtoupper($value) === 'OFF') {
+                    }
+                    if (\in_array($normalizedValue, ['OFF', 'FALSE', 'NO', '0', 'UNLOCK', 'CLOSE', 'CLOSED'], true)) {
                         return false;
                     }
+
+                    $this->SendDebug(__FUNCTION__, 'Unbekannter boolescher Stringwert für ' . $ident . ': ' . json_encode($value) . ' -> false', 0);
+                    return false;
                 }
                 return (bool) $value;
             case 1:
@@ -2539,13 +2672,13 @@ abstract class ModulBase extends \IPSModule
         $adjustedValue = $this->adjustSpecialValue($ident, $value);
 
         // Debug-Ausgabe des verarbeiteten Wertes
-        $debugValue = is_array($adjustedValue) ? json_encode($adjustedValue) : $adjustedValue;
+        $debugValue = \is_array($adjustedValue) ? json_encode($adjustedValue) : $adjustedValue;
         $this->SendDebug(__FUNCTION__ . ' :: ' . __LINE__ . ' :: ', $key . ' verarbeitet: ' . $key . ' => ' . $debugValue, 0);
 
         // Wert setzen
         $this->SetValueDirect($ident, $adjustedValue);
 
-        $this->SendDebug(__FUNCTION__, sprintf('SetValueDirect aufgerufen für %s mit Wert: %s (Typ: %s)', $ident, is_array($adjustedValue) ? json_encode($adjustedValue) : $adjustedValue, gettype($adjustedValue)), 0);
+        $this->SendDebug(__FUNCTION__, \sprintf('SetValueDirect aufgerufen für %s mit Wert: %s (Typ: %s)', $ident, \is_array($adjustedValue) ? json_encode($adjustedValue) : $adjustedValue, gettype($adjustedValue)), 0);
         // Allgemeine Aktualisierung von Preset-Variablen
         $this->updatePresetVariable($ident, $adjustedValue);
         return true;
@@ -2601,7 +2734,7 @@ abstract class ModulBase extends \IPSModule
      */
     private function adjustSpecialValue(string $ident, mixed $value): mixed
     {
-        $debugValue = is_array($value) ? json_encode($value) : $value;
+        $debugValue = \is_array($value) ? json_encode($value) : $value;
         $this->SendDebug(__FUNCTION__, 'Processing special variable: ' . $ident . ' with value: ' . $debugValue, 0);
         switch ($ident) {
             case 'last_seen':
@@ -2676,7 +2809,7 @@ abstract class ModulBase extends \IPSModule
     private function convertOnOffValue($value, bool $toBool = true): mixed
     {
         if ($toBool) {
-            if (is_string($value)) {
+            if (\is_string($value)) {
                 return strtoupper($value) === 'ON';
             }
             return (bool) $value;
@@ -2810,7 +2943,7 @@ abstract class ModulBase extends \IPSModule
                     ($valueOn === true && $valueOff === false) ||
                     ($valueOn === false && $valueOff === true) ||
                     (
-                        is_string($valueOn) && is_string($valueOff) &&
+                        \is_string($valueOn) && \is_string($valueOff) &&
                         (
                             (strtoupper($valueOn) === 'ON' && strtoupper($valueOff) === 'OFF') ||
                             (strtoupper($valueOn) === 'TRUE' && strtoupper($valueOff) === 'FALSE')
@@ -2934,55 +3067,55 @@ abstract class ModulBase extends \IPSModule
      *
      * @see \IPSModule::SendDebug()
      * @see is_string()
-     * @see mb_convert_encoding()
      * @see str_replace()
      * @see in_array()
      * @see fmod()
      */
-    private function getVariableTypeFromProfile(string $type, string $feature, $unit = '', float $value_step = 1.0, ?string $groupType = null): string
+    private function getVariableTypeFromProfile(string $type, string $feature, string $unit = '', float $value_step = 1.0, ?string $groupType = null): string
     {
-        // Erst StandardProfile prüfen
-        foreach (self::$VariableUseStandardProfile as $profile) {
-            if ($profile['feature'] === $feature) {
-                switch ($profile['variableType']) {
-                    case VARIABLETYPE_BOOLEAN:
-                        return 'bool';
-                    case VARIABLETYPE_INTEGER:
-                        return 'int';
-                    case VARIABLETYPE_FLOAT:
-                        return 'float';
-                    case VARIABLETYPE_STRING:
-                        return 'string';
-                }
-            }
-        }
-        // Prüfen, ob ein spezifisches Mapping für type und feature existiert
+        // Prüfen, ob ein spezifisches Mapping existiert.
+        // Wichtig: Nicht nur auf den Feature-Namen matchen, da z.B. "position"
+        // je nach Gerätetyp numerisch (Cover) oder enum (Kontakt) sein kann.
         foreach (self::$VariableUseStandardProfile as $entry) {
-            if ((isset($entry['type']) && ($entry['type'] === $type || $entry['type'] === '')) && $entry['feature'] === $feature) {
-                $this->SendDebug(__FUNCTION__, 'Found specific mapping for type and feature: ' . $entry['variableType'], 0);
-                return $entry['variableType'];
+            if (($entry['feature'] ?? '') !== $feature) {
+                continue;
             }
-            if ((isset($entry['group_type']) && ($entry['group_type'] === $groupType || $entry['group_type'] === '')) && $entry['feature'] === $feature) {
-                $this->SendDebug(__FUNCTION__, 'Found specific mapping for group_type and feature: ' . $entry['variableType'], 0);
-                return $entry['variableType'];
+
+            $typeMatches = !isset($entry['type']) || $entry['type'] === '' || $entry['type'] === $type;
+            $groupMatches = !isset($entry['group_type']) || $entry['group_type'] === '' || $entry['group_type'] === $groupType;
+
+            if (!$typeMatches || !$groupMatches) {
+                continue;
+            }
+
+            $this->SendDebug(__FUNCTION__, 'Found specific mapping: ' . json_encode($entry), 0);
+
+            switch ($entry['variableType']) {
+                case VARIABLETYPE_BOOLEAN:
+                    return 'bool';
+                case VARIABLETYPE_INTEGER:
+                    return 'int';
+                case VARIABLETYPE_FLOAT:
+                    return 'float';
+                case VARIABLETYPE_STRING:
+                    return 'string';
             }
         }
 
         // Prüfen, ob die Einheit in den Float-Einheiten enthalten ist
-        if (!empty($unit) && is_string($unit)) {
+        if (!empty($unit) && \is_string($unit)) {
             // Debug der Original-Einheit
             $this->SendDebug(__FUNCTION__, 'Original unit: ' . bin2hex($unit), 0);
 
-            // Verbesserte UTF-8 Behandlung
-            $unit = mb_convert_encoding($unit, 'UTF-8', 'AUTO');
+            // Unit kommt aus JSON und ist UTF-8; keine AUTO-Rekonvertierung durchführen.
             $unitTrimmed = str_replace(' ', '', $unit);
 
             // Erweiterte Debug-Ausgaben
-            $this->SendDebug(__FUNCTION__, 'Unit after UTF-8 conversion: ' . bin2hex($unitTrimmed), 0);
-            $this->SendDebug(__FUNCTION__, 'Unit after conversion (readable): ' . $unitTrimmed, 0);
+            $this->SendDebug(__FUNCTION__, 'Unit normalized (hex): ' . bin2hex($unitTrimmed), 0);
+            $this->SendDebug(__FUNCTION__, 'Unit normalized (readable): ' . $unitTrimmed, 0);
             $this->SendDebug(__FUNCTION__, 'FLOAT_UNITS content: ' . json_encode(self::FLOAT_UNITS), 0);
 
-            if (in_array($unitTrimmed, self::FLOAT_UNITS, true)) {
+            if (\in_array($unitTrimmed, self::FLOAT_UNITS, true)) {
                 // Wenn unit in FLOAT_UNITS und step eine Ganzzahl ist -> integer
                 if ($value_step != 1.0 && fmod($value_step, 1) === 0.0) {
                     $this->SendDebug(__FUNCTION__, 'Unit in FLOAT_UNITS but step is integer, returning integer', 0);
@@ -3270,7 +3403,7 @@ abstract class ModulBase extends \IPSModule
         // Frühe Typ-Bestimmung
         $type = $expose['type'] ?? '';
         $feature = $expose['property'] ?? '';
-        $unit = isset($expose['unit']) && is_string($expose['unit']) ? $expose['unit'] : '';
+        $unit = isset($expose['unit']) && \is_string($expose['unit']) ? $expose['unit'] : '';
         $value_step = isset($expose['value_step']) ? (float) $expose['value_step'] : 1.0;
 
         // Bestimme Variablentyp
@@ -3292,11 +3425,10 @@ abstract class ModulBase extends \IPSModule
         $max = $expose['value_max'] ?? 0;
         $step = $expose['value_step'] ?? 1.0;
 
-        // Verbesserte UTF8-Decodierung für unit
+        // Einheit direkt als UTF-8 verwenden.
         $unitWithSpace = '';
         if ($unit !== '') {
-            // Einfache UTF8-Konvertierung für korrekte Darstellung von Sonderzeichen
-            $unitWithSpace = ' ' . mb_convert_encoding($unit, 'ISO-8859-1', 'UTF-8');
+            $unitWithSpace = ' ' . $unit;
         }
 
         // Profil entsprechend Variablentyp erstellen
@@ -3422,7 +3554,7 @@ abstract class ModulBase extends \IPSModule
 
         // Prüfe ob Expose-Attribute existiert und Daten enthält
         $exposes = $this->ReadAttributeArray(self::ATTRIBUTE_EXPOSES);
-        if (count($exposes)) {
+        if (\count($exposes)) {
             return true;
         }
 
@@ -3493,7 +3625,7 @@ abstract class ModulBase extends \IPSModule
     private function getKnownVariables(): array
     {
         $data = array_values($this->ReadAttributeArray(self::ATTRIBUTE_EXPOSES));
-        if (!count($data)) {
+        if (!\count($data)) {
             $this->SendDebug(__FUNCTION__, 'Fehlende exposes oder features.', 0);
             return [];
         }
@@ -3593,7 +3725,7 @@ abstract class ModulBase extends \IPSModule
         $translations = $this->missingTranslations;
         $missingKVP = [$type => $value];
         // Füge den neuen Begriff hinzu, wenn er noch nicht existiert
-        if (!in_array($missingKVP, $translations)) {
+        if (!\in_array($missingKVP, $translations)) {
             $translations[] = $missingKVP;
             $this->missingTranslations = $translations;
         }
@@ -3618,7 +3750,7 @@ abstract class ModulBase extends \IPSModule
      *
      * @return void
      *
-     * @throws Exception Bei ungültigen Feature-Informationen
+     * @throws \Exception Bei ungültigen Feature-Informationen
      *
      * Beispiele:
      * ```php
@@ -3671,7 +3803,7 @@ abstract class ModulBase extends \IPSModule
             return;
         }
 
-        $featureProperty = is_array($feature) ? $feature['property'] : $feature;
+        $featureProperty = \is_array($feature) ? $feature['property'] : $feature;
 
         // Frühe Validierung der Property
         if (empty($featureProperty)) {
@@ -3682,7 +3814,7 @@ abstract class ModulBase extends \IPSModule
         $this->SendDebug(__FUNCTION__ . ' Registriere Variable für Property: ', $featureProperty, 0);
 
         // Übergebe das komplette Feature-Array für Access-Check
-        $stateConfig = $this->getStateConfiguration($featureProperty, is_array($feature) ? $feature : null);
+        $stateConfig = $this->getStateConfiguration($featureProperty, \is_array($feature) ? $feature : null);
         if ($stateConfig !== null) {
             $formattedLabel = $this->convertLabelToName($featureProperty);
 
@@ -3712,18 +3844,23 @@ abstract class ModulBase extends \IPSModule
             if (isset($stateConfig['enableAction'])) {
                 // Explizit definierter enableAction-Wert hat Vorrang
                 if ($stateConfig['enableAction']) {
-                    $this->checkAndEnableAction($stateConfig['ident'], is_array($feature) ? $feature : null, true);
+                    $this->checkAndEnableAction($stateConfig['ident'], \is_array($feature) ? $feature : null, true);
                 }
                 // Wenn explizit false, dann kein EnableAction - auch nicht über Access-Rechte
             } else {
                 // Kein expliziter enableAction-Wert, verwende Access-basierte Prüfung
-                $this->checkAndEnableAction($stateConfig['ident'], is_array($feature) ? $feature : null);
+                $this->checkAndEnableAction($stateConfig['ident'], \is_array($feature) ? $feature : null);
             }
             return;
         }
 
         // Überprüfung auf spezielle Fälle
         if (isset(self::$specialVariables[$feature['property']])) {
+            $aFiltered = $this->ReadAttributeArray(self::ATTRIBUTE_FILTERED);
+            if (\in_array($feature['property'], $aFiltered, true)) {
+                $this->SendDebug(__FUNCTION__, 'Skipping filtered special variable: ' . $feature['property'], 0);
+                return;
+            }
             $this->registerSpecialVariable($feature);
             return;
         }
@@ -3797,18 +3934,22 @@ abstract class ModulBase extends \IPSModule
 
                         // Preset-Handling für Sub-Features
                         if (isset($subFeature['presets'])) {
-                            $variableType = $this->getVariableTypeFromProfile(
-                                $subFeature['type'] ?? 'numeric',
-                                $subFeature['property'],
-                                $subFeature['unit'] ?? '',
-                                $subFeature['value_step'] ?? 1.0
-                            );
-                            $this->registerPresetVariables(
-                                $subFeature['presets'],
-                                $subFeature['property'],
-                                $variableType,
-                                $subFeature
-                            );
+                            $aFiltered = $this->ReadAttributeArray(self::ATTRIBUTE_FILTERED);
+                            $subPresetIdent = $subFeature['property'] . '_presets';
+                            if (!\in_array($subPresetIdent, $aFiltered, true)) {
+                                $variableType = $this->getVariableTypeFromProfile(
+                                    $subFeature['type'] ?? 'numeric',
+                                    $subFeature['property'],
+                                    $subFeature['unit'] ?? '',
+                                    $subFeature['value_step'] ?? 1.0
+                                );
+                                $this->registerPresetVariables(
+                                    $subFeature['presets'],
+                                    $subFeature['property'],
+                                    $variableType,
+                                    $subFeature
+                                );
+                            }
                         }
 
                         // Rekursiver Aufruf mit einzelnem Feature
@@ -3844,16 +3985,23 @@ abstract class ModulBase extends \IPSModule
         // Zusätzliche Registrierung der color_temp_kelvin Variable, wenn color_temp registriert wird
         if ($property === 'color_temp') {
             $kelvinIdent = $property . '_kelvin';
-            $this->RegisterVariableInteger($kelvinIdent, $this->Translate('Color Temperature Kelvin'), '~TWColor');
-            $variableId = $this->GetIDForIdent($kelvinIdent);
-            // color_temp_kelvin ist eine spezielle UI-Variable, die immer EnableAction haben soll
-            $this->checkAndEnableAction($kelvinIdent, null, true);
+            $aFiltered = $this->ReadAttributeArray(self::ATTRIBUTE_FILTERED);
+            if (!\in_array($kelvinIdent, $aFiltered, true)) {
+                $this->RegisterVariableInteger($kelvinIdent, $this->Translate('Color Temperature Kelvin'), '~TWColor');
+                $variableId = $this->GetIDForIdent($kelvinIdent);
+                // color_temp_kelvin ist eine spezielle UI-Variable, die immer EnableAction haben soll
+                $this->checkAndEnableAction($kelvinIdent, null, true);
+            }
         }
         // Preset-Verarbeitung nach der normalen Variablenregistrierung
         if (isset($feature['presets']) && !empty($feature['presets'])) {
-            $variableType = $this->getVariableTypeFromProfile($type, $property, $unit, $step, $groupType);
-            $this->registerPresetVariables($feature['presets'], $feature['property'], $variableType, $feature);
-            $this->SendDebug(__FUNCTION__, 'Registered presets for: ' . $feature['property'], 0);
+            $presetIdent = $property . '_presets';
+            $aFiltered = $this->ReadAttributeArray(self::ATTRIBUTE_FILTERED);
+            if (!\in_array($presetIdent, $aFiltered, true)) {
+                $variableType = $this->getVariableTypeFromProfile($type, $property, $unit, $step, $groupType);
+                $this->registerPresetVariables($feature['presets'], $feature['property'], $variableType, $feature);
+                $this->SendDebug(__FUNCTION__, 'Registered presets for: ' . $feature['property'], 0);
+            }
         }
         return;
     }
@@ -3888,20 +4036,33 @@ abstract class ModulBase extends \IPSModule
             return;
         }
 
+        $aFiltered = $this->ReadAttributeArray(self::ATTRIBUTE_FILTERED);
         switch ($feature['name']) {
             case 'color_xy':
+                if (\in_array('color', $aFiltered, true)) {
+                    $this->SendDebug(__FUNCTION__, 'Skipping filtered color variable: color', 0);
+                    break;
+                }
                 $this->RegisterVariableInteger('color', $this->Translate($this->convertLabelToName('color')), '~HexColor');
                 // Farbvariablen erhalten IMMER EnableAction, unabhängig von Access-Prüfung
                 $this->checkAndEnableAction('color', null, true);
                 $this->SendDebug(__FUNCTION__ . ' :: Line ' . __LINE__ . ' :: Creating composite color_xy', 'color', 0);
                 break;
             case 'color_hs':
+                if (\in_array('color_hs', $aFiltered, true)) {
+                    $this->SendDebug(__FUNCTION__, 'Skipping filtered color variable: color_hs', 0);
+                    break;
+                }
                 $this->RegisterVariableInteger('color_hs', $this->Translate($this->convertLabelToName('color_hs')), '~HexColor');
                 // Farbvariablen erhalten IMMER EnableAction, unabhängig von Access-Prüfung
                 $this->checkAndEnableAction('color_hs', null, true);
                 $this->SendDebug(__FUNCTION__ . ' :: Line ' . __LINE__ . ' :: Creating composite color_hs', 'color_hs', 0);
                 break;
             case 'color_rgb':
+                if (\in_array('color_rgb', $aFiltered, true)) {
+                    $this->SendDebug(__FUNCTION__, 'Skipping filtered color variable: color_rgb', 0);
+                    break;
+                }
                 $this->RegisterVariableInteger('color_rgb', $this->Translate($this->convertLabelToName('color_rgb')), '~HexColor');
                 // Farbvariablen erhalten IMMER EnableAction, unabhängig von Access-Prüfung
                 $this->checkAndEnableAction('color_rgb', null, true);
@@ -4009,7 +4170,7 @@ abstract class ModulBase extends \IPSModule
         }
 
         $ident = $feature['property'];
-        $this->SendDebug(__FUNCTION__, sprintf('Checking special case for %s: %s', $ident, json_encode($feature)), 0);
+        $this->SendDebug(__FUNCTION__, \sprintf('Checking special case for %s: %s', $ident, json_encode($feature)), 0);
 
         if (!isset(self::$specialVariables[$ident])) {
             return;
@@ -4262,7 +4423,7 @@ abstract class ModulBase extends \IPSModule
         if (@$this->GetIDForIdent($presetIdent) !== false) {
             // Variable existiert, also aktualisieren wir direkt ihren Wert
             $this->SetValueDirect($presetIdent, $value);
-            $this->SendDebug(__FUNCTION__, "Updated $presetIdent with value: " . (is_array($value) ? json_encode($value) : $value), 0);
+            $this->SendDebug(__FUNCTION__, "Updated $presetIdent with value: " . (\is_array($value) ? json_encode($value) : $value), 0);
         }
     }
 

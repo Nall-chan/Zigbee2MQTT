@@ -347,7 +347,7 @@ trait ColorHelper
         $oldMax = $this->getBrightnessValue('max');
 
         if ($toDevice) {
-            $this->SendDebug(__FUNCTION__, sprintf(
+            $this->SendDebug(__FUNCTION__, \sprintf(
                 'Converting %.2f%% to device value (range %d-%d)',
                 $value,
                 $oldMin,
@@ -357,7 +357,7 @@ trait ColorHelper
             $value = max(0, min(100, $value));
             $result = (int) (($value * ($oldMax - $oldMin) / 100) + $oldMin);
         } else {
-            $this->SendDebug(__FUNCTION__, sprintf(
+            $this->SendDebug(__FUNCTION__, \sprintf(
                 'Converting device value %.2f (range %d-%d) to percent',
                 $value,
                 $oldMin,
@@ -365,11 +365,11 @@ trait ColorHelper
             ), 0);
 
             $value = max($oldMin, min($oldMax, $value));
-            // Float zu Integer casten vor intdiv
+            // Float zu Integer cast vor intdiv
             $result = intdiv((int) ($value - $oldMin) * 100, $oldMax - $oldMin);
         }
 
-        $this->SendDebug(__FUNCTION__, sprintf(
+        $this->SendDebug(__FUNCTION__, \sprintf(
             'Result: %d (%s)',
             $result,
             $toDevice ? 'device value' : 'percent'
@@ -427,7 +427,7 @@ trait ColorHelper
         ];
 
         $value = isset($config[$type]) ? (int) $config[$type] : $defaults[$type];
-        $this->SendDebug(__FUNCTION__, sprintf(
+        $this->SendDebug(__FUNCTION__, \sprintf(
             'Brightness %s-Wert: %d (%s)',
             $type,
             $value,
